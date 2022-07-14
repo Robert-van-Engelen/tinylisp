@@ -26,7 +26,9 @@ To compile tinylisp:
 ~~~
 $ cc -o tinylisp tinylisp-opt.c
 ~~~
-To install the libraries when running tinylisp, use Linux/Unix `cat`:
+The number of cells allocated is N=1024 by default, which is only 8K.  To increase memory size increase the value of N in the code.  Then recompile tinylisp.
+
+To install one or more optional Lisp libraries to run tinylisp, use Linux/Unix `cat`:
 ~~~
 cat common.lisp list.lisp math.lisp | ./tinylisp
 ~~~
