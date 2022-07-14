@@ -10,7 +10,7 @@ A cool pocket computer with a built-in C compiler.  Tinylisp compiles and runs o
 
 ## How is tinylisp so small?
 
-Using NaN boxing and BCD boxing (for BCD floating point) and some programming tricks in C.  See my [article](tinylisp.pdf) for details and examples.
+Using NaN boxing and BCD boxing and some programming tricks in C.  See my [article](tinylisp.pdf) for details, examples and detailed instructions how to extend tinylisp with more features.
 
 ## Project code
 
