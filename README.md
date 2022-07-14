@@ -4,7 +4,7 @@ In honor of the contributions made by Church and McCarthy, I wrote this project 
 
 ## Tinylisp running on a vintage Sharp PC-G850VS pocket computer
 
-![PC-G850](lisp850.jpeg)
+![PC-G850](lisp850.jpg)
 
 A cool pocket computer with a built-in C compiler.  Tinylisp compiles and runs on this machine too with its native C!
 
