@@ -32,7 +32,7 @@ cat common.lisp list.lisp math.lisp | ./tinylisp
 ~~~
 But before you can do this, you will have to change the `look` function as explained in Section 7 of the article.
 
-On the Sharp PC-850 use SIO or [PocketTools](https://www.peil-partner.de/ifhe.de/sharp/) to load via audio cassette interface (CE-124 or CE-126p):
+On the Sharp PC-G850(V)(S) use SIO or [PocketTools](https://www.peil-partner.de/ifhe.de/sharp/) to load via audio cassette interface (CE-124 or CE-126p):
 ~~~
 PC: bas2img --pc=G850VS --type=asm -l0x408 lisp850-opt.c
 PC: bin2wav --pc=G850VS lisp850-opt.img
