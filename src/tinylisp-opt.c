@@ -93,7 +93,7 @@ L parse() {
  L n; I i;
  if (*buf == '(') return list();
  if (*buf == '\'') return cons(atom("quote"),cons(read(),nil));
- if (sscanf(buf,"%lg%n",&n,&i) && !buf[i]) return n;
+ if (sscanf(buf,"%lg%n",&n,&i) > 0 && !buf[i]) return n;
  return atom(buf);
 }
 void print(L);
