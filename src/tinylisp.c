@@ -70,7 +70,7 @@ char scan() {
 L read() { return scan(),parse(); }
 L list() { L x; return scan() == ')' ? nil : !strcmp(buf, ".") ? (x = read(),scan(),x) : (x = parse(),cons(x,list())); }
 L quote() { return cons(atom("quote"),cons(read(),nil)); }
-L atomic() { L n; I i; return sscanf(buf,"%lg%n",&n,&i) && !buf[i] ? n : atom(buf); }
+L atomic() { L n; I i; return sscanf(buf,"%lg%n",&n,&i) > 0 && !buf[i] ? n : atom(buf); }
 L parse() { return *buf == '(' ? list() : *buf == '\'' ? quote() : atomic(); }
 void print(L);
 void printlist(L t) {
