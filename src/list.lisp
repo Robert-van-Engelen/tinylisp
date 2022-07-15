@@ -78,7 +78,7 @@
     (lambda (f . args)
         (if (any? null? args)
             ()
-            (let
+            (let*
                 (mapcar (map1 car args))
                 (mapcdr (map1 cdr args))
                 (cons (f . mapcar) (map f . mapcdr))))))
