@@ -58,11 +58,11 @@ void look() { see = getchar(); }
 I seeing(char c) { return c == ' ' ? see > 0 && see <= c : see == c; }
 char get() { char c = see; look(); return c; }
 char scan() {
- char *tok = buf;
+ I i = 0;
  while (seeing(' ')) look();
- if (seeing('(') || seeing(')') || seeing('\'')) *tok++ = get();
- else do *tok++ = get(); while (!seeing('(') && !seeing(')') && !seeing(' '));
- return *tok = 0,*buf;
+ if (seeing('(') || seeing(')') || seeing('\'')) buf[i++] = get();
+ else do buf[i++] = get(); while (i < 39 && !seeing('(') && !seeing(')') && !seeing(' '));
+ return buf[i] = 0,*buf;
 }
 L read() { return scan(),parse(); }
 L list() { L x; return scan() == ')' ? nil : !strcmp(buf, ".") ? (x = read(),scan(),x) : (x = parse(),cons(x,list())); }
