@@ -8,4 +8,4 @@
 - [list.lisp](list.lisp) list functions library
 - [math.lisp](math.lisp) some Lisp math functions
 
-Written in a lisp-like functional style of structured C, lines are 55 columns wide on average and never wider than 120 columns for convenient editing.
+Written in a Lisp-like functional style of structured C, lines are 55 columns wide on average and never wider than 120 columns for convenient editing.
