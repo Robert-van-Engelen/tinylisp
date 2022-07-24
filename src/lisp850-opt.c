@@ -18,7 +18,7 @@ L cons(L x,L y) { cell[--sp] = x; cell[--sp] = y; if (hp > sp<<3) abort(); retur
 L car(L p) { return (T p&224) == CONS ? cell[T p &= 15,(I)p-9] : err; }
 L cdr(L p) { return (T p&224) == CONS ? cell[T p &= 15,(I)p-10] : err; }
 L pair(L v,L x,L e) { return cons(cons(v,x),e); }
-L assoc(L a,L e) { while (T e == CONS && a != car(car(e))) e = cdr(e); return T e == CONS ? cdr(car(e)) : err; }
+L assoc(L v,L e) { while (T e == CONS && v != car(car(e))) e = cdr(e); return T e == CONS ? cdr(car(e)) : err; }
 I not(L x) { return T x == NIL; }
 I let(L x) { return T x != NIL && (x = cdr(x),T x != NIL); }
 L eval(L,L),parse();
