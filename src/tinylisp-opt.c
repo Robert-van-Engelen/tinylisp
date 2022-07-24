@@ -69,7 +69,7 @@ L eval(L x,L e) {
   if (T(d) == NIL) d = env;
   while (T(v) == CONS && T(x) == CONS) d = pair(car(v),eval(car(x),e),d),v = cdr(v),x = cdr(x);
   if (T(v) == CONS) { x = eval(x,e); while (T(v) == CONS) d = pair(car(v),car(x),d),v = cdr(v),x = cdr(x); }
-  else if (T(x) == CONS) x = evlis(x,e);
+  if (T(x) == CONS) x = evlis(x,e); else x = eval(x,e);
   if (T(v) != NIL) d = pair(v,x,d);
   x = cdr(car(f)),e = d;
  }
