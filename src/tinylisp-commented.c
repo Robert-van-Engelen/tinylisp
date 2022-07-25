@@ -9,7 +9,7 @@
         I    unsigned integer (either 16 bit, 32 bit or 64 bit unsigned)
         L    Lisp expression (double with NaN boxing)
    I variables and function parameters are named as follows:
-        i    any unsigned integer "ordinal"
+        i    any unsigned integer, e.g. a NaN-boxed ordinal value
         t    a NaN-boxing tag
    L variables and function parameters are named as follows:
         x,y  any Lisp expression
@@ -22,7 +22,7 @@
 #define I unsigned
 #define L double
 
-/* T(x) returns the tag bits of a Lisp value x */
+/* T(x) returns the tag bits of a NaN-boxed Lisp expression x */
 #define T(x) *(unsigned long long*)&x >> 48
 
 /* address of the atom heap is at the bottom of the cell stack */
@@ -33,7 +33,7 @@
 
 /* hp: heap pointer, A+hp with hp=0 points to the first atom string in cell[]
    sp: stack pointer, the stack starts at the top of cell[] with sp=N
-   invariant: hp <= sp<<3 */
+   safety invariant: hp <= sp<<3 */
 I hp = 0, sp = N;
 
 /* atom, primitive, cons, closure and nil tags for NaN boxing */
@@ -45,10 +45,10 @@ L cell[N];
 /* Lisp constant expressions () (nil), #t, ERR, and the global environment env */
 L nil, tru, err, env;
 
-/* NaN boxing specific functions:
+/* NaN-boxing specific functions:
    box(t,i): returns a new NaN-boxed double with tag t and ordinal i
    ord(x):   returns the ordinal of the NaN-boxed double x
-   num(n):   convert or check number n (does nothing, could check for NaN)
+   num(n):   convert or check number n (does nothing, e.g. could check for NaN)
    equ(x,y): returns nonzero if x equals y */
 L box(I t, I i) {
   L x;
@@ -90,11 +90,12 @@ L cons(L x, L y) {
   return box(CONS, sp);
 }
 
-/* return the car or cdr of a pair */
+/* return the car of a pair or ERR if not a pair */
 L car(L p) {
   return (T(p) & ~(CONS^CLOS)) == CONS ? cell[ord(p)+1] : err;
 }
 
+/* return the cdr of a pair or ERR if not a pair */
 L cdr(L p) {
   return (T(p) & ~(CONS^CLOS)) == CONS ? cell[ord(p)] : err;
 }
@@ -109,7 +110,7 @@ L closure(L v, L x, L e) {
   return box(CLOS, ord(pair(v, x, equ(e, env) ? nil : e)));
 }
 
-/* look up a symbol in an environment, return its value or err if not found */
+/* look up a symbol in an environment, return its value or ERR if not found */
 L assoc(L v, L e) {
   while (T(e) == CONS && !equ(v, car(car(e))))
     e = cdr(e);
@@ -126,7 +127,7 @@ I let(L x) {
   return T(x) != NIL && !not(cdr(x));
 }
 
-/* return a new list of evaluated Lisp expressions */
+/* return a new list of evaluated Lisp expressions t in environment e */
 L eval(L, L);
 L evlis(L t, L e) {
   return T(t) == CONS ? cons(eval(car(t), e), evlis(cdr(t), e)) : eval(t, e);
@@ -299,7 +300,7 @@ struct {
   {"define", f_define},
   {0}};
 
-/* create environment by extending e with variables v bound to values x */
+/* create environment by extending e with variables v bound to values t */
 L bind(L v, L t, L e) {
   return T(v) == NIL ? e :
          T(v) == CONS ? bind(cdr(v), cdr(t), pair(car(v), car(t), e)) :
@@ -311,7 +312,7 @@ L reduce(L f, L t, L e) {
   return eval(cdr(car(f)), bind(car(car(f)), evlis(t, e), not(cdr(f)) ? env : cdr(f)));
 }
 
-/* apply closure or primitive f to arguments t in environment e, or return err */
+/* apply closure or primitive f to arguments t in environment e, or return ERR */
 L apply(L f, L t, L e) {
   return T(f) == PRIM ? prim[ord(f)].f(t, e) :
          T(f) == CLOS ? reduce(f, t, e) :
@@ -347,17 +348,17 @@ char get() {
 
 /* tokenize into buf[], return first character of buf[] */
 char scan() {
- I i = 0;
- while (seeing(' '))
-   look();
- if (seeing('(') || seeing(')') || seeing('\''))
-   buf[i++] = get();
- else
-   do
-     buf[i++] = get();
-   while (i < 39 && !seeing('(') && !seeing(')') && !seeing(' '));
- buf[i] = 0;
- return *buf;
+  I i = 0;
+  while (seeing(' '))
+    look();
+  if (seeing('(') || seeing(')') || seeing('\''))
+    buf[i++] = get();
+  else
+    do
+      buf[i++] = get();
+    while (i < 39 && !seeing('(') && !seeing(')') && !seeing(' '));
+  buf[i] = 0;
+  return *buf;
 }
 
 /* return the Lisp expression read from standard input */
@@ -367,7 +368,7 @@ L read() {
   return parse();
 }
 
-/* return the parsed Lisp list */
+/* return a parsed Lisp list */
 L list() {
   L x;
   if (scan() == ')')
@@ -381,23 +382,26 @@ L list() {
   return cons(x, list());
 }
 
-/* return the parsed Lisp expression quoted */
+/* return a parsed Lisp expression x quoted as (quote x) */
 L quote() {
   return cons(atom("quote"), cons(read(), nil));
 }
 
-/* return a parsed atomic Lisp expression (number or atom) */
+/* return a parsed atomic Lisp expression (a number or an atom) */
 L atomic() {
   L n; I i;
-  return sscanf(buf, "%lg%n", &n, &i) > 0 && !buf[i] ? n : atom(buf);
+  return (sscanf(buf, "%lg%n", &n, &i) > 0 && !buf[i]) ? n :
+         atom(buf);
 }
 
 /* return a parsed Lisp expression */
 L parse() {
-  return *buf == '(' ? list() : *buf == '\'' ? quote() : atomic();
+  return *buf == '(' ? list() :
+         *buf == '\'' ? quote() :
+         atomic();
 }
 
-/* display a Lisp list */
+/* display a Lisp list t */
 void print(L);
 void printlist(L t) {
   putchar('(');
@@ -416,7 +420,7 @@ void printlist(L t) {
   putchar(')');
 }
 
-/* display a Lisp expression */
+/* display a Lisp expression x */
 void print(L x) {
   if (T(x) == NIL)
     printf("()");
