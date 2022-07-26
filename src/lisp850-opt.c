@@ -63,9 +63,11 @@ L eval(L x,L e) {
   v = car(car(f)),d = cdr(f);
   if (T d == NIL) d = env;
   while (T v == CONS && T x == CONS) d = pair(car(v),eval(car(x),e),d),v = cdr(v),x = cdr(x);
-  if (T v == CONS) { x = eval(x,e); while (T v == CONS) d = pair(car(v),car(x),d),v = cdr(v),x = cdr(x); }
-  if (T x == CONS) x = evlis(x,e); else x = eval(x,e);
-  if (T v != NIL) d = pair(v,x,d);
+  if (T v == CONS) x = eval(x,e);
+  while (T v == CONS) d = pair(car(v),car(x),d),v = cdr(v),x = cdr(x);
+  if (T(x) == CONS) x = evlis(x,e);
+  else if (T(x) != NIL) x = eval(x,e);
+  if (T(v) != NIL) d = pair(v,x,d);
   x = cdr(car(f)),e = d;
  }
 }
@@ -94,8 +96,7 @@ L parse() {
  if (*buf == '(') return list();
  if (*buf == '\'') return cons(atom("quote"),cons(read(),nil));
  i = strlen(buf);
- if (isdigit(buf[*buf == '-']) && sscanf(buf,"%lg%n",&n,&i) && !buf[i]) return n;
- return atom(buf);
+ return isdigit(buf[*buf == '-']) && sscanf(buf,"%lg%n",&n,&i) > 0 && !buf[i] ? n : atom(buf);
 }
 void print(L);
 void printlist(L t) {
