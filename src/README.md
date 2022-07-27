@@ -5,6 +5,8 @@ Lisp in 99 lines is written in a Lisp-like functional style of structured C, lin
 - [tinylisp.c](tinylisp.c) Lisp in 99 lines of C
 - [tinylisp-commented.c](tinylisp-commented.c) commented version in an (overly) verbose C style
 - [tinylisp-opt.c](tinylisp-opt.c) optimized version for speed and reduced memory use
+- [tinylisp-float.c](tinylisp-float.c) version with single float precision
+- [tinylisp-float-opt.c](tinylisp-float-opt.c) optimized version with single float precision
 - [lisp850.c](lisp850.c) Lisp in 99 lines of C for the Sharp PC-G850 with BCD boxing
 - [lisp850-opt.c](lisp850-opt.c) optimized version for speed and reduced memory use
 - [common.lisp](common.lisp) common Lisp functions defined in tiny Lisp itself
