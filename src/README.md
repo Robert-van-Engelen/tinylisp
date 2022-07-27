@@ -1,6 +1,6 @@
 # Project code
 
-Lisp in 99 lines is written in a Lisp-like functional style of structured C, lines are 55 columns wide on average and never wider than 120 columns for convenient editing.
+Lisp in 99 lines is written in a Lisp-like functional style of structured C, lines are 55 columns wide on average and never wider than 120 columns for convenient editing.  It supports double precision floating point, has 20 built-in Lisp primitives, a REPL and garbage collection.
 
 - [tinylisp.c](tinylisp.c) Lisp in 99 lines of C
 - [tinylisp-commented.c](tinylisp-commented.c) commented version in an (overly) verbose C style
