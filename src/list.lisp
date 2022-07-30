@@ -58,15 +58,15 @@
 (define all?
     (lambda (f t)
         (if t
-            (if (f (car t))
-                (all? f (cdr t))
-                ())
+            (and
+                (f (car t))
+                (all? f (cdr t)))
             #t)))
 (define any?
     (lambda (f t)
         (if t
-            (if (f (car t))
-                #t
+            (or
+                (f (car t))
                 (any? f (cdr t)))
             ())))
 (define map1
@@ -83,12 +83,18 @@
                 (mapcdr (map1 cdr args))
                 (cons (f . mapcar) (map f . mapcdr))))))
 (define zip (lambda args (map list . args)))
+(define seq
+    (lambda (n m)
+        (if (< n m)
+            (cons n (seq (+ n 1) m))
+            ())))
+(define seqby
+    (lambda (n m k)
+        (if (< 0 (* k (- m n)))
+            (cons n (seqby (+ n k) m k))
+            ())))
 (define range
     (lambda (n m . args)
         (if args
-            (if (< 0 (* (car args) (- m n)))
-                (cons n (range (+ n (car args)) m (car args)))
-                ())
-            (if (< n m)
-                (cons n (range (+ n 1) m))
-                ()))))
+            (seqby n m (car args))
+            (seq n m))))
