@@ -28,36 +28,36 @@ Lisp in 99 lines is written in a Lisp-like functional style of structured C, lin
 - [math.lisp](src/math.lisp) some Lisp math functions
 
 To compile tinylisp:
-~~~
-$ cc -o tinylisp tinylisp-opt.c
-~~~
+
+    $ cc -o tinylisp tinylisp-opt.c
+
 The number of cells allocated is N=1024 by default, which is only 8K of memory.  To increase memory size, increase the value of N in the code.  Then recompile tinylisp.
 
 To install one or more optional Lisp libraries to run tinylisp, use Linux/Unix `cat`:
-~~~
-cat common.lisp list.lisp math.lisp | ./tinylisp
-~~~
+
+    $ cat common.lisp list.lisp math.lisp | ./tinylisp
+
 But before you can do this, change the `look` function to reopen /dev/tty as explained in Section 7 of the [article](tinylisp.pdf).
 
 ## PC-G850
 
 On the Sharp PC-G850(V)(S) use SIO or [PocketTools](https://www.peil-partner.de/ifhe.de/sharp/) to load via audio cassette interface (CE-124 or CE-126p):
-~~~
-PC: bas2img --pc=G850VS --type=asm -l0x408 lisp850-opt.c
-PC: bin2wav --pc=G850VS lisp850-opt.img
-G850: BASIC (PRO MODE)
-G850: BLOAD
-PC: play lisp850-opt.wav
-G850: TEXT
-G850: Basic
-G850: Text<-Basic
-G850: BASIC (2x PRO MODE)
-G850: NEW
-G850: 2ndF TEXT (C)
-G840: G (go)
-~~~
+
+    PC:   bas2img --pc=G850VS --type=asm -l0x408 lisp850-opt.c
+    PC:   bin2wav --pc=G850VS lisp850-opt.img
+    G850: BASIC (PRO MODE)
+    G850: BLOAD
+    PC:   play lisp850-opt.wav
+    G850: TEXT
+    G850: Basic
+    G850: Text<-Basic
+    G850: BASIC (2x PRO MODE)
+    G850: NEW
+    G850: 2ndF TEXT (C)
+    G840: G (go)
+
 The `bas2img` option `-l0x400` adds line numbers to the C source automatically.
 
-## A follow-up project
+## Spoiler alert!
 
 In "[Lisp in under 1k lines of C, explained](https://github.com/Robert-van-Engelen/lisp)" I introduce another small Lisp interpreter that is largely based on tinylisp.  It shares many similarities, but has over 40 built-in Lisp primitives, strings, macros, exceptions, execution tracing, a mark-sweep/compacting garbage collector and REPL.
