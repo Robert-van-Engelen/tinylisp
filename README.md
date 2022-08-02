@@ -60,4 +60,4 @@ The `bas2img` option `-l0x400` adds line numbers to the C source automatically.
 
 ## Spoiler alert!
 
-In "[Lisp in under 1k lines of C, explained](https://github.com/Robert-van-Engelen/lisp)" I introduce another small Lisp interpreter that is largely based on tinylisp.  It shares many similarities, but has over 40 built-in Lisp primitives, strings, macros, exceptions, execution tracing, a mark-sweep/compacting garbage collector and REPL.
+In "[Lisp in under 1k lines of C, explained](https://github.com/Robert-van-Engelen/lisp)" I introduce another small Lisp interpreter that is largely based on tinylisp.  It shares many similarities, but has over 40 built-in Lisp primitives, strings, macros, exceptions, execution tracing, file loading, a mark-sweep/compacting garbage collector and REPL.
