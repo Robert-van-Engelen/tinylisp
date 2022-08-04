@@ -28,8 +28,7 @@ I not(L x) { return T(x) == NIL; }
 I let(L x) { return T(x) != NIL && (x = cdr(x),T(x) != NIL); }
 L eval(L,L),parse();
 L evlis(L t,L e) {
- L s = nil,*p = &s;
- while (T(t) == CONS) *p = cons(eval(car(t),e),nil),p = cell+sp,t = cdr(t);
+ L s,*p; for (s = nil,p = &s; T(t) == CONS; p = cell+sp,t = cdr(t)) *p = cons(eval(car(t),e),nil);
  if (T(t) != NIL) *p = eval(t,e);
  return s;
 }
@@ -59,7 +58,7 @@ struct { const char *s; L (*f)(L,L); } prim[] = {
 {"not", f_not}, {"cond", f_cond}, {"if",  f_if},  {"let*",f_leta},{"lambda",f_lambda},{"define",f_define},{0}};
 L eval(L x,L e) {
  L f,v,d;
- while (1) {
+ for (; ; x = cdr(car(f)),e = d) {
   if (T(x) == ATOM) return assoc(x,e);
   if (T(x) != CONS) return x;
   f = eval(car(x),e),x = cdr(x);
@@ -73,7 +72,6 @@ L eval(L x,L e) {
   if (T(x) == CONS) x = evlis(x,e);
   else if (T(x) != NIL) x = eval(x,e);
   if (T(v) != NIL) d = pair(v,x,d);
-  x = cdr(car(f)),e = d;
  }
 }
 char buf[40],see = ' ';
@@ -89,11 +87,10 @@ char scan() {
 }
 L read() { return scan(),parse(); }
 L list() {
- L t = nil,*p = &t;
- while (1) {
+ L t,*p;
+ for (t = nil,p = &t; ; *p = cons(parse(),nil),p = cell+sp) {
   if (scan() == ')') return t;
   if (*buf == '.' && !buf[1]) return *p = read(),scan(),t;
-  *p = cons(parse(),nil),p = cell+sp;
  }
 }
 L parse() {
