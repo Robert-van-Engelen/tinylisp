@@ -57,7 +57,7 @@ L box(I t, I i) {
 }
 
 I ord(L x) {
-  return *(unsigned long long*)&x;
+  return *(unsigned long long*)&x; /* the return value is narrowed to 32 bit unsigned integer to remove the tag */
 }
 
 L num(L n) {
@@ -147,8 +147,8 @@ L evlis(L t, L e) {
    (< n1 n2)           #t if n1<n2, otherwise ()
    (eq? x y)           #t if x equals y, otherwise ()
    (not x)             #t if x is (), otherwise ()
-   (or x1 x2 ... xk)   #t if any x is not (), otherwise ()
-   (and x1 x2 ... xk)  #t if all x are not (), otherwise ()
+   (or x1 x2 ... xk)   first x that is not (), otherwise ()
+   (and x1 x2 ... xk)  last x if all x are not (), otherwise ()
    (cond (x1 y1)
          (x2 y2)
          ...
@@ -234,18 +234,18 @@ L f_not(L t, L e) {
   return not(car(evlis(t, e))) ? tru : nil;
 }
 
-L f_or(L t, L e) {
-  for (; T(t) != NIL; t = cdr(t))
-    if (!not(eval(car(t), e)))
-      return tru;
-  return nil;
+L f_or(L t,L e) {
+  L x = nil;
+  while (T(t) != NIL && not(x = eval(car(t),e)))
+    t = cdr(t);
+  return x;
 }
 
-L f_and(L t, L e) {
-  for (; T(t) != NIL; t = cdr(t))
-    if (not(eval(car(t), e)))
-      return nil;
-  return tru;
+L f_and(L t,L e) {
+  L x = nil;
+  while (T(t) != NIL && !not(x = eval(car(t),e)))
+    t = cdr(t);
+  return x;
 }
 
 L f_cond(L t, L e) {
