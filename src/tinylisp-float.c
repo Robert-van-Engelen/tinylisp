@@ -41,8 +41,8 @@ L f_int(L t,L e) { L n = car(evlis(t,e)); return n<1e7 && n>-1e7 ? (long long)n 
 L f_lt(L t,L e) { return t = evlis(t,e),car(t) - car(cdr(t)) < 0 ? tru : nil; }
 L f_eq(L t,L e) { return t = evlis(t,e),equ(car(t),car(cdr(t))) ? tru : nil; }
 L f_not(L t,L e) { return not(car(evlis(t,e))) ? tru : nil; }
-L f_or(L t,L e) { for (; T(t) != NIL; t = cdr(t)) if (!not(eval(car(t),e))) return tru; return nil; }
-L f_and(L t,L e) { for (; T(t) != NIL; t = cdr(t)) if (not(eval(car(t),e))) return nil; return tru; }
+L f_or(L t,L e) { L x = nil; while (T(t) != NIL && not(x = eval(car(t),e))) t = cdr(t); return x; }
+L f_and(L t,L e) { L x = nil; while (T(t) != NIL && !not(x = eval(car(t),e))) t = cdr(t); return x; }
 L f_cond(L t,L e) { while (T(t) != NIL && not(eval(car(car(t)),e))) t = cdr(t); return eval(car(cdr(car(t))),e); }
 L f_if(L t,L e) { return eval(car(cdr(not(eval(car(t),e)) ? cdr(t) : t)),e); }
 L f_leta(L t,L e) { while (let(t)) e = pair(car(car(t)),eval(car(cdr(car(t))),e),e),t = cdr(t); return eval(car(t),e); }
