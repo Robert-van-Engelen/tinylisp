@@ -45,7 +45,7 @@ L f_or(L t,L e) { L x = nil; while (T(t) != NIL && not(x = eval(car(t),e))) t = 
 L f_and(L t,L e) { L x = nil; while (T(t) != NIL && !not(x = eval(car(t),e))) t = cdr(t); return x; }
 L f_cond(L t,L e) { while (T(t) != NIL && not(eval(car(car(t)),e))) t = cdr(t); return eval(car(cdr(car(t))),e); }
 L f_if(L t,L e) { return eval(car(cdr(not(eval(car(t),e)) ? cdr(t) : t)),e); }
-L f_leta(L t,L e) { while (let(t)) e = pair(car(car(t)),eval(car(cdr(car(t))),e),e),t = cdr(t); return eval(car(t),e); }
+L f_leta(L t,L e) { for (;let(t); t = cdr(t)) e = pair(car(car(t)),eval(car(cdr(car(t))),e),e); return eval(car(t),e); }
 L f_lambda(L t,L e) { return closure(car(t),car(cdr(t)),e); }
 L f_define(L t,L e) { env = pair(car(t),eval(car(cdr(t)),e),env); return car(t); }
 struct { const char *s; L (*f)(L,L); } prim[] = {
