@@ -14,7 +14,7 @@ Using NaN boxing and BCD boxing and some programming tricks in C.  See my [artic
 
 ## Project code
 
-Lisp in 99 lines is written in a Lisp-like functional style of structured C, lines are 55 columns wide on average and never wider than 120 columns for convenient editing.  It supports double precision floating point, has 20 built-in Lisp primitives, a REPL and a simple garbage collector.
+Lisp in 99 lines is written in a Lisp-like functional style of structured C, lines are 55 columns wide on average and never wider than 120 columns for convenient editing.  It supports double precision floating point, has 20 built-in Lisp primitives, a REPL and a simple garbage collector.  Tail-call optimized versions are included for speed and reduced memory use.
 
 - [tinylisp.c](src/tinylisp.c) Lisp in 99 lines of C with double precision
 - [tinylisp-commented.c](src/tinylisp-commented.c) commented version in an (overly) verbose C style
@@ -60,4 +60,4 @@ The `bas2img` option `-l0x400` adds line numbers to the C source automatically.
 
 ## Spoiler alert!
 
-In "[Lisp in under 1k lines of C, explained](https://github.com/Robert-van-Engelen/lisp)" I introduce another small Lisp interpreter that is largely based on tinylisp.  It shares many similarities, but has over 40 built-in Lisp primitives, strings, macros, exceptions, execution tracing, file loading, a mark-sweep/compacting garbage collector and REPL.
+In "[Lisp in 1k lines of C, explained](https://github.com/Robert-van-Engelen/lisp)" I introduce another small Lisp interpreter that is largely based on tinylisp.  It shares many similarities, but has over 40 built-in Lisp primitives, strings, macros, exceptions, execution tracing, file loading, a mark-sweep/compacting garbage collector and REPL.

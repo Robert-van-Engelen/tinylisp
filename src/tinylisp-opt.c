@@ -28,50 +28,57 @@ I not(L x) { return T(x) == NIL; }
 I let(L x) { return T(x) != NIL && (x = cdr(x),T(x) != NIL); }
 L eval(L,L),parse();
 L evlis(L t,L e) {
- L s,*p; for (s = nil,p = &s; T(t) == CONS; p = cell+sp,t = cdr(t)) *p = cons(eval(car(t),e),nil);
+ L s,*p;
+ for (s = nil,p = &s; T(t) == CONS; p = cell+sp,t = cdr(t)) *p = cons(eval(car(t),e),nil);
  if (T(t) != NIL) *p = eval(t,e);
  return s;
 }
-L f_eval(L t,L e) { return eval(car(evlis(t,e)),e); }
-L f_quote(L t,L _) { return car(t); }
-L f_cons(L t,L e) { return t = evlis(t,e),cons(car(t),car(cdr(t))); }
-L f_car(L t,L e) { return car(car(evlis(t,e))); }
-L f_cdr(L t,L e) { return cdr(car(evlis(t,e))); }
-L f_add(L t,L e) { L n = car(t = evlis(t,e)); while (!not(t = cdr(t))) n += car(t); return num(n); }
-L f_sub(L t,L e) { L n = car(t = evlis(t,e)); while (!not(t = cdr(t))) n -= car(t); return num(n); }
-L f_mul(L t,L e) { L n = car(t = evlis(t,e)); while (!not(t = cdr(t))) n *= car(t); return num(n); }
-L f_div(L t,L e) { L n = car(t = evlis(t,e)); while (!not(t = cdr(t))) n /= car(t); return num(n); }
-L f_int(L t,L e) { L n = car(evlis(t,e)); return n<1e16 && n>-1e16 ? (long long)n : n; }
-L f_lt(L t,L e) { return t = evlis(t,e),car(t) - car(cdr(t)) < 0 ? tru : nil; }
-L f_eq(L t,L e) { return t = evlis(t,e),equ(car(t),car(cdr(t))) ? tru : nil; }
-L f_not(L t,L e) { return not(car(evlis(t,e))) ? tru : nil; }
-L f_or(L t,L e) { L x = nil; while (T(t) != NIL && not(x = eval(car(t),e))) t = cdr(t); return x; }
-L f_and(L t,L e) { L x = nil; while (T(t) != NIL && !not(x = eval(car(t),e))) t = cdr(t); return x; }
-L f_cond(L t,L e) { while (T(t) != NIL && not(eval(car(car(t)),e))) t = cdr(t); return eval(car(cdr(car(t))),e); }
-L f_if(L t,L e) { return eval(car(cdr(not(eval(car(t),e)) ? cdr(t) : t)),e); }
-L f_leta(L t,L e) { while (let(t)) e = pair(car(car(t)),eval(car(cdr(car(t))),e),e),t = cdr(t); return eval(car(t),e); }
-L f_lambda(L t,L e) { return closure(car(t),car(cdr(t)),e); }
-L f_define(L t,L e) { env = pair(car(t),eval(car(cdr(t)),e),env); return car(t); }
-struct { const char *s; L (*f)(L,L); } prim[] = {
-{"eval",f_eval},{"quote",f_quote},{"cons",f_cons},{"car", f_car}, {"cdr",   f_cdr},   {"+",     f_add},   {"-",  f_sub},
-{"*",   f_mul}, {"/",    f_div},  {"int", f_int}, {"<",   f_lt},  {"eq?",   f_eq},    {"or",    f_or},    {"and",f_and},
-{"not", f_not}, {"cond", f_cond}, {"if",  f_if},  {"let*",f_leta},{"lambda",f_lambda},{"define",f_define},{0}};
+L f_eval(L t,L *e) { return car(evlis(t,*e)); }
+L f_quote(L t,L *_) { return car(t); }
+L f_cons(L t,L *e) { return t = evlis(t,*e),cons(car(t),car(cdr(t))); }
+L f_car(L t,L *e) { return car(car(evlis(t,*e))); }
+L f_cdr(L t,L *e) { return cdr(car(evlis(t,*e))); }
+L f_add(L t,L *e) { L n = car(t = evlis(t,*e)); while (!not(t = cdr(t))) n += car(t); return num(n); }
+L f_sub(L t,L *e) { L n = car(t = evlis(t,*e)); while (!not(t = cdr(t))) n -= car(t); return num(n); }
+L f_mul(L t,L *e) { L n = car(t = evlis(t,*e)); while (!not(t = cdr(t))) n *= car(t); return num(n); }
+L f_div(L t,L *e) { L n = car(t = evlis(t,*e)); while (!not(t = cdr(t))) n /= car(t); return num(n); }
+L f_int(L t,L *e) { L n = car(evlis(t,*e)); return n<1e16 && n>-1e16 ? (long long)n : n; }
+L f_lt(L t,L *e) { return t = evlis(t,*e),car(t) - car(cdr(t)) < 0 ? tru : nil; }
+L f_eq(L t,L *e) { return t = evlis(t,*e),equ(car(t),car(cdr(t))) ? tru : nil; }
+L f_not(L t,L *e) { return not(car(evlis(t,*e))) ? tru : nil; }
+L f_or(L t,L *e) { L x = nil; while (T(t) != NIL && not(x = eval(car(t),*e))) t = cdr(t); return x; }
+L f_and(L t,L *e) { L x = nil; while (T(t) != NIL && !not(x = eval(car(t),*e))) t = cdr(t); return x; }
+L f_cond(L t,L *e) { while (T(t) != NIL && not(eval(car(car(t)),*e))) t = cdr(t); return car(cdr(car(t))); }
+L f_if(L t,L *e) { return car(cdr(not(eval(car(t),*e)) ? cdr(t) : t)); }
+L f_leta(L t,L *e) { for (;let(t); t = cdr(t)) *e = pair(car(car(t)),eval(car(cdr(car(t))),*e),*e); return car(t); }
+L f_lambda(L t,L *e) { return closure(car(t),car(cdr(t)),*e); }
+L f_define(L t,L *e) { env = pair(car(t),eval(car(cdr(t)),*e),env); return car(t); }
+struct { const char *s; L (*f)(L,L*); short t; } prim[] = {
+{"eval",  f_eval,  1},{"quote", f_quote, 0},{"cons",f_cons,0},{"car", f_car, 0},{"cdr",f_cdr,0},{"+",   f_add, 0},
+{"-",     f_sub,   0},{"*",     f_mul,   0},{"/",   f_div, 0},{"int", f_int, 0},{"<",  f_lt, 0},{"eq?", f_eq,  0},
+{"or",    f_or,    0},{"and",   f_and,   0},{"not", f_not, 0},{"cond",f_cond,1},{"if", f_if, 1},{"let*",f_leta,1},
+{"lambda",f_lambda,0},{"define",f_define,0},{0}};
 L eval(L x,L e) {
  L f,v,d;
- for (; ; x = cdr(car(f)),e = d) {
+ while (1) {
   if (T(x) == ATOM) return assoc(x,e);
   if (T(x) != CONS) return x;
-  f = eval(car(x),e),x = cdr(x);
-  if (T(f) == PRIM) return prim[ord(f)].f(x,e);
+  f = eval(car(x),e); x = cdr(x);
+  if (T(f) == PRIM) {
+   x = prim[ord(f)].f(x,&e);
+   if (prim[ord(f)].t) continue;
+   return x;
+  }
   if (T(f) != CLOS) return err;
-  v = car(car(f)),d = cdr(f);
+  v = car(car(f)); d = cdr(f);
   if (T(d) == NIL) d = env;
-  while (T(v) == CONS && T(x) == CONS) d = pair(car(v),eval(car(x),e),d),v = cdr(v),x = cdr(x);
+  for (;T(v) == CONS && T(x) == CONS; v = cdr(v),x = cdr(x)) d = pair(car(v),eval(car(x),e),d);
   if (T(v) == CONS) x = eval(x,e);
-  while (T(v) == CONS) d = pair(car(v),car(x),d),v = cdr(v),x = cdr(x);
+  for (;T(v) == CONS; v = cdr(v),x = cdr(x)) d = pair(car(v),car(x),d);
   if (T(x) == CONS) x = evlis(x,e);
   else if (T(x) != NIL) x = eval(x,e);
   if (T(v) != NIL) d = pair(v,x,d);
+  x = cdr(car(f)); e = d;
  }
 }
 char buf[40],see = ' ';
