@@ -8,6 +8,12 @@
         (if s
             (cons (car s) (append (cdr s) t))
             t)))
+(define nthcdr
+    (lambda (t n)
+        (if (eq? n 0)
+            t
+            (nthcdr (cdr t) (- n 1)))))
+(define nth (lambda (t n) (car (nthcdr t n))))
 (define rev1
     (lambda (r t)
         (if t
@@ -69,19 +75,19 @@
                 (f (car t))
                 (any? f (cdr t)))
             ())))
-(define map1
+(define mapcar
     (lambda (f t)
         (if t
-            (cons (f (car t)) (map1 f (cdr t)))
+            (cons (f (car t)) (mapcar f (cdr t)))
             ())))
 (define map
     (lambda (f . args)
         (if (any? null? args)
             ()
             (let*
-                (mapcar (map1 car args))
-                (mapcdr (map1 cdr args))
-                (cons (f . mapcar) (map f . mapcdr))))))
+                (x (mapcar car args))
+                (t (mapcar cdr args))
+                (cons (f . x) (map f . t))))))
 (define zip (lambda args (map list . args)))
 (define seq
     (lambda (n m)

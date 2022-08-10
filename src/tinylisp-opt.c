@@ -86,7 +86,7 @@ void look() { see = getchar(); }
 I seeing(char c) { return c == ' ' ? see > 0 && see <= c : see == c; }
 char get() { char c = see; look(); return c; }
 char scan() {
- I i = 0;
+ int i = 0;
  while (seeing(' ')) look();
  if (seeing('(') || seeing(')') || seeing('\'')) buf[i++] = get();
  else do buf[i++] = get(); while (i < 39 && !seeing('(') && !seeing(')') && !seeing(' '));
@@ -101,7 +101,7 @@ L list() {
  }
 }
 L parse() {
- L n; I i;
+ L n; int i;
  if (*buf == '(') return list();
  if (*buf == '\'') return cons(atom("quote"),cons(read(),nil));
  return sscanf(buf,"%lg%n",&n,&i) > 0 && !buf[i] ? n : atom(buf);
@@ -127,7 +127,7 @@ void print(L x) {
 }
 void gc() { sp = ord(env); }
 int main() {
- I i; printf("tinylisp");
+ int i; printf("tinylisp");
  nil = box(NIL,0); err = atom("ERR"); tru = atom("#t"); env = pair(tru,tru,nil);
  for (i = 0; prim[i].s; ++i) env = pair(atom(prim[i].s),box(PRIM,i),env);
  while (1) { printf("\n%u>",sp-hp/8); print(eval(read(),env)); gc(); }
