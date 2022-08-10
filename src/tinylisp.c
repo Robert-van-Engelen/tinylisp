@@ -74,12 +74,10 @@ L atomic() { L n; int i; return sscanf(buf,"%lg%n",&n,&i) > 0 && !buf[i] ? n : a
 L parse() { return *buf == '(' ? list() : *buf == '\'' ? quote() : atomic(); }
 void print(L);
 void printlist(L t) {
- putchar('(');
- while (1) {
+ for (putchar('('); ; putchar(' ')) {
   print(car(t));
   if (not(t = cdr(t))) break;
   if (T(t) != CONS) { printf(" . "); print(t); break; }
-  putchar(' ');
  }
  putchar(')');
 }
@@ -93,7 +91,8 @@ void print(L x) {
 }
 void gc() { sp = ord(env); }
 int main() {
- int i; printf("tinylisp");
+ int i;
+ printf("tinylisp");
  nil = box(NIL,0); err = atom("ERR"); tru = atom("#t"); env = pair(tru,tru,nil);
  for (i = 0; prim[i].s; ++i) env = pair(atom(prim[i].s),box(PRIM,i),env);
  while (1) { printf("\n%u>",sp-hp/8); print(eval(read(),env)); gc(); }

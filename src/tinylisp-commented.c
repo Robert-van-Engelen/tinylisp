@@ -404,8 +404,7 @@ L parse() {
 /* display a Lisp list t */
 void print(L);
 void printlist(L t) {
-  putchar('(');
-  while (1) {
+  for (putchar('('); ; putchar(' ')) {
     print(car(t));
     t = cdr(t);
     if (T(t) == NIL)
@@ -415,7 +414,6 @@ void printlist(L t) {
       print(t);
       break;
     }
-    putchar(' ');
   }
   putchar(')');
 }
