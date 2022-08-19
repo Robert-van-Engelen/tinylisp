@@ -71,11 +71,11 @@ I equ(L x, L y) {
 /* interning of atom names (Lisp symbols), returns a unique NaN-boxed ATOM */
 L atom(const char *s) {
   I i = 0;
-  while (i < hp && strcmp(A+i, s))
+  while (i < hp && strcmp(A+i, s))              /* search for a matching atom name on the heap */
     i += strlen(A+i)+1;
-  if (i == hp) {
-    hp += strlen(strcpy(A+i, s))+1;
-    if (hp > sp<<3)
+  if (i == hp) {                                /* if not found */
+    hp += strlen(strcpy(A+i, s))+1;             /*   allocate and add a new atom name to the heap */
+    if (hp > sp<<3)                             /* abort when out of memory */
       abort();
   }
   return box(ATOM, i);
@@ -83,9 +83,9 @@ L atom(const char *s) {
 
 /* construct pair (x . y) returns a NaN-boxed CONS */
 L cons(L x, L y) {
-  cell[--sp] = x;
-  cell[--sp] = y;
-  if (hp > sp<<3)
+  cell[--sp] = x;                               /* push the car value x */
+  cell[--sp] = y;                               /* push the cdr value y */
+  if (hp > sp<<3)                               /* abort when out of memory */
     abort();
   return box(CONS, sp);
 }
