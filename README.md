@@ -153,9 +153,9 @@ if `x` is not `()` (meaning not false, i.e. true), then return `y` else return `
 
 ### Lambdas
 
-    (lambda <parameters> <expr>)
+    (lambda <variables> <expr>)
 
-returns an anonymous function "closure" with a list of parameters and an expression as its body.  For example, `(lambda (n) (* n n))` squares its argument.  The parameters of a lambda may be a single name (not placed in a list) to pass all arguments as a named list.  For example, `(lambda args args)` returns its arguments as a list.  The pair dot may be used to indicate the rest of the arguments.  For example, `(lambda (f x . args) (f . args))` applies a function argument`f` to the arguments `args`, while ignoring `x`.  The closure includes the lexical scope of the lambda, i.e. local names defined in the outer scope can be used in the body.  For example, `(lambda (f x) (lambda args (f x . args)))` is a function that takes function `f` and argument `x` to return a [curried function](https://en.wikipedia.org/wiki/Currying).
+returns an anonymous function "closure" with a list of variables and an expression as its body.  For example, `(lambda (n) (* n n))` squares its argument.  The variables of a lambda may be a single name (not placed in a list) to pass all arguments as a named list.  For example, `(lambda args args)` returns its arguments as a list.  The pair dot may be used to indicate the rest of the arguments.  For example, `(lambda (f x . args) (f . args))` applies a function argument`f` to the arguments `args`, while ignoring `x`.  The closure includes the lexical scope of the lambda, i.e. local names defined in the outer scope can be used in the body.  For example, `(lambda (f x) (lambda args (f x . args)))` is a function that takes function `f` and argument `x` to return a [curried function](https://en.wikipedia.org/wiki/Currying).
 
 ### Globals
 
@@ -191,16 +191,16 @@ evaluates `y` with a local scope of recursive bindings for symbols `v` sequentua
 
     (setq <symbol> x)
 
-assigns a globally or locally-bound symbol a new value.
+destructively assigns a globally or locally-bound symbol a new value.
 
     (set-car! <pair> x)
     (set-cdr! <pair> y)
 
-assign a pair a new car or cdr value, respectively.
+destructively assigns a pair a new car or cdr value, respectively.
 
-    (macro <parameters> <expr>)
+    (macro <variables> <expr>)
 
-a macro is like a function, except that it does not evaluate its arguments.  Macros typically construct Lisp code that is evaluated when the macro is expanded.
+a macro is like a function, except that it does not evaluate its arguments.  Macros typically construct Lisp code that is evaluated when the macro is expanded.  For example, `(define defun (macro (f v x) (list 'define f (list 'lambda v x))))` defines a `defun` shortcut: `(defun <symbol> <variables> <expr>)` expands to `(define <symbol> (lambda <paramaters> <expr>))`.  The `defun` macro uses `(define list (lambda args args))` to create lists of Lisp code.
 
     (read)
 
