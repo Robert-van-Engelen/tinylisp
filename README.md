@@ -145,7 +145,7 @@ returns the value of the last `x` if all `x` are not `()`.  Otherwise, returns `
 
     (cond (x1 y1) (x2 y2) ... (xk yk))
 
-returns the value of `y` corresponding to the first `x` that is not `()` (meaning not false, i.e. true.)  If an `y` is missing then `y` defaults to `()`.
+returns the value of `y` corresponding to the first `x` that is not `()` (meaning not false, i.e. true.)
 
     (if x y z)
 
