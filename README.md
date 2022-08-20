@@ -200,7 +200,7 @@ destructively assigns a pair a new car or cdr value, respectively.
 
     (macro <variables> <expr>)
 
-a macro is like a function, except that it does not evaluate its arguments.  Macros typically construct Lisp code that is evaluated when the macro is expanded.  For example, `(define defun (macro (f v x) (list 'define f (list 'lambda v x))))` defines a `defun` shortcut: `(defun <symbol> <variables> <expr>)` expands to `(define <symbol> (lambda <paramaters> <expr>))`.  The `defun` macro uses `(define list (lambda args args))` to create lists of Lisp code.
+a macro is like a function, except that it does not evaluate its arguments.  Macros typically construct Lisp code that is evaluated when the macro is expanded.  For example, `(define defun (macro (f v x) (list 'define f (list 'lambda v x))))` defines a `defun` shortcut: `(defun <symbol> <variables> <expr>)` expands to `(define <symbol> (lambda <variables> <expr>))`.  The `defun` macro uses `(define list (lambda args args))` to create lists of Lisp code.
 
     (read)
 
