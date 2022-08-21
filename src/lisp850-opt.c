@@ -26,7 +26,7 @@ L eval(L,L),parse();
 L evlis(L t,L e) {
  L s,*p;
  for (s = nil,p = &s; T t == CONS; p = cell+sp,t = cdr(t)) *p = cons(eval(car(t),e),nil);
- if (T t != NIL) *p = eval(t,e);
+ if (T t == ATOM) *p = assoc(t,e);
  return s;
 }
 L f_eval(L t,L *e) { return car(evlis(t,*e)); }

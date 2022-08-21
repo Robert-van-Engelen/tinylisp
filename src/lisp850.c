@@ -24,7 +24,7 @@ L assoc(L v,L e) { while (T(e) == CONS && !equ(v,car(car(e)))) e = cdr(e); retur
 I not(L x) { return T(x) == NIL; }
 I let(L x) { return T(x) != NIL && !not(cdr(x)); }
 L eval(L,L),parse();
-L evlis(L t,L e) { return T(t) == CONS ? cons(eval(car(t),e),evlis(cdr(t),e)) : eval(t,e); }
+L evlis(L t,L e) { return T(t) == CONS ? cons(eval(car(t),e),evlis(cdr(t),e)) : T(t) == ATOM ? assoc(t,e) : nil; }
 L f_eval(L t,L e) { return eval(car(evlis(t,e)),e); }
 L f_quote(L t,L _) { return car(t); }
 L f_cons(L t,L e) { return t = evlis(t,e),cons(car(t),car(cdr(t))); }

@@ -57,7 +57,7 @@ L box(I t, I i) {
 }
 
 I ord(L x) {
-  return *(unsigned long long*)&x; /* the return value is narrowed to 32 bit unsigned integer to remove the tag */
+  return *(unsigned long long*)&x;      /* the return value is narrowed to 32 bit unsigned integer to remove the tag */
 }
 
 L num(L n) {
@@ -130,7 +130,7 @@ I let(L x) {
 /* return a new list of evaluated Lisp expressions t in environment e */
 L eval(L, L);
 L evlis(L t, L e) {
-  return T(t) == CONS ? cons(eval(car(t), e), evlis(cdr(t), e)) : eval(t, e);
+  return T(t) == CONS ? cons(eval(car(t), e), evlis(cdr(t), e)) : T(t) == ATOM ? assoc(t,e) : nil;
 }
 
 /* Lisp primitives:
