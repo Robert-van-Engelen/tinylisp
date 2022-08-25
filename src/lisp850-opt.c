@@ -38,7 +38,7 @@ L f_add(L t,L *e) { L n = car(t = evlis(t,*e)); while (!not(t = cdr(t))) n += ca
 L f_sub(L t,L *e) { L n = car(t = evlis(t,*e)); while (!not(t = cdr(t))) n -= car(t); return num(n); }
 L f_mul(L t,L *e) { L n = car(t = evlis(t,*e)); while (!not(t = cdr(t))) n *= car(t); return num(n); }
 L f_div(L t,L *e) { L n = car(t = evlis(t,*e)); while (!not(t = cdr(t))) n /= car(t); return num(n); }
-L f_int(L t,L *e) { L n = car(evlis(t,*e)); return n<1e16 && n>-1e16 ? (unsigned long)n : n; }
+L f_int(L t,L *e) { L n = car(evlis(t,*e)); return n-1e9 < 0 && n+1e9 > 0 ? (long)n : n; }
 L f_lt(L t,L *e) { return t = evlis(t,*e),car(t) - car(cdr(t)) < 0 ? tru : nil; }
 L f_eq(L t,L *e) { return t = evlis(t,*e),car(t) == car(cdr(t)) ? tru : nil; }
 L f_not(L t,L *e) { return not(car(evlis(t,*e))) ? tru : nil; }
