@@ -165,7 +165,7 @@ globally defines a symbol associated with the value of an expression.  If the ex
 
 ### Locals
 
-Locals are declared with the following `let*` special form.  This form differ slightly in syntax from other Lisp and Scheme implementations, with the aim to make let-forms more intuitive to use (but you can change it in the Lisp interpreter if you like):
+Locals are declared with the following `let*` special form.  This form differs slightly in syntax from other Lisp and Scheme implementations, with the aim to make let-forms more intuitive to use (but you can change it in the Lisp interpreter if you like):
 
     (let* (v1 x1) (v2 x2) ... (vk xk) y)
 
@@ -225,4 +225,4 @@ throws error `n`, where `n` is a nonzero integer.
 
 ## Spoiler alert!
 
-In "[Lisp in 1k lines of C, explained](https://github.com/Robert-van-Engelen/lisp)" I introduce another small Lisp interpreter that is largely based on tinylisp.  It shares many similarities, but has over 40 built-in Lisp primitives, strings, macros, exceptions, execution tracing, file loading, a mark-sweep/compacting garbage collector and REPL.
+In "[Lisp in 1k lines of C, explained](https://github.com/Robert-van-Engelen/lisp)" I introduce another small Lisp interpreter.  It shares many similarities with tinylisp, but has over 40 built-in Lisp primitives, strings, macros, exceptions, execution tracing, file loading, a mark-sweep/compacting garbage collector and REPL.
