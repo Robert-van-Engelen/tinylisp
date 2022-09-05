@@ -223,6 +223,10 @@ catch exceptions in the evaluation of an expression, returns the value of the ex
 
 throws error `n`, where `n` is a nonzero integer.
 
-## Spoiler alert!
+## There is more: two sequels to tinylisp
 
-In "[Lisp in 1k lines of C, explained](https://github.com/Robert-van-Engelen/lisp)" I introduce another small Lisp interpreter.  It shares many similarities with tinylisp, but has over 40 built-in Lisp primitives, strings, macros, exceptions, execution tracing, file loading, a mark-sweep/compacting garbage collector and REPL.
+In addition to tinylisp, I've written two other small classic Lisp implementations that share similarities with tinylisp, but expanded to include over 40 built-in Lisp primitives, strings, macros, exceptions, execution tracing, file loading, and a REPL:
+
+- [Lisp in 1k lines of C with garbage collector, explained](https://github.com/Robert-van-Engelen/lisp) uses mark-sweep/compacting garbage collection.  Unlike tinylisp however, a separate pool of free cons pair cells is used to construct lists.  The garbage collector frees up space in the pool using mark-sweep.  Space is freed up in the atom/string heap by compacting the heap after mark-sweep using pointer reversal.
+
+- [Lisp in 1k lines of C with Cheney's copying garbage collector, explained](https://github.com/Robert-van-Engelen/lisp-cheney) uses Cheney's copying garbage collector.  Like tinylisp, a stack is used to efficiently construct lists, i.e. by pushing two cells at a time on the stack to allocate cons pairs.  Heap allocation simply pushes atom/string space up from the bottom of the heap (towards the stack).  The garbage collector frees up stack and heap space by copying the active cons pair cells, atoms and strings to a new stack/heap.
