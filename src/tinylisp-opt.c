@@ -82,7 +82,7 @@ L eval(L x,L e) {
  }
 }
 char buf[40],see = ' ';
-void look() { see = getchar(); }
+void look() { int c = getchar(); see = c; if (c == EOF) exit(0); }
 I seeing(char c) { return c == ' ' ? see > 0 && see <= c : see == c; }
 char get() { char c = see; look(); return c; }
 char scan() {

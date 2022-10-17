@@ -331,7 +331,10 @@ char buf[40], see = ' ';
 
 /* advance to the next character */
 void look() {
-  see = getchar();
+  int c = getchar();
+  see = c;
+  if (c == EOF)
+    exit(0);
 }
 
 /* return nonzero if we are looking at character c, ' ' means any white space */
