@@ -1,8 +1,8 @@
 /* tinylisp-commented.c with NaN boxing by Robert A. van Engelen 2022 */
 /* tinylisp.c but adorned with comments in an (overly) verbose C style */
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 /* we only need two types to implement a Lisp interpreter:
@@ -29,20 +29,28 @@
 #define A (char*)cell
 
 /* number of cells for the shared stack and atom heap, increase N as desired */
-#define N 1024
+#define N (1024 * 10)
 
 /* hp: heap pointer, A+hp with hp=0 points to the first atom string in cell[]
    sp: stack pointer, the stack starts at the top of cell[] with sp=N
    safety invariant: hp <= sp<<3 */
 I hp = 0, sp = N;
 
-/* atom, primitive, cons, closure and nil tags for NaN boxing */
+/* atom, primitive, cons, closure and nil tags for NaN boxing
+  Note that:
+  MSB 1 bit is for sign - set to 0 as the 7 has that bit set to 0.
+  the following 11 bits set at 1 indicate a NaN number, these are the three low
+  bits that make up the first 7 and subsequent FF. Next bit set at 1 indicates a
+  silent NaN The next 3 bits are the ones that tags use - so there are max 8
+  values, but we need 5.
+ */
 I ATOM = 0x7ff8, PRIM = 0x7ff9, CONS = 0x7ffa, CLOS = 0x7ffb, NIL = 0x7ffc;
 
 /* cell[N] array of Lisp expressions, shared by the stack and atom heap */
 L cell[N];
 
-/* Lisp constant expressions () (nil), #t, ERR, and the global environment env */
+/* Lisp constant expressions () (nil), #t, ERR, and the global environment env
+ */
 L nil, tru, err, env;
 
 /* NaN-boxing specific functions:
@@ -57,19 +65,25 @@ L box(I t, I i) {
 }
 
 I ord(L x) {
-  return *(unsigned long long*)&x;      /* the return value is narrowed to 32 bit unsigned integer to remove the tag */
+  return *(unsigned long long*)&x; /* the return value is narrowed to 32 bit
+                                      unsigned integer to remove the tag */
 }
 
+// Clears the tag bits when converting to double or float the NaN value passed
+// in.
 L num(L n) {
   return n;
 }
-
+// bitwise comparison because == does not work on NaN numbers.
 I equ(L x, L y) {
   return *(unsigned long long*)&x == *(unsigned long long*)&y;
 }
 
-/* interning of atom names (Lisp symbols), returns a unique NaN-boxed ATOM */
-L atom(const char *s) {
+/* interning of atom names (Lisp symbols), returns a unique NaN-boxed ATOM
+   Note: Uses heap space thus starting from the bottom of cell array.
+   the cell array.
+*/
+L atom(const char* s) {
   I i = 0;
   while (i < hp && strcmp(A+i, s))              /* search for a matching atom name on the heap */
     i += strlen(A+i)+1;
@@ -81,7 +95,9 @@ L atom(const char *s) {
   return box(ATOM, i);
 }
 
-/* construct pair (x . y) returns a NaN-boxed CONS */
+/* construct pair (x . y) returns a NaN-boxed CONS
+   Note: Uses stack space thus starting from the top of cell array.
+*/
 L cons(L x, L y) {
   cell[--sp] = x;                               /* push the car value x */
   cell[--sp] = y;                               /* push the cdr value y */
@@ -92,7 +108,7 @@ L cons(L x, L y) {
 
 /* return the car of a pair or ERR if not a pair */
 L car(L p) {
-  return (T(p) & ~(CONS^CLOS)) == CONS ? cell[ord(p)+1] : err;
+  return (T(p) & ~(CONS ^ CLOS)) == CONS ? cell[ord(p) + 1] : err;
 }
 
 /* return the cdr of a pair or ERR if not a pair */
@@ -219,7 +235,7 @@ L f_div(L t, L e) {
 
 L f_int(L t, L e) {
   L n = car(evlis(t, e));
-  return n<1e16 && n>-1e16 ? (long long)n : n;
+  return n < 1e16 && n > -1e16 ? (long long)n : n;
 }
 
 L f_lt(L t, L e) {
@@ -234,16 +250,16 @@ L f_not(L t, L e) {
   return not(car(evlis(t, e))) ? tru : nil;
 }
 
-L f_or(L t,L e) {
+L f_or(L t, L e) {
   L x = nil;
-  while (T(t) != NIL && not(x = eval(car(t),e)))
+  while (T(t) != NIL && not(x = eval(car(t), e)))
     t = cdr(t);
   return x;
 }
 
-L f_and(L t,L e) {
+L f_and(L t, L e) {
   L x = nil;
-  while (T(t) != NIL && !not(x = eval(car(t),e)))
+  while (T(t) != NIL && !not(x = eval(car(t), e)))
     t = cdr(t);
   return x;
 }
@@ -312,7 +328,8 @@ L reduce(L f, L t, L e) {
   return eval(cdr(car(f)), bind(car(car(f)), evlis(t, e), not(cdr(f)) ? env : cdr(f)));
 }
 
-/* apply closure or primitive f to arguments t in environment e, or return ERR */
+/* apply closure or primitive f to arguments t in environment e, or return ERR
+ */
 L apply(L f, L t, L e) {
   return T(f) == PRIM ? prim[ord(f)].f(t, e) :
          T(f) == CLOS ? reduce(f, t, e) :
@@ -357,9 +374,9 @@ char scan() {
   if (seeing('(') || seeing(')') || seeing('\''))
     buf[i++] = get();
   else
-    do
+    do {
       buf[i++] = get();
-    while (i < 39 && !seeing('(') && !seeing(')') && !seeing(' '));
+    } while (i < 39 && !seeing('(') && !seeing(')') && !seeing(' '));
   buf[i] = 0;
   return *buf;
 }
@@ -392,7 +409,8 @@ L quote() {
 
 /* return a parsed atomic Lisp expression (a number or an atom) */
 L atomic() {
-  L n; I i;
+  L n; 
+  I i;
   return (sscanf(buf, "%lg%n", &n, &i) > 0 && !buf[i]) ? n :
          atom(buf);
 }
@@ -407,7 +425,7 @@ L parse() {
 /* display a Lisp list t */
 void print(L);
 void printlist(L t) {
-  for (putchar('('); ; putchar(' ')) {
+  for (putchar('(');; putchar(' ')) {
     print(car(t));
     t = cdr(t);
     if (T(t) == NIL)
@@ -426,7 +444,7 @@ void print(L x) {
   if (T(x) == NIL)
     printf("()");
   else if (T(x) == ATOM)
-    printf("%s", A+ord(x));
+    printf("%s", A + ord(x));
   else if (T(x) == PRIM)
     printf("<%s>", prim[ord(x)].s);
   else if (T(x) == CONS)
@@ -453,7 +471,7 @@ int main() {
   for (i = 0; prim[i].s; ++i)
     env = pair(atom(prim[i].s), box(PRIM, i), env);
   while (1) {
-    printf("\n%u>", sp-hp/8);
+    printf("\n%u>", sp - hp / 8);
     print(eval(read(), env));
     gc();
   }
