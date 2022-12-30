@@ -23,10 +23,10 @@
 #define L double
 
 /* T(x) returns the tag bits of a NaN-boxed Lisp expression x */
-#define T(x) *(unsigned long long*)&x >> 48
+#define T(x) *(unsigned long long *)&x >> 48
 
 /* address of the atom heap is at the bottom of the cell stack */
-#define A (char*)cell
+#define A (char *)cell
 
 /* number of cells for the shared stack and atom heap, increase N as desired */
 #define N (1024 * 10)
@@ -60,36 +60,32 @@ L nil, tru, err, env;
    equ(x,y): returns nonzero if x equals y */
 L box(I t, I i) {
   L x;
-  *(unsigned long long*)&x = (unsigned long long)t << 48 | i;
+  *(unsigned long long *)&x = (unsigned long long)t << 48 | i;
   return x;
 }
 
 I ord(L x) {
-  return *(unsigned long long*)&x; /* the return value is narrowed to 32 bit
-                                      unsigned integer to remove the tag */
+  return *(unsigned long long *)&x; /* the return value is narrowed to 32 bit
+                                       unsigned integer to remove the tag */
 }
 
 // Clears the tag bits when converting to double or float the NaN value passed
 // in.
-L num(L n) {
-  return n;
-}
+L num(L n) { return n; }
 // bitwise comparison because == does not work on NaN numbers.
-I equ(L x, L y) {
-  return *(unsigned long long*)&x == *(unsigned long long*)&y;
-}
+I equ(L x, L y) { return *(unsigned long long *)&x == *(unsigned long long *)&y; }
 
 /* interning of atom names (Lisp symbols), returns a unique NaN-boxed ATOM
    Note: Uses heap space thus starting from the bottom of cell array.
    the cell array.
 */
-L atom(const char* s) {
+L atom(const char *s) {
   I i = 0;
-  while (i < hp && strcmp(A+i, s))              /* search for a matching atom name on the heap */
-    i += strlen(A+i)+1;
-  if (i == hp) {                                /* if not found */
-    hp += strlen(strcpy(A+i, s))+1;             /*   allocate and add a new atom name to the heap */
-    if (hp > sp<<3)                             /* abort when out of memory */
+  while (i < hp && strcmp(A + i, s)) /* search for a matching atom name on the heap */
+    i += strlen(A + i) + 1;
+  if (i == hp) {                        /* if not found */
+    hp += strlen(strcpy(A + i, s)) + 1; /*   allocate and add a new atom name to the heap */
+    if (hp > sp << 3)                   /* abort when out of memory */
       abort();
   }
   return box(ATOM, i);
@@ -99,54 +95,41 @@ L atom(const char* s) {
    Note: Uses stack space thus starting from the top of cell array.
 */
 L cons(L x, L y) {
-  cell[--sp] = x;                               /* push the car value x */
-  cell[--sp] = y;                               /* push the cdr value y */
-  if (hp > sp<<3)                               /* abort when out of memory */
+  cell[--sp] = x;   /* push the car value x */
+  cell[--sp] = y;   /* push the cdr value y */
+  if (hp > sp << 3) /* abort when out of memory */
     abort();
   return box(CONS, sp);
 }
 
 /* return the car of a pair or ERR if not a pair */
-L car(L p) {
-  return (T(p) & ~(CONS ^ CLOS)) == CONS ? cell[ord(p) + 1] : err;
-}
+L car(L p) { return (T(p) & ~(CONS ^ CLOS)) == CONS ? cell[ord(p) + 1] : err; }
 
 /* return the cdr of a pair or ERR if not a pair */
-L cdr(L p) {
-  return (T(p) & ~(CONS^CLOS)) == CONS ? cell[ord(p)] : err;
-}
+L cdr(L p) { return (T(p) & ~(CONS ^ CLOS)) == CONS ? cell[ord(p)] : err; }
 
 /* construct a pair to add to environment e, returns the list ((v . x) . e) */
-L pair(L v, L x, L e) {
-  return cons(cons(v, x), e);
-}
+L pair(L v, L x, L e) { return cons(cons(v, x), e); }
 
 /* construct a closure, returns a NaN-boxed CLOS */
-L closure(L v, L x, L e) {
-  return box(CLOS, ord(pair(v, x, equ(e, env) ? nil : e)));
-}
+L closure(L v, L x, L e) { return box(CLOS, ord(pair(v, x, equ(e, env) ? nil : e))); }
 
 /* look up a symbol in an environment, return its value or ERR if not found */
 L assoc(L v, L e) {
-  while (T(e) == CONS && !equ(v, car(car(e))))
-    e = cdr(e);
+  while (T(e) == CONS && !equ(v, car(car(e)))) e = cdr(e);
   return T(e) == CONS ? cdr(car(e)) : err;
 }
 
 /* not(x) is nonzero if x is the Lisp () empty list */
-I not(L x) {
-  return T(x) == NIL;
-}
+I not(L x) { return T(x) == NIL; }
 
 /* let(x) is nonzero if x is a Lisp let/let* pair */
-I let(L x) {
-  return T(x) != NIL && !not(cdr(x));
-}
+I let(L x) { return T(x) != NIL && !not(cdr(x)); }
 
 /* return a new list of evaluated Lisp expressions t in environment e */
 L eval(L, L);
 L evlis(L t, L e) {
-  return T(t) == CONS ? cons(eval(car(t), e), evlis(cdr(t), e)) : T(t) == ATOM ? assoc(t,e) : nil;
+  return T(t) == CONS ? cons(eval(car(t), e), evlis(cdr(t), e)) : T(t) == ATOM ? assoc(t, e) : nil;
 }
 
 /* Lisp primitives:
@@ -176,33 +159,24 @@ L evlis(L t, L e) {
          y)            sequentially binds each variable v1 to xi to evaluate y
    (lambda v x)        construct a closure
    (define v x)        define a named value globally */
-L f_eval(L t, L e) {
-  return eval(car(evlis(t, e)), e);
-}
+L f_eval(L t, L e) { return eval(car(evlis(t, e)), e); }
 
-L f_quote(L t, L _) {
-  return car(t);
-}
+L f_quote(L t, L _) { return car(t); }
 
 L f_cons(L t, L e) {
   t = evlis(t, e);
   return cons(car(t), car(cdr(t)));
 }
 
-L f_car(L t, L e) {
-  return car(car(evlis(t, e)));
-}
+L f_car(L t, L e) { return car(car(evlis(t, e))); }
 
-L f_cdr(L t, L e) {
-  return cdr(car(evlis(t, e)));
-}
+L f_cdr(L t, L e) { return cdr(car(evlis(t, e))); }
 
 L f_add(L t, L e) {
   L n;
   t = evlis(t, e);
   n = car(t);
-  while (!not(t = cdr(t)))
-    n += car(t);
+  while (!not(t = cdr(t))) n += car(t);
   return num(n);
 }
 
@@ -210,8 +184,7 @@ L f_sub(L t, L e) {
   L n;
   t = evlis(t, e);
   n = car(t);
-  while (!not(t = cdr(t)))
-    n -= car(t);
+  while (!not(t = cdr(t))) n -= car(t);
   return num(n);
 }
 
@@ -219,8 +192,7 @@ L f_mul(L t, L e) {
   L n;
   t = evlis(t, e);
   n = car(t);
-  while (!not(t = cdr(t)))
-    n *= car(t);
+  while (!not(t = cdr(t))) n *= car(t);
   return num(n);
 }
 
@@ -228,8 +200,7 @@ L f_div(L t, L e) {
   L n;
   t = evlis(t, e);
   n = car(t);
-  while (!not(t = cdr(t)))
-    n /= car(t);
+  while (!not(t = cdr(t))) n /= car(t);
   return num(n);
 }
 
@@ -238,51 +209,37 @@ L f_int(L t, L e) {
   return n < 1e16 && n > -1e16 ? (long long)n : n;
 }
 
-L f_lt(L t, L e) {
-  return t = evlis(t, e), car(t) - car(cdr(t)) < 0 ? tru : nil;
-}
+L f_lt(L t, L e) { return t = evlis(t, e), car(t) - car(cdr(t)) < 0 ? tru : nil; }
 
-L f_eq(L t, L e) {
-  return t = evlis(t, e), equ(car(t), car(cdr(t))) ? tru : nil;
-}
+L f_eq(L t, L e) { return t = evlis(t, e), equ(car(t), car(cdr(t))) ? tru : nil; }
 
-L f_not(L t, L e) {
-  return not(car(evlis(t, e))) ? tru : nil;
-}
+L f_not(L t, L e) { return not(car(evlis(t, e))) ? tru : nil; }
 
 L f_or(L t, L e) {
   L x = nil;
-  while (T(t) != NIL && not(x = eval(car(t), e)))
-    t = cdr(t);
+  while (T(t) != NIL && not(x = eval(car(t), e))) t = cdr(t);
   return x;
 }
 
 L f_and(L t, L e) {
   L x = nil;
-  while (T(t) != NIL && !not(x = eval(car(t), e)))
-    t = cdr(t);
+  while (T(t) != NIL && !not(x = eval(car(t), e))) t = cdr(t);
   return x;
 }
 
 L f_cond(L t, L e) {
-  while (T(t) != NIL && not(eval(car(car(t)), e)))
-    t = cdr(t);
+  while (T(t) != NIL && not(eval(car(car(t)), e))) t = cdr(t);
   return eval(car(cdr(car(t))), e);
 }
 
-L f_if(L t, L e) {
-  return eval(car(cdr(not(eval(car(t), e)) ? cdr(t) : t)), e);
-}
+L f_if(L t, L e) { return eval(car(cdr(not(eval(car(t), e)) ? cdr(t) : t)), e); }
 
 L f_leta(L t, L e) {
-  for (; let(t); t = cdr(t))
-    e = pair(car(car(t)), eval(car(cdr(car(t))), e), e);
+  for (; let(t); t = cdr(t)) e = pair(car(car(t)), eval(car(cdr(car(t))), e), e);
   return eval(car(t), e);
 }
 
-L f_lambda(L t, L e) {
-  return closure(car(t), car(cdr(t)), e);
-}
+L f_lambda(L t, L e) { return closure(car(t), car(cdr(t)), e); }
 
 L f_define(L t, L e) {
   env = pair(car(t), eval(car(cdr(t)), e), env);
@@ -293,34 +250,19 @@ L f_define(L t, L e) {
 struct {
   const char *s;
   L (*f)(L, L);
-} prim[] = {
-  {"eval",   f_eval},
-  {"quote",  f_quote},
-  {"cons",   f_cons},
-  {"car",    f_car},
-  {"cdr",    f_cdr},
-  {"+",      f_add},
-  {"-",      f_sub},
-  {"*",      f_mul},
-  {"/",      f_div},
-  {"int",    f_int},
-  {"<",      f_lt},
-  {"eq?",    f_eq},
-  {"or",     f_or},
-  {"and",    f_and},
-  {"not",    f_not},
-  {"cond",   f_cond},
-  {"if",     f_if},
-  {"let*",   f_leta},
-  {"lambda", f_lambda},
-  {"define", f_define},
-  {0}};
+} prim[] = {{"eval", f_eval},     {"quote", f_quote},   {"cons", f_cons},
+            {"car", f_car},       {"cdr", f_cdr},       {"+", f_add},
+            {"-", f_sub},         {"*", f_mul},         {"/", f_div},
+            {"int", f_int},       {"<", f_lt},          {"eq?", f_eq},
+            {"or", f_or},         {"and", f_and},       {"not", f_not},
+            {"cond", f_cond},     {"if", f_if},         {"let*", f_leta},
+            {"lambda", f_lambda}, {"define", f_define}, {0}};
 
 /* create environment by extending e with variables v bound to values t */
 L bind(L v, L t, L e) {
-  return T(v) == NIL ? e :
-         T(v) == CONS ? bind(cdr(v), cdr(t), pair(car(v), car(t), e)) :
-         pair(v, t, e);
+  return T(v) == NIL    ? e
+         : T(v) == CONS ? bind(cdr(v), cdr(t), pair(car(v), car(t), e))
+                        : pair(v, t, e);
 }
 
 /* apply closure f to arguments t in environemt e */
@@ -331,16 +273,12 @@ L reduce(L f, L t, L e) {
 /* apply closure or primitive f to arguments t in environment e, or return ERR
  */
 L apply(L f, L t, L e) {
-  return T(f) == PRIM ? prim[ord(f)].f(t, e) :
-         T(f) == CLOS ? reduce(f, t, e) :
-         err;
+  return T(f) == PRIM ? prim[ord(f)].f(t, e) : T(f) == CLOS ? reduce(f, t, e) : err;
 }
 
 /* evaluate x and return its value in environment e */
 L eval(L x, L e) {
-  return T(x) == ATOM ? assoc(x, e) :
-         T(x) == CONS ? apply(eval(car(x), e), cdr(x), e) :
-         x;
+  return T(x) == ATOM ? assoc(x, e) : T(x) == CONS ? apply(eval(car(x), e), cdr(x), e) : x;
 }
 
 /* tokenization buffer and the next character that we are looking at */
@@ -350,14 +288,11 @@ char buf[40], see = ' ';
 void look() {
   int c = getchar();
   see = c;
-  if (c == EOF)
-    exit(0);
+  if (c == EOF) exit(0);
 }
 
 /* return nonzero if we are looking at character c, ' ' means any white space */
-I seeing(char c) {
-  return c == ' ' ? see > 0 && see <= c : see == c;
-}
+I seeing(char c) { return c == ' ' ? see > 0 && see <= c : see == c; }
 
 /* return the look ahead character from standard input, advance to the next */
 char get() {
@@ -369,12 +304,9 @@ char get() {
 /* tokenize into buf[], return first character of buf[] */
 char scan() {
   I i = 0;
-  while (seeing(' '))
-    look();
-  if (seeing('(') || seeing(')') || seeing('\''))
-    buf[i++] = get();
-  else
-    do {
+  while (seeing(' ')) look();
+  if (seeing('(') || seeing(')') || seeing('\'')) buf[i++] = get();
+  else do {
       buf[i++] = get();
     } while (i < 39 && !seeing('(') && !seeing(')') && !seeing(' '));
   buf[i] = 0;
@@ -391,8 +323,7 @@ L read() {
 /* return a parsed Lisp list */
 L list() {
   L x;
-  if (scan() == ')')
-    return nil;
+  if (scan() == ')') return nil;
   if (!strcmp(buf, ".")) {
     x = read();
     scan();
@@ -403,24 +334,17 @@ L list() {
 }
 
 /* return a parsed Lisp expression x quoted as (quote x) */
-L quote() {
-  return cons(atom("quote"), cons(read(), nil));
-}
+L quote() { return cons(atom("quote"), cons(read(), nil)); }
 
 /* return a parsed atomic Lisp expression (a number or an atom) */
 L atomic() {
-  L n; 
+  L n;
   I i;
-  return (sscanf(buf, "%lg%n", &n, &i) > 0 && !buf[i]) ? n :
-         atom(buf);
+  return (sscanf(buf, "%lg%n", &n, &i) > 0 && !buf[i]) ? n : atom(buf);
 }
 
 /* return a parsed Lisp expression */
-L parse() {
-  return *buf == '(' ? list() :
-         *buf == '\'' ? quote() :
-         atomic();
-}
+L parse() { return *buf == '(' ? list() : *buf == '\'' ? quote() : atomic(); }
 
 /* display a Lisp list t */
 void print(L);
@@ -428,8 +352,7 @@ void printlist(L t) {
   for (putchar('(');; putchar(' ')) {
     print(car(t));
     t = cdr(t);
-    if (T(t) == NIL)
-      break;
+    if (T(t) == NIL) break;
     if (T(t) != CONS) {
       printf(" . ");
       print(t);
@@ -441,38 +364,22 @@ void printlist(L t) {
 
 /* display a Lisp expression x */
 void print(L x) {
-  if (T(x) == NIL)
-    printf("()");
-  else if (T(x) == ATOM)
-    printf("%s", A + ord(x));
-  else if (T(x) == PRIM)
-    printf("<%s>", prim[ord(x)].s);
-  else if (T(x) == CONS)
-    printlist(x);
-  else if (T(x) == CLOS)
-    printf("{%u}", ord(x));
-  else
-    printf("%.10lg", x);
+  if (T(x) == NIL) printf("()");
+  else if (T(x) == ATOM) printf("%s", A + ord(x));
+  else if (T(x) == PRIM) printf("<%s>", prim[ord(x)].s);
+  else if (T(x) == CONS) printlist(x);
+  else if (T(x) == CLOS) printf("{%u}", ord(x));
+  else printf("%.10lg", x);
 }
 
 /* garbage collection removes temporary cells, keeps global environment */
-void gc() {
-  sp = ord(env);
-}
+void gc() { sp = ord(env); }
 
 /* Lisp initialization and REPL */
-int main() {
-  I i;
-  printf("tinylisp");
+void init() {
   nil = box(NIL, 0);
   err = atom("ERR");
   tru = atom("#t");
   env = pair(tru, tru, nil);
-  for (i = 0; prim[i].s; ++i)
-    env = pair(atom(prim[i].s), box(PRIM, i), env);
-  while (1) {
-    printf("\n%u>", sp - hp / 8);
-    print(eval(read(), env));
-    gc();
-  }
+  for (I i = 0; prim[i].s; ++i) env = pair(atom(prim[i].s), box(PRIM, i), env);
 }
