@@ -304,7 +304,7 @@ char buf[40], see = ' ';
 void look() {
   int c = getchar();
   see   = c;
-  if (c == EOF) exit(0);
+  if (c == EOF) freopen("/dev/tty","r",stdin);
 }
 
 /* return nonzero if we are looking at character c, ' ' means any white space */

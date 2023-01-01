@@ -13,6 +13,6 @@ L read(void);
 void print(L exp);
 void pretty_print(L x, int level);
 void init(void);
-int _main(void);
+int _main(int argc, char **argv);
 
 #endif  // ifndef __TINY_LISP_H
