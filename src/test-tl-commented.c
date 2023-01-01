@@ -169,6 +169,9 @@ void tearDown(void) {}
 //   TEST_ASSERT_EQUAL_STRING_MESSAGE(expected, result, result);
 // }
 
+
+
+
 #include <signal.h>
 
 // Runs the test(s)
@@ -176,7 +179,7 @@ int main(void) {
   // Uncomment the following line to attach debugger to running program.
   // raise(SIGSTOP);
 
-  save_iostreams();
+  // save_iostreams();
   UnityBegin("tinylisp-commented.c");
   // RUN_TEST(test_single_number);
   // RUN_TEST(test_simple_addition);

@@ -8,7 +8,7 @@ EXE_OBJ_COMMON=main.o $(LINK_COMMON)
 .DEFAULT_GOAL := all
 
 .PHONY: all
-all: tinylisp-commented tinylisp tinylisp-opt  \
+all: tinylisp-commented tinylisp-readline tinylisp tinylisp-opt  \
 	 test-tl-commented 
 
 # tinylisp-float tinylisp-float-opt
@@ -19,6 +19,9 @@ clean:
 
 tinylisp-commented: tinylisp-commented.o $(EXE_OBJ_COMMON)
 	$(CC) $(CFLAGS) -o $@  $^
+
+tinylisp-readline: tinylisp-readline.o
+	$(CC) $(CFLAGS) -o $@  $^ -lreadline
 
 test-tl-commented: test-tl-commented.o tinylisp-commented.o $(TEST_OBJ_COMMON)
 	$(CC) $(CFLAGS) -o $@  $^

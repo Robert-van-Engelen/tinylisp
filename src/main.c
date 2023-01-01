@@ -2,7 +2,10 @@
 
 #include "tinylisp.h"
 
+// #include <signal.h>
+
 int main() {
+  // raise(SIGSTOP);
   printf("tinylisp");
   init();
   while (1) {

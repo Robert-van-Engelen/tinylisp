@@ -1,6 +1,8 @@
 /* tinylisp-commented.c with NaN boxing by Robert A. van Engelen 2022 */
 /* tinylisp.c but adorned with comments in an (overly) verbose C style */
 
+#include <readline/history.h>
+#include <readline/readline.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,7 +25,7 @@
 #define L double
 
 /* T(x) returns the tag bits of a NaN-boxed Lisp expression x */
-#define T(x) *(unsigned long long *)&x >> 48
+#define T(x) (*(unsigned long long *)&x >> 48)
 
 /* address of the atom heap is at the bottom of the cell stack */
 #define A (char *)cell
@@ -288,25 +290,55 @@ L reduce(L f, L t, L e) {
 
 /* apply closure or primitive f to arguments t in environment e, or return ERR
  */
+// clang-format off
 L apply(L f, L t, L e) {
-  return T(f) == PRIM ? prim[ord(f)].f(t, e) : T(f) == CLOS ? reduce(f, t, e) : err;
+  return T(f) == PRIM ? prim[ord(f)].f(t, e) :
+         T(f) == CLOS ? reduce(f, t, e) : 
+         err;
 }
 
 /* evaluate x and return its value in environment e */
+L step(L x, L e) {
+  return T(x) == ATOM ? assoc(x, e) :
+         T(x) == CONS ? apply(eval(car(x), e), cdr(x), e) :
+         x;
+}
+
+// clang-format on
+
+void print(L);
 L eval(L x, L e) {
-  return T(x) == ATOM ? assoc(x, e) : T(x) == CONS ? apply(eval(car(x), e), cdr(x), e) : x;
+  L y = step(x, e);
+  printf("%u: ", sp);
+  print(x);
+  printf(" => ");
+  print(y);
+  printf("\n");
+  while (getchar() >= ' ') continue;
+  return y;
 }
 
 /* tokenization buffer and the next character that we are looking at */
-char buf[40], see = ' ';
+char buf[40], see = ' ', *ptr = "", *line = NULL, ps[20];
+FILE *in = NULL;
 
 /* advance to the next character */
 void look() {
-  int c = getchar();
-  see   = c;
-  if (c == EOF) exit(0);
+  if (in) {
+    int c = getc(in);
+    see   = c;
+    if (c != EOF) return;
+    fclose(in);
+    in = NULL;
+  }
+  if (see == '\n') {
+    if (line) free(line);
+    while (!(ptr = line = readline(ps))) freopen("/dev/tty", "r", stdin);
+    add_history(line);
+    strcpy(ps, "?");
+  }
+  if (!(see = *ptr++)) see = '\n';
 }
-
 /* return nonzero if we are looking at character c, ' ' means any white space */
 I seeing(char c) { return c == ' ' ? see > 0 && see <= c : see == c; }
 
@@ -356,7 +388,8 @@ L quote() { return cons(atom("quote"), cons(read(), nil)); }
 L atomic() {
   L n;
   I i;
-  return (sscanf(buf, "%lg%n", &n, &i) > 0 && !buf[i]) ? n : atom(buf);
+  L r_n = (sscanf(buf, "%lg%n", &n, &i) > 0 && !buf[i]) ? n : atom(buf);
+  return r_n;
 }
 
 /* return a parsed Lisp expression */
@@ -393,10 +426,29 @@ void gc() { sp = ord(env); }
 
 /* Lisp initialization and REPL */
 void init() {
-  hp = 0, sp = N;
+  // ptr = "", line = NULL;
+  hp  = 0;
+  sp  = N;
   nil = box(NIL, 0);
   err = atom("ERR");
   tru = atom("#t");
   env = pair(tru, tru, nil);
   for (I i = 0; prim[i].s; ++i) env = pair(atom(prim[i].s), box(PRIM, i), env);
+  // pretty_print(env, 0);
+  // for (int i = 0; i < 40; i++) buf[i] = '\0';
+}
+
+int main(int argc, char **argv) {
+  // raise(SIGSTOP);
+  printf("tinylisp");
+  in = freopen("/dev/tty", "r", stdin);
+  ;  // ((argc > 1 ? argv[1] : "init.lisp"), "r");
+  init();
+  using_history();
+  while (1) {
+    putchar('\n');
+    snprintf(ps, 20, "%u>", sp - hp / 8);
+    print(eval(read(), env));
+    gc();
+  }
 }
