@@ -1,5 +1,6 @@
 CC=clang
 CFLAGS=-std=c2x -g -Wall
+#CFLAGS.test-tl-commented += -DDEBUG
 
 #LINK_COMMON=lex.o
 TEST_OBJ_COMMON=../test-framework/unity.o $(LINK_COMMON)

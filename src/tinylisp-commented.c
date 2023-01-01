@@ -392,11 +392,27 @@ void print(L x) {
 void gc() { sp = ord(env); }
 
 /* Lisp initialization and REPL */
-void init() {
-  hp = 0, sp = N;
+// void init() {
+//   hp = 0, sp = N;
+//   nil = box(NIL, 0);
+//   err = atom("ERR");
+//   tru = atom("#t");
+//   env = pair(tru, tru, nil);
+//   for (I i = 0; prim[i].s; ++i) env = pair(atom(prim[i].s), box(PRIM, i), env);
+// }
+
+int _main() {
+  int i;
+  // init();
+  printf("tinylisp");
   nil = box(NIL, 0);
   err = atom("ERR");
   tru = atom("#t");
   env = pair(tru, tru, nil);
-  for (I i = 0; prim[i].s; ++i) env = pair(atom(prim[i].s), box(PRIM, i), env);
+  for (i = 0; prim[i].s; ++i) env = pair(atom(prim[i].s), box(PRIM, i), env);
+  while (1) {
+    printf("\n%u>", sp - hp / 8);
+    print(eval(read(), env));
+    gc();
+  }
 }
