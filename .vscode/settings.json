@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "tinylisp.h": "c"
+    },
+    "C_Cpp.errorSquiggles": "disabled"
+}
