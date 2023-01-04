@@ -7,15 +7,11 @@
     },
     "C_Cpp.errorSquiggles": "disabled",
     "C_Cpp.default.configurationProvider": "ms-vscode.makefile-tools",
+    "makefile.makeDirectory": "./src",
     "makefile.launchConfigurations": [
         {
             "cwd": "${workspaceFolder}/src",
             "binaryPath": "${workspaceFolder}/src/tinylisp-tested",
-            "binaryArgs": []
-        },
-        {
-            "cwd": "${workspaceFolder}/src",
-            "binaryPath": "${workspaceFolder}/src/tinylisp-tl-tested",
             "binaryArgs": []
         },
         {
