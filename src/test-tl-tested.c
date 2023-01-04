@@ -1,74 +1,78 @@
 // ----------------------------------------------------------------------------
 
-// #define _GNU_SOURCE
+#define _GNU_SOURCE
 // #define _POSIX_C_SOURCE
 #include <stdbool.h>
-// #include <stdio.h>
-// #include <stdlib.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-// #include <unistd.h>
+#include <unistd.h>
 
-// FILE *_test_saved_stdin, *_test_saved_stdout, *_test_saved_stderr;
+FILE *_test_saved_stdin = NULL, *_test_saved_stdout = NULL, *_test_saved_stderr = NULL;
 
-// /**
-//  * save_iostreams: Saves stdin, stdout and stderr such that
-//  * a test can subsequently redirect these safely.
-//  * Note: Call it ONCE only on test suite setup.
-//  * TODO: TEST this.
-//  */
-// void save_iostreams(void) {
-//   if (fileno(stdin) != STDIN_FILENO || fileno(stdout) != STDOUT_FILENO ||
-//       fileno(stderr) != STDERR_FILENO) {
-//     perror("Nope, can't save custom iostreams");
-//     exit(1);
-//   }
-//   _test_saved_stdin  = stdin;
-//   _test_saved_stdout = stdout;
-//   _test_saved_stderr = stderr;
-// }
+/**
+ * save_iostreams: Saves stdin, stdout and stderr such that
+ * a test can subsequently redirect these safely.
+ * Note: Call it ONCE only on test suite setup.
+ * TODO: TEST this.
+ */
+void save_iostreams(void) {
+  if (fileno(stdin) != STDIN_FILENO || fileno(stdout) != STDOUT_FILENO ||
+      fileno(stderr) != STDERR_FILENO) {
+    perror("Nope, can't save custom iostreams");
+    exit(1);
+  }
+  _test_saved_stdin  = stdin;
+  _test_saved_stdout = stdout;
+  _test_saved_stderr = stderr;
+}
 
-// /**
-//  * reset_iostreams: Restores the stdin, stdout, stderr configuration
-//  * that was previously saved. Should be called on test Setup or Teardown.
-//  */
-// void reset_iostreams(void) {
-//   if (stdin != _test_saved_stdin) {
-//     fclose(stdin);
-//     stdin = _test_saved_stdin;
-//   }
-//   if (stdout != _test_saved_stdout) {
-//     fflush(stdout);
-//     fclose(stdout);
-//     stdout = _test_saved_stdout;
-//   }
-//   if (stderr != _test_saved_stderr) {
-//     fflush(stderr);
-//     fclose(stderr);
-//     stderr = _test_saved_stderr;
-//   }
-// }
+/**
+ * reset_iostreams: Restores the stdin, stdout, stderr configuration
+ * that was previously saved. Should be called on test Setup or Teardown.
+ */
+void reset_iostreams(void) {
+  if (_test_saved_stderr == NULL) {
+    fprintf(stderr, "You need to initialize things by calling save_iostreams initially\n");
+    exit(1);
+  }
+  if (stdin != _test_saved_stdin) {
+    fclose(stdin);
+    stdin = _test_saved_stdin;
+  }
+  if (stdout != _test_saved_stdout) {
+    fflush(stdout);
+    fclose(stdout);
+    stdout = _test_saved_stdout;
+  }
+  if (stderr != _test_saved_stderr) {
+    fflush(stderr);
+    fclose(stderr);
+    stderr = _test_saved_stderr;
+  }
+}
 
-// /**
-//  * stdin_from_str: Redirects stdin to read from a string.
-//  */
-// void stdin_from_str(const char *input_str) {
-//   stdin = fmemopen((void *)input_str, strlen(input_str), "r");
-//   if (stdin == NULL) {
-//     perror("Error creating input stream");
-//     exit(1);
-//   }
-// }
-// /**
-//  * stderr_to_str: Redirect the stderr stream to a string.
-//  * Note: Make sure the string has sufficient space.
-//  */
-// void stderr_to_str(char *buf, int buf_len) {
-//   stderr = fmemopen(buf, buf_len, "w");
-//   if (stderr == NULL) {
-//     perror("Error creating error stream");
-//     exit(1);
-//   }
-// }
+/**
+ * stdin_from_str: Redirects stdin to read from a string.
+ */
+void stdin_from_str(const char *input_str) {
+  stdin = fmemopen((void *)input_str, strlen(input_str), "r");
+  if (stdin == NULL) {
+    perror("Error creating input stream");
+    exit(1);
+  }
+}
+/**
+ * stderr_to_str: Redirect the stderr stream to a string.
+ * Note: Make sure the string has sufficient space.
+ */
+void stderr_to_str(char *buf, int buf_len) {
+  stderr = fmemopen(buf, buf_len, "w");
+  if (stderr == NULL) {
+    perror("Error creating error stream");
+    exit(1);
+  }
+}
 
 // /**
 //  * chopped_result: Returns a portion of the result, which matches in length an expected result.
@@ -96,7 +100,7 @@
 
 // Runs before every test.
 void setUp(void) {
-  // reset_iostreams();
+  reset_iostreams();
   // init_lex();
 }
 
@@ -107,6 +111,16 @@ void tearDown(void) {}
  *
  * NOTE: Single Thread.
  */
+static const char *exercise_scan(const char *in_buf) {
+  // static char out_buf[1024];
+  stdin_from_str(in_buf);
+  // out_buf[0] = '\0';
+  // stderr_to_str(out_buf, 1024);
+  scan();
+  return buf;
+}
+
+
 // static const char *test_statements(const char *in_buf) {
 //   static char out_buf[1024];
 //   stdin_from_str(in_buf);
@@ -171,12 +185,16 @@ void tearDown(void) {}
 // }
 
 static void test_scan_lp(void) {
-  buf[0] = '\0';
-  TEST_ASSERT_EQUAL(0, strlen(buf));
-  char retval = scan();
-  TEST_ASSERT_EQUAL_CHAR('(', retval);
-  TEST_ASSERT_TRUE(true);
+  const char *out_buf = exercise_scan("(");
+  TEST_ASSERT_EQUAL_CHAR('(', *out_buf);
 }
+
+static void test_scan_del_spaces(void) {
+  const char *out_buf = exercise_scan("(                )");
+  printf("buf = '%s'", out_buf);
+  // TEST_ASSERT_EQUAL_CHAR('(', *out_buf);
+}
+
 
 #include <signal.h>
 
@@ -185,9 +203,10 @@ int main(void) {
   // Uncomment the following line to attach debugger to running program.
   // raise(SIGSTOP);
 
-  // save_iostreams();
+  save_iostreams();
   UnityBegin("tinylisp-tested.c");
   RUN_TEST(test_scan_lp);
+  RUN_TEST(test_scan_del_spaces);
   // RUN_TEST(test_single_number);
   // RUN_TEST(test_simple_addition);
   // RUN_TEST(test_several_expressions);

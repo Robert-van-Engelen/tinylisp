@@ -9,7 +9,7 @@ extern I hp, sp;
 
 void gc(void);
 L eval(L exp, L env);
-L read(void);
+L Read(void);
 void print(L exp);
 void pretty_print(L x, int level);
 void init(void);

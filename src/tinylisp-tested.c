@@ -310,11 +310,9 @@ char buf[40], see = ' ';
 void look() {
   int c = getc(stdin);
   see   = c;
-  if (c == EOF) {
-    printf("Me fui por EOF\n");
-    exit(1);
-  }
-  if (c == EOF) freopen("/dev/tty", "r", stdin);
+  // This next one is such that I can pipe initial files and then resume
+  // the repl for interactive entry.
+  // if (c == EOF) freopen("/dev/tty", "r", stdin);
 }
 
 /* return nonzero if we are looking at character c, ' ' means any white space */
@@ -341,8 +339,9 @@ char scan() {
 
 /* return the Lisp expression read from standard input */
 L parse();
-L read() {
+L Read() {
   scan();
+  printf("scan ==> '%s'\n", buf);
   return parse();
 }
 
@@ -351,7 +350,7 @@ L list() {
   L x;
   if (scan() == ')') return nil;
   if (!strcmp(buf, ".")) {
-    x = read();
+    x = Read();
     scan();
     return x;
   }
@@ -360,7 +359,7 @@ L list() {
 }
 
 /* return a parsed Lisp expression x quoted as (quote x) */
-L quote() { return cons(atom("quote"), cons(read(), nil)); }
+L quote() { return cons(atom("quote"), cons(Read(), nil)); }
 
 /* return a parsed atomic Lisp expression (a number or an atom) */
 L atomic() {
@@ -418,7 +417,7 @@ int _main() {
   init();
   while (1) {
     printf("\n%u>", sp - hp / 8);
-    print(eval(read(), env));
+    print(eval(Read(), env));
     gc();
   }
 }
