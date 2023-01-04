@@ -1,4 +1,4 @@
-CC=clang
+CC=gcc
 CFLAGS=-std=c2x -g -Wall
 #CFLAGS.test-tl-commented += -DDEBUG
 
@@ -9,8 +9,8 @@ EXE_OBJ_COMMON=main.o $(LINK_COMMON)
 .DEFAULT_GOAL := all
 
 .PHONY: all
-all: tinylisp-commented tinylisp-readline tinylisp tinylisp-opt  \
-	 test-tl-commented 
+all: tinylisp-commented tinylisp-readline tinylisp-tested tinylisp tinylisp-opt  \
+	 test-tl-tested 
 
 # tinylisp-float tinylisp-float-opt
 .PHONY: clean
@@ -24,7 +24,10 @@ tinylisp-commented: tinylisp-commented.o $(EXE_OBJ_COMMON)
 tinylisp-readline: tinylisp-readline.o
 	$(CC) $(CFLAGS) -o $@  $^ -lreadline
 
-test-tl-commented: test-tl-commented.o tinylisp-commented.o $(TEST_OBJ_COMMON)
+tinylisp-tested: tinylisp-tested.o $(EXE_OBJ_COMMON)
+	$(CC) $(CFLAGS) -o $@  $^
+
+test-tl-tested: test-tl-tested.o tinylisp-tested.o $(TEST_OBJ_COMMON)
 	$(CC) $(CFLAGS) -o $@  $^
 
 

@@ -1,6 +1,28 @@
 {
     "files.associations": {
-        "tinylisp.h": "c"
+        "tinylisp.h": "c",
+        "functional": "c",
+        "ostream": "c",
+        "utility": "c"
     },
-    "C_Cpp.errorSquiggles": "disabled"
+    "C_Cpp.errorSquiggles": "disabled",
+    "C_Cpp.default.configurationProvider": "ms-vscode.makefile-tools",
+    "makefile.launchConfigurations": [
+        {
+            "cwd": "${workspaceFolder}/src",
+            "binaryPath": "${workspaceFolder}/src/tinylisp-tested",
+            "binaryArgs": []
+        },
+        {
+            "cwd": "${workspaceFolder}/src",
+            "binaryPath": "${workspaceFolder}/src/tinylisp-tl-tested",
+            "binaryArgs": []
+        },
+        {
+            "cwd": "/home/pierre/tinylisp/src",
+            "binaryPath": "/home/pierre/tinylisp/src/test-tl-tested",
+            "binaryArgs": []
+        }
+    ],
+    "makefile.loggingLevel": "Verbose"
 }

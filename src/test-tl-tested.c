@@ -180,7 +180,7 @@ int main(void) {
   // raise(SIGSTOP);
 
   // save_iostreams();
-  UnityBegin("tinylisp-commented.c");
+  UnityBegin("tinylisp-tested.c");
   // RUN_TEST(test_single_number);
   // RUN_TEST(test_simple_addition);
   // RUN_TEST(test_several_expressions);
