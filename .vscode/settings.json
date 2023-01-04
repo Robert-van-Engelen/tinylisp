@@ -15,10 +15,11 @@
             "binaryArgs": []
         },
         {
-            "cwd": "/home/pierre/tinylisp/src",
-            "binaryPath": "/home/pierre/tinylisp/src/test-tl-tested",
+            "cwd": "${workspaceFolder}/src",
+            "binaryPath": "${workspaceFolder}/src/test-tl-tested",
             "binaryArgs": []
         }
     ],
-    "makefile.loggingLevel": "Verbose"
+    "makefile.loggingLevel": "Verbose",
+    "makefile.makefilePath": "./src/Makefile"
 }
