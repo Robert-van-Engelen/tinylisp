@@ -101,7 +101,7 @@ void stderr_to_str(char *buf, int buf_len) {
 // Runs before every test.
 void setUp(void) {
   reset_iostreams();
-  // init_lex();
+  init_tinylisp();
 }
 
 // Runs after every test.
@@ -112,78 +112,15 @@ void tearDown(void) {}
  * NOTE: Single Thread.
  */
 static const char *exercise_scan(const char *in_buf) {
-  // static char out_buf[1024];
+  init_tinylisp();
   stdin_from_str(in_buf);
-  // out_buf[0] = '\0';
-  // stderr_to_str(out_buf, 1024);
   scan();
   return buf;
 }
 
-
-// static const char *test_statements(const char *in_buf) {
-//   static char out_buf[1024];
-//   stdin_from_str(in_buf);
-//   out_buf[0] = '\0';
-//   stderr_to_str(out_buf, 1024);
-//   init_lex();
-//   statements();
-//   reset_iostreams();
-//   return out_buf;
-// }
-
-// static void test_single_number(void) {
-//   const char *result = test_statements("2;");
-//   TEST_ASSERT_EMPTY_MESSAGE(result, result);
-// }
-
-// static void test_simple_addition(void) {
-//   const char *result = test_statements("2 + 3;");
-//   TEST_ASSERT_EMPTY_MESSAGE(result, result);
-// }
-
-// static void test_several_expressions(void) {
-//   const char *input_expressions =
-//       "3 * ( 4 + 3 + 2);\n"
-//       "4 + 2;";
-//   const char *result = test_statements(input_expressions);
-//   TEST_ASSERT_EMPTY_MESSAGE(result, result);
-// }
-// static void test_expected(void) {
-//   const char *strs[] = {"2 + 3;", "(2 + 3);"};
-//   for (int i = 0; i < (sizeof(strs) / sizeof(char *)); i++) {
-//     const char *result = test_statements(strs[i]);
-//     TEST_ASSERT_EMPTY_MESSAGE(result, strs[i]);
-//   }
-// }
-
-// static void test_warning_insert_semicolon(void) {
-//   const char *result = test_statements("1");
-//   const char *expected = "1: Inserting missing semicolon";
-//   // I use a limited strncmp because there are more messages.
-//   // Testing the first one is good enough for precision. In fact
-//   // just testing that the length of expected is > 0 would
-//   // suffice to establish the error condition.
-//   TEST_ASSERT_EQUAL_MESSAGE(0, strncmp(expected, result, strlen(expected)), result);
-// }
-
-// static void test_error_empty_program(void) {
-//   const char *result = test_statements("");
-//   const char *expected = "0: Number or identifier expected";
-//   // I use a limited strncmp because there are more messages.
-//   // Testing the first one is good enough for precision. In fact
-//   // just testing that the length of expected is > 0 would
-//   // suffice to establish the error condition.
-//   TEST_ASSERT_EQUAL_MESSAGE(0, strncmp(expected, result, strlen(expected)), result);
-// }
-
-// static void test_error_invalid_character(void) {
-//   const char *expected = "Ignoring illegal input <->\n";
-//   const char *result = chopped_result(test_statements("-"), expected);
-//   // TEST_ASSERT_EQUAL_MESSAGE(0, strncmp(expected,  result, strlen(expected)), result);
-//   TEST_ASSERT_EQUAL_STRING_MESSAGE(expected, result, result);
-// }
-
+// scan returns a single token each time.
+// the possible tokens are '(', ')', '\'' and
+// any string which is not composed of '(', ')' or ' '.
 static void test_scan_lp(void) {
   const char *out_buf = exercise_scan("(");
   TEST_ASSERT_EQUAL_CHAR('(', *out_buf);
@@ -191,10 +128,51 @@ static void test_scan_lp(void) {
 
 static void test_scan_del_spaces(void) {
   const char *out_buf = exercise_scan("(                )");
-  printf("buf = '%s'", out_buf);
-  // TEST_ASSERT_EQUAL_CHAR('(', *out_buf);
+  TEST_ASSERT_EQUAL_CHAR('(', *out_buf);
 }
 
+static void test_scan_symbol_string(void) {
+  const char expected[] = "ao%vq#";
+  const char *out_buf   = exercise_scan(expected);
+  TEST_ASSERT_EQUAL_STRING_MESSAGE(expected, out_buf, "Difference in strings");
+}
+
+static void test_scan_single_quote(void) {
+  const char expected[] = "'";
+  const char *out_buf   = exercise_scan(expected);
+  TEST_ASSERT_EQUAL_STRING(expected, out_buf);
+}
+
+static void test_scan_quotes_in_symbol(void) {
+  const char expected[] = "ao%vq\"'#";
+  const char *out_buf   = exercise_scan(expected);
+  TEST_ASSERT_EQUAL_STRING_MESSAGE(expected, out_buf, "Difference in strings");
+}
+
+static void test_scan_del_spaces_before_token(void) {
+  // clang-format off
+  const char *expectations[] = {
+      "a",
+      "b",
+      "(", 
+      "\"", 
+      "'", 
+      "ao%vq\"'#", 
+      "define", 
+      "......", 
+      "another_one_bites_the_dust",
+      "________%%%__________",
+      "______'''''@#$@%^#*"
+  };
+  // clang-format on
+  for (int i = 0; i < (sizeof(expectations) / sizeof(char *)); i++) {
+    const char *expected = expectations[i];
+    char in_buf[1024];
+    sprintf(in_buf, "               %s", expected);
+    const char *out_buf = exercise_scan(in_buf);
+    TEST_ASSERT_EQUAL_STRING(expected, out_buf);
+  }
+}
 
 #include <signal.h>
 
@@ -207,6 +185,10 @@ int main(void) {
   UnityBegin("tinylisp-tested.c");
   RUN_TEST(test_scan_lp);
   RUN_TEST(test_scan_del_spaces);
+  RUN_TEST(test_scan_symbol_string);
+  RUN_TEST(test_scan_single_quote);
+  RUN_TEST(test_scan_quotes_in_symbol);
+  RUN_TEST(test_scan_del_spaces_before_token);
   // RUN_TEST(test_single_number);
   // RUN_TEST(test_simple_addition);
   // RUN_TEST(test_several_expressions);

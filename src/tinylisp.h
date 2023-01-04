@@ -12,7 +12,7 @@ L eval(L exp, L env);
 L Read(void);
 void print(L exp);
 void pretty_print(L x, int level);
-void init(void);
+void init_tinylisp(void);
 int _main(int argc, char **argv);
 
 char scan(void);

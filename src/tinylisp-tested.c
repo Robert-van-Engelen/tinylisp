@@ -1,6 +1,7 @@
 /* tinylisp-commented.c with NaN boxing by Robert A. van Engelen 2022 */
 /* tinylisp.c but adorned with comments in an (overly) verbose C style */
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -304,7 +305,9 @@ L eval(L x, L e) {
 }
 
 /* tokenization buffer and the next character that we are looking at */
-char buf[40], see = ' ';
+#define MAX_SCAN_BUF 40
+char buf[MAX_SCAN_BUF], see = ' ';
+#define IS_EOF() (see == EOF)
 
 /* advance to the next character */
 void look() {
@@ -312,10 +315,17 @@ void look() {
   see   = c;
   // This next one is such that I can pipe initial files and then resume
   // the repl for interactive entry.
-  // if (c == EOF) freopen("/dev/tty", "r", stdin);
+  // if (c == EOF) {
+  //   //
+  //   // freopen("/dev/tty", "r", stdin);
+  //   printf("Exiting on look\n");
+  //   exit(0);
+  // }
 }
 
-/* return nonzero if we are looking at character c, ' ' means any white space */
+/* return nonzero if we are looking at character c, ' ' means any white space
+   as all other white space like \n \r or \t happen before
+ */
 I seeing(char c) { return c == ' ' ? see > 0 && see <= c : see == c; }
 
 /* return the look ahead character from standard input, advance to the next */
@@ -325,7 +335,11 @@ char get() {
   return c;
 }
 
-/* tokenize into buf[], return first character of buf[] */
+/* tokenize into buf[], return first character of buf[]
+The following tokens are recognized:
+  '(',')', '\'', ' ', '\t', '\n'
+  any string composed of characters not of the above.
+*/
 char scan() {
   I i = 0;
   // skip whitespace
@@ -333,10 +347,9 @@ char scan() {
   // If I see one of this, I return only that
   if (seeing('(') || seeing(')') || seeing('\'')) buf[i++] = get();
   else do {
-    // else, I collect everything, as long as it's not one of the
-    // above fellows.
+      // else, I collect everything until I get to a closing parentheses or space.
       buf[i++] = get();
-    } while (i < 39 && !seeing('(') && !seeing(')') && !seeing(' '));
+    } while (i < (MAX_SCAN_BUF - 1) && !(IS_EOF() || seeing('(') || seeing(')') || seeing(' ')));
   buf[i] = 0;
   return *buf;
 }
@@ -345,6 +358,9 @@ char scan() {
 L parse();
 L Read() {
   scan();
+  // if we hit EOF, we just get out. This should not be evaluated,
+  // so 0 is meaningless.
+  if (IS_EOF()) return 0;
   printf("scan ==> '%s'\n", buf);
   return parse();
 }
@@ -352,12 +368,16 @@ L Read() {
 /* return a parsed Lisp list */
 L list() {
   L x;
+  // First we look for the empty list.
   if (scan() == ')') return nil;
+  // Then we look for other lists, which do not
+  // use pair syntax.
   if (!strcmp(buf, ".")) {
     x = Read();
     scan();
     return x;
   }
+  // Now, we deal with pairs.
   x = parse();
   return cons(x, list());
 }
@@ -372,8 +392,13 @@ L atomic() {
   return (sscanf(buf, "%lg%n", &n, &i) > 0 && !buf[i]) ? n : atom(buf);
 }
 
+// clang-format off
 /* return a parsed Lisp expression */
-L parse() { return *buf == '(' ? list() : *buf == '\'' ? quote() : atomic(); }
+L parse() { return *buf == '(' ? list() : 
+                   *buf == '\'' ? quote() : 
+                   atomic(); 
+}
+// clang-format on
 
 /* display a Lisp list t */
 void print(L);
@@ -405,23 +430,30 @@ void print(L x) {
 void gc() { sp = ord(env); }
 
 /* Lisp initialization and REPL */
-void init() {
+void init_tinylisp() {
+  // reset heap an stack pointers.
   hp = 0, sp = N;
-
+  // initialize scanner data.
+  see = ' ';
+  // Initialize a few things globally available.
   nil = box(NIL, 0);
   err = atom("ERR");
   tru = atom("#t");
+  // environment starts empty.
   env = pair(tru, tru, nil);
+  // Initialize primitives, extending environment for each one.
   for (int i = 0; prim[i].s; ++i) env = pair(atom(prim[i].s), box(PRIM, i), env);
 }
 
 int _main() {
-  init();
   printf("tinylisp");
-  init();
-  while (1) {
+  init_tinylisp();
+  while (true) {
     printf("\n%u>", sp - hp / 8);
-    print(eval(Read(), env));
+    L read_data = Read();
+    if (IS_EOF()) break;
+    print(eval(read_data, env));
     gc();
   }
+  return 0;
 }

@@ -6,7 +6,7 @@
         "utility": "c",
         "unity.h": "c"
     },
-    "C_Cpp.clang_format_fallbackStyle": "{ BasedOnStyle: Google,  AlignArrayOfStructures: Left, AlignConsecutiveAssignments: Consecutive, AllowShortIfStatementsOnASingleLine: AllIfsAndElse, BreakBeforeTernaryOperators: true, ColumnLimit: 100, DerivePointerAlignment: false, PointerAlignment: Right }",
+    "C_Cpp.clang_format_fallbackStyle": "{ BasedOnStyle: Google, AlignArrayOfStructures: Left, AlignConsecutiveAssignments: Consecutive, AllowShortIfStatementsOnASingleLine: AllIfsAndElse, BreakBeforeTernaryOperators: true, ColumnLimit: 100, DerivePointerAlignment: false, PointerAlignment: Right }",
     "C_Cpp.errorSquiggles": "disabled",
     "C_Cpp.default.configurationProvider": "ms-vscode.makefile-tools",
     "makefile.makeDirectory": "./src",
