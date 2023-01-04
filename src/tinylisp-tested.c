@@ -328,9 +328,13 @@ char get() {
 /* tokenize into buf[], return first character of buf[] */
 char scan() {
   I i = 0;
+  // skip whitespace
   while (seeing(' ')) look();
+  // If I see one of this, I return only that
   if (seeing('(') || seeing(')') || seeing('\'')) buf[i++] = get();
   else do {
+    // else, I collect everything, as long as it's not one of the
+    // above fellows.
       buf[i++] = get();
     } while (i < 39 && !seeing('(') && !seeing(')') && !seeing(' '));
   buf[i] = 0;
