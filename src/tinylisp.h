@@ -15,4 +15,7 @@ void pretty_print(L x, int level);
 void init(void);
 int _main(int argc, char **argv);
 
+char scan(void);
+extern char buf[40];
+
 #endif  // ifndef __TINY_LISP_H

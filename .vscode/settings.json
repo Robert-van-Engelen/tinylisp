@@ -3,7 +3,8 @@
         "tinylisp.h": "c",
         "functional": "c",
         "ostream": "c",
-        "utility": "c"
+        "utility": "c",
+        "unity.h": "c"
     },
     "C_Cpp.errorSquiggles": "disabled",
     "C_Cpp.default.configurationProvider": "ms-vscode.makefile-tools",
@@ -17,6 +18,11 @@
         {
             "cwd": "${workspaceFolder}/src",
             "binaryPath": "${workspaceFolder}/src/test-tl-tested",
+            "binaryArgs": []
+        },
+        {
+            "cwd": "/home/pierre/tinylisp/src",
+            "binaryPath": "/home/pierre/tinylisp/src/test-tl-tested",
             "binaryArgs": []
         }
     ],

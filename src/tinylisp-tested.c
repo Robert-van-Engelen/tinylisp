@@ -308,8 +308,12 @@ char buf[40], see = ' ';
 
 /* advance to the next character */
 void look() {
-  int c = getchar();
+  int c = getc(stdin);
   see   = c;
+  if (c == EOF) {
+    printf("Me fui por EOF\n");
+    exit(1);
+  }
   if (c == EOF) freopen("/dev/tty", "r", stdin);
 }
 
