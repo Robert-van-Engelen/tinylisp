@@ -6,31 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* we only need two types to implement a Lisp interpreter:
-        I    unsigned integer (either 16 bit, 32 bit or 64 bit unsigned)
-        L    Lisp expression (double with NaN boxing)
-   I variables and function parameters are named as follows:
-        i    any unsigned integer, e.g. a NaN-boxed ordinal value
-        t    a NaN-boxing tag
-   L variables and function parameters are named as follows:
-        x,y  any Lisp expression
-        n    number
-        t    list
-        f    function or Lisp primitive
-        p    pair, a cons of two Lisp expressions
-        e,d  environment, a list of pairs, e.g. created with (define v x)
-        v    the name of a variable (an atom) or a list of variables */
-#define I unsigned
-#define L double
-
-/* T(x) returns the tag bits of a NaN-boxed Lisp expression x */
-#define T(x) *(unsigned long long *)&x >> 48
-
-/* address of the atom heap is at the bottom of the cell stack */
-#define A (char *)cell
-
-/* number of cells for the shared stack and atom heap, increase N as desired */
-#define N (1024 * 10)
+#include "tinylisp.h"
 
 /* hp: heap pointer, A+hp with hp=0 points to the first atom string in cell[]
    sp: stack pointer, the stack starts at the top of cell[] with sp=N
@@ -247,11 +223,6 @@ L f_define(L t, L e) {
   return car(t);
 }
 
-L f_atom2(L t, L _) {
-  L tt = car(t);
-  return T(tt) == ATOM ? tru : nil;
-}
-
 /* table of Lisp primitives, each has a name s and function pointer f */
 struct {
   const char *s;
@@ -277,7 +248,6 @@ struct {
     {"let*", f_leta},
     {"lambda", f_lambda},
     {"define", f_define},
-    {"atom2?", f_atom2},
     {0}
 };
 
@@ -305,23 +275,11 @@ L eval(L x, L e) {
 }
 
 /* tokenization buffer and the next character that we are looking at */
-#define MAX_SCAN_BUF 40
 char buf[MAX_SCAN_BUF], see = ' ';
 #define IS_EOF() (see == EOF)
 
 /* advance to the next character */
-void look() {
-  int c = getc(stdin);
-  see   = c;
-  // This next one is such that I can pipe initial files and then resume
-  // the repl for interactive entry.
-  // if (c == EOF) {
-  //   //
-  //   // freopen("/dev/tty", "r", stdin);
-  //   printf("Exiting on look\n");
-  //   exit(0);
-  // }
-}
+static inline void look(void) { see = getc(stdin); }
 
 /* return nonzero if we are looking at character c, ' ' means any white space
    as all other white space like \n \r or \t happen before
@@ -356,12 +314,11 @@ char scan() {
 
 /* return the Lisp expression read from standard input */
 L parse();
-L Read() {
+L Read(void) {
   scan();
   // if we hit EOF, we just get out. This should not be evaluated,
   // so 0 is meaningless.
   if (IS_EOF()) return 0;
-  printf("scan ==> '%s'\n", buf);
   return parse();
 }
 
@@ -389,7 +346,10 @@ L quote() { return cons(atom("quote"), cons(Read(), nil)); }
 L atomic() {
   L n;
   I i;
-  return (sscanf(buf, "%lg%n", &n, &i) > 0 && !buf[i]) ? n : atom(buf);
+  n = (sscanf(buf, "%lg%n", &n, &i) > 0 && !buf[i]) ? 
+          n : 
+          atom(buf);
+  return n;
 }
 
 // clang-format off
@@ -445,7 +405,7 @@ void init_tinylisp() {
   for (int i = 0; prim[i].s; ++i) env = pair(atom(prim[i].s), box(PRIM, i), env);
 }
 
-int _main() {
+int _main(int argc, char **argv) {
   printf("tinylisp");
   init_tinylisp();
   while (true) {

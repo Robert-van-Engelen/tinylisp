@@ -1,17 +1,7 @@
-// ----------------------------------------------------------------------------
-
-#define _GNU_SOURCE
-// #define _POSIX_C_SOURCE
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-
-// ------------------------------------------------------------------------
-
 // Include the test framework.
+#define UNITY_INCLUDE_DOUBLE
 #include "../test-framework/unity.h"
+#include "test-util.h"
 #include "tinylisp.h"
 // Include the header file with the declarations of the functions you create.
 // #include "plain.h"
@@ -71,6 +61,21 @@ static void test_scanner(void) {
   }
 }
 
+static void test_read_number(void) {
+  stdin_from_str("99.3\n");
+  L result = Read();
+  TEST_ASSERT_DOUBLE_IS_NOT_NAN(result);
+  TEST_ASSERT_EQUAL_DOUBLE(99.3, result);
+}
+
+static void test_read_atom(void) {
+  stdin_from_str("an_atom_here\n");
+  L result = Read();
+  TEST_ASSERT_DOUBLE_IS_NAN(result);
+  TEST_ASSERT(T(result) == ATOM);
+  TEST_ASSERT_EQUAL_STRING("an_atom_here", A + ord(result));
+}
+
 #include <signal.h>
 
 int main(void) {
@@ -78,8 +83,10 @@ int main(void) {
   // raise(SIGSTOP);
 
   save_iostreams();
-  UnityBegin("tinylisp-tested.c");
+  UNITY_BEGIN();
   RUN_TEST(test_scanner);
+  RUN_TEST(test_read_number);
+  RUN_TEST(test_read_atom);
 
-  return UnityEnd();
+  return UNITY_END();
 }

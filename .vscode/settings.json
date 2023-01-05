@@ -4,7 +4,8 @@
         "functional": "c",
         "ostream": "c",
         "utility": "c",
-        "unity.h": "c"
+        "unity.h": "c",
+        "signal.h": "c"
     },
     "C_Cpp.clang_format_fallbackStyle": "{ BasedOnStyle: Google, AlignArrayOfStructures: Left, AlignConsecutiveAssignments: Consecutive, AllowShortIfStatementsOnASingleLine: AllIfsAndElse, BreakBeforeTernaryOperators: true, ColumnLimit: 100, DerivePointerAlignment: false, PointerAlignment: Right }",
     "C_Cpp.errorSquiggles": "disabled",
