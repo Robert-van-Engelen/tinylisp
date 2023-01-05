@@ -3,7 +3,7 @@ CFLAGS=-std=c2x -g -Wall
 #CFLAGS.test-tl-commented += -DDEBUG
 
 #LINK_COMMON=lex.o
-TEST_OBJ_COMMON=../test-framework/unity.o $(LINK_COMMON)
+TEST_OBJ_COMMON=../test-framework/unity.o test-util.o $(LINK_COMMON)
 EXE_OBJ_COMMON=main.o $(LINK_COMMON)
 
 .DEFAULT_GOAL := all
