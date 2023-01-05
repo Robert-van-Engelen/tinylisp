@@ -13,11 +13,6 @@
     "makefile.launchConfigurations": [
         {
             "cwd": "${workspaceFolder}/src",
-            "binaryPath": "${workspaceFolder}/src/tinylisp-tested",
-            "binaryArgs": []
-        },
-        {
-            "cwd": "${workspaceFolder}/src",
             "binaryPath": "${workspaceFolder}/src/test-tl-tested",
             "binaryArgs": []
         },
