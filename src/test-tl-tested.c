@@ -121,34 +121,6 @@ static const char *exercise_scan(const char *in_buf) {
 // scan returns a single token each time.
 // the possible tokens are '(', ')', '\'' and
 // any string which is not composed of '(', ')' or ' '.
-static void test_scan_lp(void) {
-  const char *out_buf = exercise_scan("(");
-  TEST_ASSERT_EQUAL_CHAR('(', *out_buf);
-}
-
-static void test_scan_del_spaces(void) {
-  const char *out_buf = exercise_scan("(                )");
-  TEST_ASSERT_EQUAL_CHAR('(', *out_buf);
-}
-
-static void test_scan_symbol_string(void) {
-  const char expected[] = "ao%vq#";
-  const char *out_buf   = exercise_scan(expected);
-  TEST_ASSERT_EQUAL_STRING_MESSAGE(expected, out_buf, "Difference in strings");
-}
-
-static void test_scan_single_quote(void) {
-  const char expected[] = "'";
-  const char *out_buf   = exercise_scan(expected);
-  TEST_ASSERT_EQUAL_STRING(expected, out_buf);
-}
-
-static void test_scan_quotes_in_symbol(void) {
-  const char expected[] = "ao%vq\"'#";
-  const char *out_buf   = exercise_scan(expected);
-  TEST_ASSERT_EQUAL_STRING_MESSAGE(expected, out_buf, "Difference in strings");
-}
-
 typedef struct {
   const char *in;
   const char *out;
@@ -156,24 +128,22 @@ typedef struct {
 } expectation;
 
 static void test_scanner(void) {
-  // c\\lang-format off
-
   const expectation expectations[] = {
-      {"a",                          NULL,       "letter"     },
-      {"a      (",                   "a",        "letter"     },
-      {"b",                          NULL,       "letter"     },
-      {"(",                          NULL,       "Single LP"  },
-      {"(        ",                  "(",        "Single LP"  },
-      {"\"",                         NULL,       "token"      },
-      {"'",                          NULL,       "msg"        },
-      {"ao%vq\"'(#",                 "ao%vq\"'", "Weird token"},
-      {"define",                     NULL,       "msg"        },
-      {"......",                     NULL,       "msg"        },
-      {"another_one_bites_the_dust", NULL,       "msg"        },
-      {"________%%%__________",      NULL,       "msg"        },
-      {"______'''''@#$@%^#*",        NULL,       "msg"        }
+      {"a",                          NULL,       "letter"                      },
+      {"a      (",                   "a",        "letter"                      },
+      {"b",                          NULL,       "letter"                      },
+      {"(",                          NULL,       "Single LP"                   },
+      {"(        )",                 "(",        "Single LP followed by spaces"},
+      {"\"",                         NULL,       "token"                       },
+      {"'",                          NULL,       "Single quote"                },
+      {"ao%vq\"'(#",                 "ao%vq\"'", "Token finished by LP '('"    },
+      {"define",                     NULL,       "define simple token"         },
+      {"......",                     NULL,       "dots are a token too"        },
+      {"another_one_bites_the_dust", NULL,       "a long feasible token"       },
+      {"________%%%__________",      NULL,       "One more odd token"          },
+      {"______'''''@#$@%^#*",        NULL,       "Another, odd but valid token"}
   };
-  // c\\lang-format on
+
   for (int i = 0; i < (sizeof(expectations) / sizeof(expectation)); i++) {
     const expectation exp = expectations[i];
     char in_buf[1024];
@@ -185,26 +155,13 @@ static void test_scanner(void) {
 
 #include <signal.h>
 
-// Runs the test(s)
 int main(void) {
   // Uncomment the following line to attach debugger to running program.
   // raise(SIGSTOP);
 
   save_iostreams();
   UnityBegin("tinylisp-tested.c");
-  RUN_TEST(test_scan_lp);
-  RUN_TEST(test_scan_del_spaces);
-  RUN_TEST(test_scan_symbol_string);
-  RUN_TEST(test_scan_single_quote);
-  RUN_TEST(test_scan_quotes_in_symbol);
   RUN_TEST(test_scanner);
-  // RUN_TEST(test_single_number);
-  // RUN_TEST(test_simple_addition);
-  // RUN_TEST(test_several_expressions);
-  // RUN_TEST(test_expected);
-  // RUN_TEST(test_error_empty_program);
-  // RUN_TEST(test_error_invalid_character);
-  // RUN_TEST(test_warning_insert_semicolon);
 
   return UnityEnd();
 }
