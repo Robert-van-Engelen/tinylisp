@@ -313,12 +313,10 @@ char scan() {
 }
 
 /* return the Lisp expression read from standard input */
-L parse();
+L parse(void);
 L Read(void) {
   scan();
-  // if we hit EOF, we just get out. This should not be evaluated,
-  // so 0 is meaningless.
-  if (IS_EOF()) return 0;
+  // if (IS_EOF()) return nil;
   return parse();
 }
 
@@ -346,17 +344,14 @@ L quote() { return cons(atom("quote"), cons(Read(), nil)); }
 L atomic() {
   L n;
   I i;
-  n = (sscanf(buf, "%lg%n", &n, &i) > 0 && !buf[i]) ? 
-          n : 
-          atom(buf);
-  return n;
+  return (sscanf(buf, "%lg%n", &n, &i) > 0 && !buf[i]) ? n : atom(buf);
 }
 
 // clang-format off
 /* return a parsed Lisp expression */
-L parse() { return *buf == '(' ? list() : 
-                   *buf == '\'' ? quote() : 
-                   atomic(); 
+L parse(void) { return *buf == '(' ? list() : 
+                       *buf == '\'' ? quote() : 
+                       atomic(); 
 }
 // clang-format on
 

@@ -23,7 +23,7 @@
 #define A ((char *)cell)
 
 /* number of cells for the shared stack and atom heap, increase N as desired */
-#define N (1024 * 10)
+#define N (1024)
 // Shared stack and atom heap.
 extern L cell[N];
 

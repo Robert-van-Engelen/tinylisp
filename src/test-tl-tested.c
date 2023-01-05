@@ -73,7 +73,15 @@ static void test_read_atom(void) {
   L result = Read();
   TEST_ASSERT_DOUBLE_IS_NAN(result);
   TEST_ASSERT(T(result) == ATOM);
-  TEST_ASSERT_EQUAL_STRING("an_atom_here", A + ord(result));
+  TEST_ASSERT_EQUAL_STRING_MESSAGE("an_atom_here", A + ord(result), "Atom interning");
+}
+
+static void test_read_quote(void) {
+  stdin_from_str("'an_quote_here\n");
+  L result = Read();
+  TEST_ASSERT_DOUBLE_IS_NAN(result);
+  TEST_ASSERT(T(result) == CONS);
+  // TEST_ASSERT_EQUAL_STRING_MESSAGE("a_quote_here", A + ord(result), "Atom interning"); 
 }
 
 #include <signal.h>
@@ -87,6 +95,7 @@ int main(void) {
   RUN_TEST(test_scanner);
   RUN_TEST(test_read_number);
   RUN_TEST(test_read_atom);
+  RUN_TEST(test_read_quote);
 
   return UNITY_END();
 }
