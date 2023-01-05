@@ -2,3 +2,9 @@
 *.dSYM/
 *.swp
 *.o
+src/test-tl-tested
+src/tinylisp
+src/tinylisp-tested
+src/tinylisp-readline
+src/tinylisp-commented
+src/tinylisp-opt
