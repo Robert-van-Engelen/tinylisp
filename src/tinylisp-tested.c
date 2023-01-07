@@ -269,7 +269,11 @@ L apply(L f, L t, L e) {
   return T(f) == PRIM ? prim[ord(f)].f(t, e) : T(f) == CLOS ? reduce(f, t, e) : err;
 }
 
-/* evaluate x and return its value in environment e */
+/* evaluate x and return its value in environment e
+If the x(pression) passed in is an atom, it's irreducibel so just obtain the value.
+If the x(pression) passed in is a list, then delegate to apply which will receive
+the (sub-)eval of the first element of the list and as arguments the CDR of the list.
+ */
 L eval(L x, L e) {
   return T(x) == ATOM ? assoc(x, e) : T(x) == CONS ? apply(eval(car(x), e), cdr(x), e) : x;
 }
@@ -400,6 +404,22 @@ void init_tinylisp() {
   for (int i = 0; prim[i].s; ++i) env = pair(atom(prim[i].s), box(PRIM, i), env);
 }
 
+/*
+The read-eval-print-loop
+
+The interactive prompt gives you a so-called read-eval-print-loop (REPL). 
+Tinylisp uses the read function to read in a lisp object, 
+evaluates it using eval, and prints it using print. Then prompt again. 
+
+The functions eval and apply interact in a fundamental way in the interpreter: 
+If we are evaluating an ordinary function call (which is represented as a list, of course),
+we evaluate the first element of the list to get the functions,
+evaluate the remaining elements to get the arguments, 
+and then use apply to apply the function to the arguments.
+
+(Notice that this is using call by value semantics, not lazy evaluation as in Haskell -- 
+  the arguments get evaluated before applying the function to them.) 
+*/
 int _main(int argc, char **argv) {
   printf("tinylisp");
   init_tinylisp();
