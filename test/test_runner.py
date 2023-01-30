@@ -60,6 +60,11 @@ def main() -> int:
 
     print(f"Importing {test_choice}")
     tests = import_module(test_choice)
+
+    if (not Path("../src/" + tests.testee).is_file()):
+        print(f"Could not locate executable {tests.testee}: Did you compile it?")
+        return -1
+
     tests_passed: int = run_tests(tests)
     print(f"Passed {tests_passed}/{len(tests.test_list)} tests")
     return 0 if tests_passed == len(tests.test_list) else -1
