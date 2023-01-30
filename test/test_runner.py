@@ -8,8 +8,7 @@ from importlib import import_module
 from pathlib import Path
 import re
 from subprocess import Popen, PIPE, STDOUT
-from typing import List
-from test_case import TestCase
+from typing import Dict, List
 
 
 regex = re.compile("\\d{1,}\\>(.*)$")
@@ -22,19 +21,19 @@ def extract_result(results: str) -> str:
     return matchArray[0]
 
 
-def run_test(testee: str, test_case: TestCase) -> bool:
-    print(f"Testing {test_case.name}: ", end='')
+def run_test(testee: str, test_case: Dict) -> bool:
+    print(f"Testing {test_case['name']}: ", end='')
     proc = Popen(["../src/" + testee], stdin=PIPE, stdout=PIPE, stderr=PIPE,
                  universal_newlines=True)
-    results = proc.communicate(test_case.send + '\n')
+    results = proc.communicate(test_case['send'] + '\n')
     returned_result = extract_result(results)
     ret_val: bool = False
-    if (returned_result == test_case.expect):
+    if (returned_result == test_case['expect']):
         ret_val = True
         print("passed")
     else:
         print("failed!")
-        print(f"Expected: {test_case.expect}")
+        print(f"Expected: {test_case['expect']}")
         print(f"But got: {returned_result}")
     return ret_val
 
