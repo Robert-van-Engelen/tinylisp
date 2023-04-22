@@ -113,7 +113,7 @@ returns the second part `y` of a pair `(x . y)`.  For lists this returns the res
     (* n1 n2 ... nk)
     (/ n1 n2 ... nk)
 
-add, substract, multiply or divide `n1` to `nk`.  This is the same as `n1` <op> `n2` <op> ... <op> `nk`. Note that `(- 2)` is 2, not -2.  Also, at least one value `n` should be provided.  As the article suggests, change the Lisp interpreter as you like to change this.
+add, substract, multiply or divide `n1` to `nk`.  This computes `n1` oper `n2` oper ... oper `nk`. Note that `(- 2)` is 2, not -2, and note that `(- 0 2)` gives -2.  Also, at least one value `n` should be provided.  As the article suggests, change the Lisp interpreter as you like to change this.
 
     (int n)
 
