@@ -171,6 +171,14 @@ Locals are declared with the following `let*` special form.  This form differs s
 
 evaluates `y` with a local scope of bindings for symbols `v` sequentially bound from the first to the last to the corresponding values of `x`.
 
+> Note that most Lisp use a syntax with binding pairs in a list and one or more body expressions:
+> 
+>     (let* ((v1 x1) (v2 x2) ... (vk xk)) y1 ... yn)
+> 
+> In tinylisp we can do the same by binding all but the last body expression `y` to dummy variables:
+> 
+>     (let* (v1 x1) (v2 x2) ... (vk xk) (_ y1) ... yn)
+
 ## Additional Lisp primitives introduced in the [article](tinylisp.pdf)
 
     (assoc <quoted-symbol> <environment>)
@@ -222,6 +230,78 @@ catch exceptions in the evaluation of an expression, returns the value of the ex
     (throw n)
 
 throws error `n`, where `n` is a nonzero integer.
+
+## Additional Lisp functions defined in tinylisp itself
+
+The following functions are defined in [common.lisp](src/common.lisp).
+
+    (null? x)
+
+same as `not`, returns `#t` if `x` is not `()`.  Otherwise, returns `()` (empty list means false).
+
+    (err? x)
+
+evaluates `x` and returns `#t` if `x` is an `ERR` value.  Otherwise, returns `()`.
+
+    (number? n)
+
+returns `#t` if `n` is numeric.  Otherwise, returns `()`.
+
+    (pair? x)
+
+returns `#t` if `x` is a pair or a non-empty list.  Otherwise, returns `()`.
+
+    (symbol? a)
+
+returns `#t` if `a` is a symbol, for example `(symbol? 'foo)` is `#t`.  Otherwise, returns `()`.
+
+    (atom? a)
+
+returns `#t` if `a` is an atom, that is, a symbol or the empty list `()`.  Otherwise, returns `()`.
+
+    (list? <list>)
+
+returns `#t` if `<list>` is a proper list, i.e. either empty `()` or a list of values.  Otherwise, returns `()`.
+
+    (equal? x y)
+
+returns `#t` if `x` and `y` are structurally equal.  Otherwise, returns `()`.
+
+    (negate n)
+
+returns the negative of `n`.
+
+    (> n1 n2)
+
+returns `#t` if numbers `n1` > `n2`.  Otherwise, returns `()`.
+
+    (<= n1 n2)
+
+returns `#t` if numbers `n1` <= `n2`.  Otherwise, returns `()`.
+
+    (>= n1 n2)
+
+returns `#t` if numbers `n1` >= `n2`.  Otherwise, returns `()`.
+
+    (= n1 n2)
+
+returns `#t` if numbers `n1` = `n2`.  Otherwise, returns `()`.
+
+    (list x1 x2 ... xk)
+
+returns the list of `x1`, `x2`, ..., `xk`.  That is, `(x1 x2 ... xk)` with all `x` evaluated.
+
+    (cadr <list>)
+
+returns `(car (cdr <list>))`.  That is, the second value of `<list>`.
+
+    (caddr <list>)
+
+returns `(car (cdr (cdr <list>)))`.  That is, the third value of `<list>`.
+
+    (begin x1 x2 ... xk)
+
+evaluates all `x` and returns the value of `xk`.
 
 ## There is more: two sequels to tinylisp
 
