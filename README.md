@@ -177,7 +177,7 @@ evaluates `y` with a local scope of bindings for symbols `v` sequentially bound 
 > 
 > In tinylisp we can do the same by binding all but the last body expression `y` to dummy variables:
 > 
->     (let* (v1 x1) (v2 x2) ... (vk xk) (_ y1) ... yn)
+>     (let* (v1 x1) (v2 x2) ... (vk xk) (_ y1) ...) yn)
 
 ## Additional Lisp primitives introduced in the [article](tinylisp.pdf)
 
