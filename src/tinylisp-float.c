@@ -67,9 +67,9 @@ char scan() {
  else do buf[i++] = get(); while (i < 39 && !seeing('(') && !seeing(')') && !seeing(' '));
  return buf[i] = 0,*buf;
 }
-L read() { return scan(),parse(); }
-L list() { L x; return scan() == ')' ? nil : !strcmp(buf, ".") ? (x = read(),scan(),x) : (x = parse(),cons(x,list())); }
-L quote() { return cons(atom("quote"),cons(read(),nil)); }
+L Read() { return scan(),parse(); }
+L list() { L x; return scan() == ')' ? nil : !strcmp(buf, ".") ? (x = Read(),scan(),x) : (x = parse(),cons(x,list())); }
+L quote() { return cons(atom("quote"),cons(Read(),nil)); }
 L atomic() { L n; int i; return sscanf(buf,"%g%n",&n,&i) > 0 && !buf[i] ? n : atom(buf); }
 L parse() { return *buf == '(' ? list() : *buf == '\'' ? quote() : atomic(); }
 void print(L);
@@ -95,5 +95,5 @@ int main() {
  printf("tinylisp");
  nil = box(NIL,0); err = atom("ERR"); tru = atom("#t"); env = pair(tru,tru,nil);
  for (i = 0; prim[i].s; ++i) env = pair(atom(prim[i].s),box(PRIM,i),env);
- while (1) { printf("\n%u>",sp-hp/4); print(eval(read(),env)); gc(); }
+ while (1) { printf("\n%u>",sp-hp/4); print(eval(Read(),env)); gc(); }
 }
