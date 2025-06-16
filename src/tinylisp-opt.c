@@ -7,19 +7,18 @@
 #define T(x) *(unsigned long long*)&x>>48
 #define A (char*)cell
 #define N 1024
-I hp=0,sp=N,lo=N,ATOM=0x7ff8,PRIM=0x7ff9,CONS=0x7ffa,CLOS=0x7ffb,NIL=0x7ffc;
+I hp=0,sp=N,ATOM=0x7ff8,PRIM=0x7ff9,CONS=0x7ffa,CLOS=0x7ffb,NIL=0x7ffc;
 L cell[N],nil,tru,err,env;
-void lwm() { if (sp-hp/8 < lo) lo = sp-hp/8; }
 L box(I t,I i) { L x; *(unsigned long long*)&x = (unsigned long long)t<<48|i; return x; }
 I ord(L x) { return *(unsigned long long*)&x; }
 L num(L n) { return n; }
 I equ(L x,L y) { return *(unsigned long long*)&x == *(unsigned long long*)&y; }
 L atom(const char *s) {
  I i = 0; while (i < hp && strcmp(A+i,s)) i += strlen(A+i)+1;
- if (i == hp && (hp += strlen(strcpy(A+i,s))+1) > sp<<3) abort(); lwm();
+ if (i == hp && (hp += strlen(strcpy(A+i,s))+1) > sp<<3) abort();
  return box(ATOM,i);
 }
-L cons(L x,L y) { cell[--sp] = x; cell[--sp] = y; if (hp > sp<<3) abort(); lwm(); return box(CONS,sp); }
+L cons(L x,L y) { cell[--sp] = x; cell[--sp] = y; if (hp > sp<<3) abort(); return box(CONS,sp); }
 L car(L p) { return (T(p)&~(CONS^CLOS)) == CONS ? cell[ord(p)+1] : err; }
 L cdr(L p) { return (T(p)&~(CONS^CLOS)) == CONS ? cell[ord(p)] : err; }
 L pair(L v,L x,L e) { return cons(cons(v,x),e); }
@@ -136,5 +135,5 @@ int main() {
  printf("tinylisp");
  nil = box(NIL,0); err = atom("ERR"); tru = atom("#t"); env = pair(tru,tru,nil);
  for (i = 0; prim[i].s; ++i) env = pair(atom(prim[i].s),box(PRIM,i),env);
- while (1) { printf("\n%u|%u>",sp-hp/8,lo); print(eval(Read(),env)); gc(); }
+ while (1) { printf("\n%u>",sp-hp/8); print(eval(Read(),env)); gc(); }
 }
