@@ -59,7 +59,7 @@ struct { const char *s; L (*f)(L,L*); short t; } prim[] = {
 {"or",    f_or,    0},{"and",   f_and,   0},{"not", f_not, 0},{"cond",f_cond,1},{"if", f_if, 1},{"let*",f_leta,1},
 {"lambda",f_lambda,0},{"define",f_define,0},{0}};
 L eval(L x,L e) {
- L f,v,d; char evaluated;
+ L f,v,d;
  while (1) {
   if (T(x) == ATOM) return assoc(x,e);
   if (T(x) != CONS) return x;
@@ -72,17 +72,14 @@ L eval(L x,L e) {
   if (T(f) != CLOS) return err;
   v = car(car(f)); d = cdr(f);
   if (T(d) == NIL) d = env;
-  evaluated = 0;
   for(;T(v) != NIL;v = cdr(v),x = cdr(x)) {
-    if (T(x) != CONS) {
-      evaluated = 1;
-      x = eval(x, e);
-    }
-    if (T(v) == ATOM) {
-      d = pair(v, (evaluated ? x : evlis(x, e)), d);
-      break;
-    }
-    d = pair(car(v),(evaluated ? car(x) : eval(car(x),e)),d);
+    if (T(x) != CONS) { x = eval(x, e); break; }
+    if (T(v) == ATOM) { d = pair(v, evlis(x, e), d); v = nil; break; }
+    d = pair(car(v),eval(car(x),e),d);
+  }
+  for(;T(v) != NIL;v = cdr(v),x = cdr(x)) {
+    if (T(v) == ATOM) { d = pair(v, x, d); break; }
+    d = pair(car(v),car(x),d);
   }
   x = cdr(car(f)); e = d;
  }
