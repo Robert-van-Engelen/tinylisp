@@ -104,7 +104,7 @@ returns the first part `x` of a pair `(x . y)` or list.
 
     (cdr <pair>)
 
-returns the second part `y` of a pair `(x . y)`.  For lists this returns the rest of the list after the first part.
+returns the second part `y` of a pair `(x . y)`.  For lists this returns the rest of the list after the first item.
 
 ### Arithmetic
 

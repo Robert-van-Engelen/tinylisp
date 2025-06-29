@@ -20,7 +20,7 @@ L atom(const char *s) {
 }
 L cons(L x,L y) { cell[--sp] = x; cell[--sp] = y; if (hp > sp<<2) abort(); return box(CONS,sp); }
 L car(L p) { return (T(p)&~(CONS^CLOS)) == CONS ? cell[ord(p)+1] : err; }
-L cdr(L p) { return (T(p)&~(CONS^CLOS)) == CONS ? cell[ord(p)] : err; }
+L cdr(L p) { return (T(p)&~(CONS^CLOS)) == CONS ? cell[ord(p)] : nil; }
 L pair(L v,L x,L e) { return cons(cons(v,x),e); }
 L closure(L v,L x,L e) { return box(CLOS,ord(pair(v,x,equ(e,env) ? nil : e))); }
 L assoc(L v,L e) { while (T(e) == CONS && !equ(v,car(car(e)))) e = cdr(e); return T(e) == CONS ? cdr(car(e)) : err; }
@@ -73,11 +73,8 @@ L eval(L x,L e) {
   v = car(car(f)); d = cdr(f);
   if (T(d) == NIL) d = env;
   for (;T(v) == CONS && T(x) == CONS; v = cdr(v),x = cdr(x)) d = pair(car(v),eval(car(x),e),d);
-  if (T(v) == CONS) x = eval(x,e);
-  for (;T(v) == CONS; v = cdr(v),x = cdr(x)) d = pair(car(v),car(x),d);
-  if (T(x) == CONS) x = evlis(x,e);
-  else if (T(x) != NIL) x = eval(x,e);
-  if (T(v) != NIL) d = pair(v,x,d);
+  for (x = T(x) == CONS ? evlis(x,e) : eval(x,e); T(v) == CONS; v = cdr(v),x = cdr(x)) d = pair(car(v),car(x),d);
+  if (T(v) == ATOM) d = pair(v,x,d);
   x = cdr(car(f)); e = d;
  }
 }
