@@ -72,15 +72,9 @@ L eval(L x,L e) {
   if (T(f) != CLOS) return err;
   v = car(car(f)); d = cdr(f);
   if (T(d) == NIL) d = env;
-  for(;T(v) != NIL;v = cdr(v),x = cdr(x)) {
-    if (T(x) != CONS) { x = eval(x, e); break; }
-    if (T(v) == ATOM) { d = pair(v, evlis(x, e), d); v = nil; break; }
-    d = pair(car(v),eval(car(x),e),d);
-  }
-  for(;T(v) != NIL;v = cdr(v),x = cdr(x)) {
-    if (T(v) == ATOM) { d = pair(v, x, d); break; }
-    d = pair(car(v),car(x),d);
-  }
+  for (;T(v) == CONS && T(x) == CONS; v = cdr(v),x = cdr(x)) d = pair(car(v),eval(car(x),e),d);
+  for (x = T(x) == CONS ? evlis(x,e) : eval(x,e); T(v) == CONS; v = cdr(v),x = cdr(x)) d = pair(car(v),car(x),d);
+  if (T(v) == ATOM) d = pair(v,x,d);
   x = cdr(car(f)); e = d;
  }
 }
