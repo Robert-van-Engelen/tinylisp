@@ -24,7 +24,7 @@ Lisp in 99 lines is written in a Lisp-like functional style of structured C, lin
 - [lisp850.c](src/lisp850.c) Lisp in 99 lines of C for the Sharp PC-G850 with BCD boxing
 - [lisp850-opt.c](src/lisp850-opt.c) optimized version for speed and reduced memory use
 - [common.lisp](src/common.lisp) common Lisp functions defined in tiny Lisp itself
-- [list.lisp](src/list.lisp) list functions library
+- [list.lisp](src/list.lisp) list functions library, requires common.lisp definitions
 - [math.lisp](src/math.lisp) some Lisp math functions
 
 To compile tinylisp:

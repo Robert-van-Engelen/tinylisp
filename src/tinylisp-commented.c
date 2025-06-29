@@ -124,7 +124,7 @@ I not(L x) {
 
 /* let(x) is nonzero if x is a Lisp let/let* pair */
 I let(L x) {
-  return T(x) != NIL && !not(cdr(x));
+  return !not(x) && !not(cdr(x));
 }
 
 /* return a new list of evaluated Lisp expressions t in environment e */

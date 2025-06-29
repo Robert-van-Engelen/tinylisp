@@ -25,7 +25,7 @@ L pair(L v,L x,L e) { return cons(cons(v,x),e); }
 L closure(L v,L x,L e) { return box(CLOS,ord(pair(v,x,equ(e,env) ? nil : e))); }
 L assoc(L v,L e) { while (T(e) == CONS && !equ(v,car(car(e)))) e = cdr(e); return T(e) == CONS ? cdr(car(e)) : err; }
 I not(L x) { return T(x) == NIL; }
-I let(L x) { return T(x) != NIL && (x = cdr(x),T(x) != NIL); }
+I let(L x) { return !not(x) && !not(cdr(x)); }
 L eval(L,L),parse();
 L evlis(L t,L e) {
  L s,*p;
