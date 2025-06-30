@@ -231,6 +231,10 @@ catch exceptions in the evaluation of an expression, returns the value of the ex
 
 throws error `n`, where `n` is a nonzero integer.
 
+    (load <atom>)
+
+parses and executes Lisp from a file with the name `<atom>`, for example `(load 'some.lisp)`.
+
 ## Additional Lisp functions defined in tinylisp itself
 
 The following functions are defined in [common.lisp](src/common.lisp).
