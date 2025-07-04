@@ -46,9 +46,9 @@ L f_int(L t,L *e) { L n = car(evlis(t,*e)); return n<1e16 && n>-1e16 ? (long lon
 L f_lt(L t,L *e) { return t = evlis(t,*e),car(t) - car(cdr(t)) < 0 ? tru : nil; }
 L f_eq(L t,L *e) { return t = evlis(t,*e),equ(car(t),car(cdr(t))) ? tru : nil; }
 L f_not(L t,L *e) { return not(car(evlis(t,*e))) ? tru : nil; }
-L f_or(L t,L *e) { L x = nil; while (T(t) != NIL && not(x = eval(car(t),*e))) t = cdr(t); return x; }
-L f_and(L t,L *e) { L x = nil; while (T(t) != NIL && !not(x = eval(car(t),*e))) t = cdr(t); return x; }
-L f_cond(L t,L *e) { while (T(t) != NIL && not(eval(car(car(t)),*e))) t = cdr(t); return car(cdr(car(t))); }
+L f_or(L t,L *e) { L x = nil; while (!not(t) && not(x = eval(car(t),*e))) t = cdr(t); return x; }
+L f_and(L t,L *e) { L x = tru; while (!not(t) && !not(x = eval(car(t),*e))) t = cdr(t); return x; }
+L f_cond(L t,L *e) { while (!not(t) && not(eval(car(car(t)),*e))) t = cdr(t); return car(cdr(car(t))); }
 L f_if(L t,L *e) { return car(cdr(not(eval(car(t),*e)) ? cdr(t) : t)); }
 L f_leta(L t,L *e) { for (;let(t); t = cdr(t)) *e = pair(car(car(t)),eval(car(cdr(car(t))),*e),*e); return car(t); }
 L f_lambda(L t,L *e) { return closure(car(t),car(cdr(t)),*e); }

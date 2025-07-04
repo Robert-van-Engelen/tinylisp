@@ -41,9 +41,9 @@ L f_int(L t,L e) { L n = car(evlis(t,e)); return n<1e16 && n>-1e16 ? (long long)
 L f_lt(L t,L e) { return t = evlis(t,e),car(t) - car(cdr(t)) < 0 ? tru : nil; }
 L f_eq(L t,L e) { return t = evlis(t,e),equ(car(t),car(cdr(t))) ? tru : nil; }
 L f_not(L t,L e) { return not(car(evlis(t,e))) ? tru : nil; }
-L f_or(L t,L e) { L x = nil; while (T(t) != NIL && not(x = eval(car(t),e))) t = cdr(t); return x; }
-L f_and(L t,L e) { L x = nil; while (T(t) != NIL && !not(x = eval(car(t),e))) t = cdr(t); return x; }
-L f_cond(L t,L e) { while (T(t) != NIL && not(eval(car(car(t)),e))) t = cdr(t); return eval(car(cdr(car(t))),e); }
+L f_or(L t,L e) { L x = nil; while (!not(t) && not(x = eval(car(t),e))) t = cdr(t); return x; }
+L f_and(L t,L e) { L x = tru; while (!not(t) && !not(x = eval(car(t),e))) t = cdr(t); return x; }
+L f_cond(L t,L e) { while (!not(t) && not(eval(car(car(t)),e))) t = cdr(t); return eval(car(cdr(car(t))),e); }
 L f_if(L t,L e) { return eval(car(cdr(not(eval(car(t),e)) ? cdr(t) : t)),e); }
 L f_leta(L t,L e) { for (;let(t); t = cdr(t)) e = pair(car(car(t)),eval(car(cdr(car(t))),e),e); return eval(car(t),e); }
 L f_lambda(L t,L e) { return closure(car(t),car(cdr(t)),e); }
@@ -52,7 +52,7 @@ struct { const char *s; L (*f)(L,L); } prim[] = {
 {"eval",f_eval},{"quote",f_quote},{"cons",f_cons},{"car", f_car}, {"cdr",   f_cdr},   {"+",     f_add},   {"-",  f_sub},
 {"*",   f_mul}, {"/",    f_div},  {"int", f_int}, {"<",   f_lt},  {"eq?",   f_eq},    {"or",    f_or},    {"and",f_and},
 {"not", f_not}, {"cond", f_cond}, {"if",  f_if},  {"let*",f_leta},{"lambda",f_lambda},{"define",f_define},{0}};
-L bind(L v,L t,L e) { return T(v) == NIL ? e : T(v) == CONS ? bind(cdr(v),cdr(t),pair(car(v),car(t),e)) : pair(v,t,e); }
+L bind(L v,L t,L e) { return not(v) ? e : T(v) == CONS ? bind(cdr(v),cdr(t),pair(car(v),car(t),e)) : pair(v,t,e); }
 L reduce(L f,L t,L e) { return eval(cdr(car(f)),bind(car(car(f)),evlis(t,e),not(cdr(f)) ? env : cdr(f))); }
 L apply(L f,L t,L e) { return T(f) == PRIM ? prim[ord(f)].f(t,e) : T(f) == CLOS ? reduce(f,t,e) : err; }
 L eval(L x,L e) { return T(x) == ATOM ? assoc(x,e) : T(x) == CONS ? apply(eval(car(x),e),cdr(x),e) : x; }

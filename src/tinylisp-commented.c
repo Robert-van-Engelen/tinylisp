@@ -236,20 +236,20 @@ L f_not(L t, L e) {
 
 L f_or(L t,L e) {
   L x = nil;
-  while (T(t) != NIL && not(x = eval(car(t),e)))
+  while (!not(t) && not(x = eval(car(t),e)))
     t = cdr(t);
   return x;
 }
 
 L f_and(L t,L e) {
-  L x = nil;
-  while (T(t) != NIL && !not(x = eval(car(t),e)))
+  L x = tru;
+  while (!not(t) && !not(x = eval(car(t),e)))
     t = cdr(t);
   return x;
 }
 
 L f_cond(L t, L e) {
-  while (T(t) != NIL && not(eval(car(car(t)), e)))
+  while (!not(t) && not(eval(car(car(t)), e)))
     t = cdr(t);
   return eval(car(cdr(car(t))), e);
 }
@@ -302,7 +302,7 @@ struct {
 
 /* create environment by extending e with variables v bound to values t */
 L bind(L v, L t, L e) {
-  return T(v) == NIL ? e :
+  return not(v) ? e :
          T(v) == CONS ? bind(cdr(v), cdr(t), pair(car(v), car(t), e)) :
          pair(v, t, e);
 }
@@ -410,7 +410,7 @@ void printlist(L t) {
   for (putchar('('); ; putchar(' ')) {
     print(car(t));
     t = cdr(t);
-    if (T(t) == NIL)
+    if (not(t))
       break;
     if (T(t) != CONS) {
       printf(" . ");
