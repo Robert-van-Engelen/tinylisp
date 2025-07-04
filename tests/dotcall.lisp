@@ -85,3 +85,40 @@
      'failed)
  '(early-dot))
 
+(cons
+ (if (equal?
+      ((lambda (l)
+         (+ . l)) '(1 2 3))
+      6)
+     'passed
+     'failed)
+ '(builtin-add))
+
+(cons
+ (if (equal?
+      ((lambda (l)
+         (- . l)) '(1 2 3))
+      -4)
+     'passed
+     'failed)
+ '(builtin-sub))
+
+(cons
+ (if (equal?
+      ((lambda (l)
+         (* . l)) '(1 2 3))
+      6)
+     'passed
+     'failed)
+ '(builtin-mul))
+
+(cons
+ (if (equal?
+      ((lambda (l)
+         (/ . l)) '(1 2))
+      0.5)
+     'passed
+     'failed)
+ '(builtin-div))
+
+'OK
