@@ -1,5 +1,5 @@
 (define err? (lambda (x) (eq? x 'ERR)))
-(define pair? (lambda (x) (not (err? (car x)))))
+(define pair? (lambda (x) (not (err? (cdr x)))))
 (define equal?
     (lambda (x y)
         (or

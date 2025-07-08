@@ -97,7 +97,7 @@ L car(L p) {
 
 /* return the cdr of a pair or ERR if not a pair */
 L cdr(L p) {
-  return (T(p) & ~(CONS^CLOS)) == CONS ? cell[ord(p)] : nil;
+  return (T(p) & ~(CONS^CLOS)) == CONS ? cell[ord(p)] : err;
 }
 
 /* construct a pair to add to environment e, returns the list ((v . x) . e) */

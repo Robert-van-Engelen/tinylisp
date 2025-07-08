@@ -16,7 +16,7 @@ L atom(const char *s) {
 }
 L cons(L x,L y) { cell[--sp] = x; cell[--sp] = y; if (hp > sp<<3) abort(); return box(CONS,sp); }
 L car(L p) { return (T p&224) == CONS ? cell[T p &= 15,(I)p-9] : err; }
-L cdr(L p) { return (T p&224) == CONS ? cell[T p &= 15,(I)p-10] : nil; }
+L cdr(L p) { return (T p&224) == CONS ? cell[T p &= 15,(I)p-10] : err; }
 L pair(L v,L x,L e) { return cons(cons(v,x),e); }
 L closure(L v,L x,L e) { return box(CLOS,ord(pair(v,x,e == env ? nil : e))); }
 L assoc(L v,L e) { while (T e == CONS && v != car(car(e))) e = cdr(e); return T e == CONS ? cdr(car(e)) : err; }
