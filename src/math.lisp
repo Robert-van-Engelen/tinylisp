@@ -12,7 +12,7 @@
                 (- n 1)
                 n))))
 (define ceiling (lambda (n) (- 0 (floor (- 0 n)))))
-(define round (lambda (n) (+ (floor n) 0.5)))
+(define round (lambda (n) (floor (+ n 0.5))))
 (define mod (lambda (n m) (- n (* m (int (/ n m))))))
 (define gcd
     (lambda (n m)
