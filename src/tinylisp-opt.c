@@ -45,19 +45,20 @@ L f_div(L t,L *e) { L n = car(t = evlis(t,*e)); while (!not(t = cdr(t))) n /= ca
 L f_int(L t,L *e) { L n = car(evlis(t,*e)); return n<1e16 && n>-1e16 ? (long long)n : n; }
 L f_lt(L t,L *e) { return t = evlis(t,*e),car(t) - car(cdr(t)) < 0 ? tru : nil; }
 L f_eq(L t,L *e) { return t = evlis(t,*e),equ(car(t),car(cdr(t))) ? tru : nil; }
-L f_not(L t,L *e) { return not(car(evlis(t,*e))) ? tru : nil; }
+L f_pair(L t,L *e) { L x = car(evlis(t,*e)); return T(x) == CONS ? tru : nil; }
 L f_or(L t,L *e) { L x = nil; while (!not(t) && not(x = eval(car(t),*e))) t = cdr(t); return x; }
 L f_and(L t,L *e) { L x = tru; while (!not(t) && !not(x = eval(car(t),*e))) t = cdr(t); return x; }
+L f_not(L t,L *e) { return not(car(evlis(t,*e))) ? tru : nil; }
 L f_cond(L t,L *e) { while (!not(t) && not(eval(car(car(t)),*e))) t = cdr(t); return car(cdr(car(t))); }
 L f_if(L t,L *e) { return car(cdr(not(eval(car(t),*e)) ? cdr(t) : t)); }
 L f_leta(L t,L *e) { for (;let(t); t = cdr(t)) *e = pair(car(car(t)),eval(car(cdr(car(t))),*e),*e); return car(t); }
 L f_lambda(L t,L *e) { return closure(car(t),car(cdr(t)),*e); }
 L f_define(L t,L *e) { env = pair(car(t),eval(car(cdr(t)),*e),env); return car(t); }
 struct { const char *s; L (*f)(L,L*); short t; } prim[] = {
-{"eval",  f_eval,  1},{"quote", f_quote, 0},{"cons",f_cons,0},{"car", f_car, 0},{"cdr",f_cdr,0},{"+",   f_add, 0},
-{"-",     f_sub,   0},{"*",     f_mul,   0},{"/",   f_div, 0},{"int", f_int, 0},{"<",  f_lt, 0},{"eq?", f_eq,  0},
-{"or",    f_or,    0},{"and",   f_and,   0},{"not", f_not, 0},{"cond",f_cond,1},{"if", f_if, 1},{"let*",f_leta,1},
-{"lambda",f_lambda,0},{"define",f_define,0},{0}};
+{"eval",  f_eval,  1},{"quote", f_quote, 0},{"cons", f_cons,0},{"car", f_car, 0},{"cdr",f_cdr,0},{"+",   f_add, 0},
+{"-",     f_sub,   0},{"*",     f_mul,   0},{"/",    f_div, 0},{"int", f_int, 0},{"<",  f_lt, 0},{"eq?", f_eq,  0},
+{"or",    f_or,    0},{"and",   f_and,   0},{"not",  f_not, 0},{"cond",f_cond,1},{"if", f_if, 1},{"let*",f_leta,1},
+{"lambda",f_lambda,0},{"define",f_define,0},{"pair?",f_pair,0},{0}};
 L eval(L x,L e) {
  L f,v,d;
  while (1) {
@@ -122,8 +123,7 @@ void print(L x) {
 }
 void gc() { sp = ord(env); }
 int main() {
- int i;
- printf("tinylisp");
+ I i; printf("tinylisp");
  nil = box(NIL,0); err = atom("ERR"); tru = atom("#t"); env = pair(tru,tru,nil);
  for (i = 0; prim[i].s; ++i) env = pair(atom(prim[i].s),box(PRIM,i),env);
  while (1) { printf("\n%u>",sp-hp/8); print(eval(Read(),env)); gc(); }

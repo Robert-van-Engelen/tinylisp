@@ -1,6 +1,6 @@
 # Lisp in 99 lines of C and how to write one yourself
 
-In honor of the contributions made by Church and McCarthy, I wrote this project and the accompanying [article](tinylisp.pdf) to show how anyone can write a tiny Lisp interpreter in a few lines of C or in any "C-like" programming language for that matter.  I attempted to preserve the original meaning and flavor of Lisp as much as possible.  As a result, the C code in this project is strongly Lisp-like in compact form.  Despite being small, these tiny Lisp interpreters in C include 20 built-in Lisp primitives, garbage collection and REPL, which makes them a bit more practical than a toy example.  If desired, more Lisp features can be easily added with a few more lines of C as explained in my [article](tinylisp.pdf) with examples that are ready for you to try.
+In honor of the contributions made by Church and McCarthy, I wrote this project and the accompanying [article](tinylisp.pdf) to show how anyone can write a tiny Lisp interpreter in a few lines of C or in any "C-like" programming language for that matter.  I attempted to preserve the original meaning and flavor of Lisp as much as possible.  As a result, the C code in this project is strongly Lisp-like in compact form.  Despite being small, these tiny Lisp interpreters in C include 21 built-in Lisp primitives, simple garbage collection and REPL, which makes them a bit more practical than a toy example.  If desired, more Lisp features can be easily added with a few more lines of C as explained in my [article](tinylisp.pdf) with examples that are ready for you to try.
 
 ## Tinylisp running on a vintage Sharp PC-G850VS pocket computer
 
@@ -10,11 +10,11 @@ A cool pocket computer with a built-in C compiler.  Tinylisp compiles and runs o
 
 ## How is tinylisp so small?
 
-Using NaN boxing and BCD boxing and some programming tricks in C.  See my [article](tinylisp.pdf) for details, examples and detailed instructions how to extend tinylisp with more features.
+Using NaN boxing (or BCD boxing) and some programming tricks in C.  See my [article](tinylisp.pdf) for details, examples and detailed instructions how to extend tinylisp with more features.
 
 ## Project code
 
-Lisp in 99 lines is written in a Lisp-like functional style of structured C, lines are 55 columns wide on average and never wider than 120 columns for convenient editing.  It supports double precision floating point, has 20 built-in Lisp primitives, a REPL and a simple garbage collector.  Tail-call optimized versions are included for speed and reduced memory use.
+Lisp in 99 lines is written in a Lisp-like functional style of structured C, lines are 55 columns wide on average and never wider than 120 columns for convenient editing.  It supports double precision floating point, has 21 built-in Lisp primitives, a REPL and a simple garbage collector.  Tail-call optimized versions are included for speed and reduced memory use.
 
 - [tinylisp.c](src/tinylisp.c) Lisp in 99 lines of C with double precision
 - [tinylisp-commented.c](src/tinylisp-commented.c) commented version in an (overly) verbose C style
@@ -26,6 +26,10 @@ Lisp in 99 lines is written in a Lisp-like functional style of structured C, lin
 - [common.lisp](src/common.lisp) common Lisp functions defined in tiny Lisp itself
 - [list.lisp](src/list.lisp) list functions library, requires common.lisp definitions
 - [math.lisp](src/math.lisp) some Lisp math functions
+
+TL;DR: the article's additions and optimizations implemented with section references:
+
+- [tinylisp-extrase.c](tinylisp-extras.c) compile with `-lreadline`
 
 To compile tinylisp:
 
@@ -106,6 +110,10 @@ returns the first part `x` of a pair `(x . y)` or list.
 
 returns the second part `y` of a pair `(x . y)`.  For lists this returns the rest of the list after the first item.
 
+    (pair? x)
+
+returns `#t` (true) if `x` is a pair, that is, a non-empty list cons-cell to which `car` and `cdr` can be applied.
+
 ### Arithmetic
 
     (+ n1 n2 ... nk)
@@ -129,10 +137,6 @@ returns `#t` (true) if numbers `n1` < `n2`.  Otherwise, returns `()` (empty list
 
 returns `#t` (true) if values `x` and `y` are identical.  Otherwise, returns `()` (empty list means false).  Numbers and symbols of the same value are always identical, but non-empty lists may or may not be identical even when their values are the same.
 
-    (not x)
-
-returns `#t` if `x` is not `()`.  Otherwise, returns `()` (empty list means false).
-
     (or x1 x2 ... xk)
 
 returns the value of the first `x` that is not `()`.  Otherwise, returns `()` (empty list means false).  Only evaluates the `x` until the first is not `()`, i.e. the `or` is conditional.
@@ -140,6 +144,10 @@ returns the value of the first `x` that is not `()`.  Otherwise, returns `()` (e
     (and x1 x2 ... xk)
 
 returns the value of the last `x` if all `x` are not `()`.  Otherwise, returns `()` (empty list means false).  Only evaluates the `x` until the first is `()`, i.e. the `and` is conditional.
+
+    (not x)
+
+returns `#t` if `x` is not `()`.  Otherwise, returns `()` (empty list means false).
 
 ### Conditionals
 
@@ -233,7 +241,7 @@ throws error `n`, where `n` is a nonzero integer.
 
     (load <atom>)
 
-parses and executes Lisp from a file with the name `<atom>`, for example `(load 'some.lisp)`.
+parses and executes Lisp from a file with the name `<atom>`, for example `(load some.lisp)` (name is not quoted).
 
 ## Additional Lisp functions defined in tinylisp itself
 
@@ -250,10 +258,6 @@ evaluates `x` and returns `#t` if `x` is an `ERR` value.  Otherwise, returns `()
     (number? n)
 
 returns `#t` if `n` is numeric.  Otherwise, returns `()`.
-
-    (pair? x)
-
-returns `#t` if `x` is a pair or a non-empty list.  Otherwise, returns `()`.
 
     (symbol? a)
 

@@ -37,18 +37,19 @@ L f_div(L t,L e) { L n = car(t = evlis(t,e)); while (!not(t = cdr(t))) n /= car(
 L f_int(L t,L e) { L n = car(evlis(t,e)); return n-1e9 < 0 && n+1e9 > 0 ? (long)n : n; }
 L f_lt(L t,L e) { return t = evlis(t,e),car(t) - car(cdr(t)) < 0 ? tru : nil; }
 L f_eq(L t,L e) { return t = evlis(t,e),equ(car(t),car(cdr(t))) ? tru : nil; }
-L f_not(L t,L e) { return not(car(evlis(t,e))) ? tru : nil; }
+L f_pair(L t,L e) { L x = car(evlis(t,e)); return T x == CONS ? tru : nil; }
 L f_or(L t,L e) { L x = nil; while (T t != NIL && not(x = eval(car(t),e))) t = cdr(t); return x; }
 L f_and(L t,L e) { L x = tru; while (T t != NIL && !not(x = eval(car(t),e))) t = cdr(t); return x; }
+L f_not(L t,L e) { return not(car(evlis(t,e))) ? tru : nil; }
 L f_cond(L t,L e) { while (T t != NIL && not(eval(car(car(t)),e))) t = cdr(t); return eval(car(cdr(car(t))),e); }
 L f_if(L t,L e) { return eval(car(cdr(not(eval(car(t),e)) ? cdr(t) : t)),e); }
 L f_leta(L t,L e) { for (;let(t); t = cdr(t)) e = pair(car(car(t)),eval(car(cdr(car(t))),e),e); return eval(car(t),e); }
 L f_lambda(L t,L e) { return closure(car(t),car(cdr(t)),e); }
 L f_define(L t,L e) { env = pair(car(t),eval(car(cdr(t)),e),env); return car(t); }
 struct { const char *s; L (*f)(L,L); } prim[] = {
-{"eval",f_eval},{"quote",f_quote},{"cons",f_cons},{"car", f_car}, {"cdr",   f_cdr},   {"+",     f_add},   {"-",  f_sub},
-{"*",   f_mul}, {"/",    f_div},  {"int", f_int}, {"<",   f_lt},  {"eq?",   f_eq},    {"or",    f_or},    {"and",f_and},
-{"not", f_not}, {"cond", f_cond}, {"if",  f_if},  {"let*",f_leta},{"lambda",f_lambda},{"define",f_define},{0}};
+{"eval", f_eval },{"car",f_car},{"-",f_sub},{"<",  f_lt },{"or", f_or },{"cond",f_cond},{"lambda",f_lambda},
+{"quote",f_quote},{"cdr",f_cdr},{"*",f_mul},{"int",f_int},{"and",f_and},{"if",  f_if  },{"define",f_define},
+{"cons", f_cons },{"+",  f_add},{"/",f_div},{"eq?",f_eq },{"not",f_not},{"let*",f_leta},{"pair?", f_pair  },{0}};
 L bind(L v,L t,L e) { return T v == NIL ? e : T v == CONS ? bind(cdr(v),cdr(t),pair(car(v),car(t),e)) : pair(v,t,e); }
 L reduce(L f,L t,L e) { return eval(cdr(car(f)),bind(car(car(f)),evlis(t,e),not(cdr(f)) ? env : cdr(f))); }
 L apply(L f,L t,L e) { return T f == PRIM ? prim[ord(f)].f(t,e) : T f == CLOS ? reduce(f,t,e) : err; }
@@ -91,8 +92,7 @@ void print(L x) {
 }
 void gc() { sp = ord(env); }
 int main() {
- int i;
- printf("lisp850");
+ I i; printf("lisp850");
  nil = box(NIL,0); err = atom("ERR"); tru = atom("#t"); env = pair(tru,tru,nil);
  for (i = 0; prim[i].s; ++i) env = pair(atom(prim[i].s),box(PRIM,i),env);
  while (1) { printf("\n%u>",sp-hp/8); print(eval(read(),env)); gc(); }

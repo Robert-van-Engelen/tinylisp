@@ -12,3 +12,7 @@ Lisp in 99 lines is written in a Lisp-like functional style of structured C, lin
 - [common.lisp](common.lisp) common Lisp functions defined in tiny Lisp itself
 - [list.lisp](list.lisp) list functions library
 - [math.lisp](math.lisp) some Lisp math functions
+
+TL;DR: the article's additions and optimizations implemented with section references:
+
+- [tinylisp-extrase.c](tinylisp-extras.c) compile with `-lreadline`
