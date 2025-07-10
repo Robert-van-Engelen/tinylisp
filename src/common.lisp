@@ -1,7 +1,6 @@
 (define null? not)
 (define err? (lambda (x) (eq? x 'ERR)))
 (define number? (lambda (x) (eq? (* 0 x) 0)))
-(define pair? (lambda (x) (not (err? (cdr x)))))
 (define symbol?
     (lambda (x)
         (and
