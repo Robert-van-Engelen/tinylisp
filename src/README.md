@@ -15,4 +15,4 @@ Lisp in 99 lines is written in a Lisp-like functional style of structured C, lin
 
 TL;DR: the article's additions and optimizations implemented with section references:
 
-- [tinylisp-extrase.c](tinylisp-extras.c) compile with `-lreadline`
+- [tinylisp-extras.c](tinylisp-extras.c) compile with `-lreadline`
