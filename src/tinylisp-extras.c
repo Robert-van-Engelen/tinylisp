@@ -1,4 +1,4 @@
-/* tinylisp-extras.c with NaN boxing with the article's extras by Robert A. van Engelen 2025 */
+/* tinylisp-extras.c with the article's extras by Robert A. van Engelen 2025 */
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -7,15 +7,19 @@
 #define T(x) *(unsigned long long*)&x>>48
 #define A (char*)cell
 #define N 8192
+
 /* section 12: adding readline with history */
 #include <readline/readline.h>
 #include <readline/history.h>
 FILE *in = NULL;
 char buf[40],see = ' ',*ptr = "",*line = NULL,ps[20];
+
 /* section 14: error handling and exceptions */
 #include <setjmp.h>
+#include <signal.h>
 jmp_buf jb;
 L err(I i) { longjmp(jb,i); }
+
 /* section 4: constructing lisp expressions */
 I hp=0,sp=N,ATOM=0x7ff8,PRIM=0x7ff9,CONS=0x7ffa,CLOS=0x7ffb,MACR=0x7ffc,NIL=0x7ffd;
 L cell[N],nil,tru,env;
@@ -37,7 +41,8 @@ L macro(L v,L x) { return box(MACR,ord(cons(v,x))); }
 L assoc(L v,L e) { while (T(e) == CONS && !equ(v,car(car(e)))) e = cdr(e); return T(e) == CONS ? cdr(car(e)) : err(2); }
 I not(L x) { return T(x) == NIL; }
 I let(L x) { return !not(x) && !not(cdr(x)); }
-L eval(L,L),Read(),parse(); void print(L);
+L eval(L,L),Read(),parse(); void print(L); /* forward proto declarations */
+
 /* section 16.1: replacing recursion with loops */
 L evlis(L t,L e) {
  L s,*p;
@@ -45,6 +50,7 @@ L evlis(L t,L e) {
  if (T(t) == ATOM) *p = assoc(t,e);
  return s;
 }
+
 /* section 16.4: optimizing the lisp primitives */
 L evarg(L *t,L *e,I *a) {
  L x;
@@ -52,6 +58,8 @@ L evarg(L *t,L *e,I *a) {
  x = car(*t); *t = cdr(*t);
  return *a ? x : eval(x,*e);
 }
+
+/* section 6 lisp primitives (optimized with evarg per section 16.4) */
 L f_eval(L t,L *e) { I a = 0; return evarg(&t,e,&a); }
 L f_quote(L t,L *_) { return car(t); }
 L f_cons(L t,L *e) { I a = 0; L x = evarg(&t,e,&a); return cons(x,evarg(&t,e,&a)); }
@@ -64,6 +72,7 @@ L f_div(L t,L *e) { I a = 0; L n = evarg(&t,e,&a); while (!not(t)) n /= evarg(&t
 L f_int(L t,L *e) { I a = 0; L n = evarg(&t,e,&a); return n<1e16 && n>-1e16 ? (long long)n : n; }
 L f_lt(L t,L *e) { I a = 0; L n = evarg(&t,e,&a); return n - evarg(&t,e,&a) < 0 ? tru : nil; }
 L f_eq(L t,L *e) { I a = 0; L x = evarg(&t,e,&a); return equ(x,evarg(&t,e,&a)) ? tru : nil; }
+L f_pair(L t,L *e) { I a = 0; L x = evarg(&t,e,&a); return T(x) == CONS ? tru : nil; }
 L f_not(L t,L *e) { I a = 0; return not(evarg(&t,e,&a)) ? tru : nil; }
 L f_or(L t,L *e) { I a = 0; L x = nil; while (!not(t) && not(x)) x = evarg(&t,e,&a); return x; }
 L f_and(L t,L *e) { I a = 0; L x = tru; while (!not(t) && !not(x)) x = evarg(&t,e,&a); return x; }
@@ -71,10 +80,9 @@ L f_cond(L t,L *e) { while (!not(t) && not(eval(car(car(t)),*e))) t = cdr(t); re
 L f_if(L t,L *e) { return car(cdr(not(eval(car(t),*e)) ? cdr(t) : t)); }
 L f_leta(L t,L *e) { for (;let(t); t = cdr(t)) *e = pair(car(car(t)),eval(car(cdr(car(t))),*e),*e); return car(t); }
 L f_lambda(L t,L *e) { return closure(car(t),car(cdr(t)),*e); }
-L f_macro(L t,L *_) { return macro(car(t),car(cdr(t))); }
 L f_define(L t,L *e) { env = pair(car(t),eval(car(cdr(t)),*e),env); return car(t); }
-L f_pair(L t,L *e) { I a = 0; L x = evarg(&t,e,&a); return T(x) == CONS ? tru : nil; }
-/* section 11: additional lisp primitives */
+
+/* section 11: additional lisp primitives (optimized with evarg per section 16.4) */
 L f_assoc(L t,L *e) { I a = 0; L x = evarg(&t,e,&a); return assoc(x,evarg(&t,e,&a)); }
 L f_env(L _,L *e) { return *e; }
 L f_let(L t,L *e) {
@@ -99,11 +107,14 @@ L f_setcdr(L t,L *e) {
  I a = 0; L x = evarg(&t,e,&a);
  return (T(x) == CONS) ? cell[ord(x)] = evarg(&t,e,&a) : err(1);
 }
+L f_macro(L t,L *_) { return macro(car(t),car(cdr(t))); }
 L f_read(L t,L *_) { L x; char c = see; see = ' '; x = Read(); see = c; return x; }
 L f_print(L t, L *e) { I a = 0; L x; while (!not(t)) print(evarg(&t,e,&a)); return nil; }
 L f_println(L t,L *e) { f_print(t,e); putchar('\n'); return nil; }
+
 /* section 12: adding readline with history */
 L f_load(L t,L *e) { L x = car(t); if (!in && T(x) == ATOM) in = fopen(A+ord(x),"r"); return x; }
+
 /* section 14: error handling and exceptions */
 L f_catch(L t,L *e) {
  L x; I i;
@@ -114,44 +125,46 @@ L f_catch(L t,L *e) {
  memcpy(jb,savedjb,sizeof(jb));
  return x;
 }
-L f_throw(L t,L *e) { longjmp(jb,(I)num(car(t))); }
+L f_throw(L t,L *_) { longjmp(jb,(I)num(car(t))); }
+
 struct { const char *s; L (*f)(L,L*); short t; } prim[] = {
-{"eval",    f_eval,   1},
-{"quote",   f_quote,  0},
-{"cons",    f_cons,   0},
-{"car",     f_car,    0},
-{"cdr",     f_cdr,    0},
-{"+",       f_add,    0},
-{"-",       f_sub,    0},
-{"*",       f_mul,    0},
-{"/",       f_div,    0},
-{"int",     f_int,    0},
-{"<",       f_lt,     0},
-{"eq?",     f_eq,     0},
-{"pair?",   f_pair,   0},
-{"or",      f_or,     0},
-{"and",     f_and,    0},
-{"not",     f_not,    0},
-{"cond",    f_cond,   1},
-{"if",      f_if,     1},
-{"let*",    f_leta,   1},
-{"lambda",  f_lambda, 0},
-{"macro",   f_macro,  0},
-{"define",  f_define, 0},
-{"assoc",   f_assoc,  0},
-{"env",     f_env,    0},
-{"let",     f_let,    1},
-{"letrec*", f_letreca,1},
-{"setq",    f_setq,   0},
-{"set-car!",f_setcar, 0},
-{"set-cdr!",f_setcdr, 0},
-{"read",    f_read,   0},
-{"print",   f_print,  0},
-{"println", f_println,0},
-{"load",    f_load,   0},
-{"catch",   f_catch,  0},
-{"throw",   f_throw,  0},
-{0}};
+ {"eval",    f_eval,   1},
+ {"quote",   f_quote,  0},
+ {"cons",    f_cons,   0},
+ {"car",     f_car,    0},
+ {"cdr",     f_cdr,    0},
+ {"+",       f_add,    0},
+ {"-",       f_sub,    0},
+ {"*",       f_mul,    0},
+ {"/",       f_div,    0},
+ {"int",     f_int,    0},
+ {"<",       f_lt,     0},
+ {"eq?",     f_eq,     0},
+ {"pair?",   f_pair,   0},
+ {"or",      f_or,     0},
+ {"and",     f_and,    0},
+ {"not",     f_not,    0},
+ {"cond",    f_cond,   1},
+ {"if",      f_if,     1},
+ {"let*",    f_leta,   1},
+ {"lambda",  f_lambda, 0},
+ {"define",  f_define, 0},
+ {"assoc",   f_assoc,  0},
+ {"env",     f_env,    0},
+ {"let",     f_let,    1},
+ {"letrec*", f_letreca,1},
+ {"setq",    f_setq,   0},
+ {"set-car!",f_setcar, 0},
+ {"set-cdr!",f_setcdr, 0},
+ {"macro",   f_macro,  0},
+ {"read",    f_read,   0},
+ {"print",   f_print,  0},
+ {"println", f_println,0},
+ {"load",    f_load,   0},
+ {"catch",   f_catch,  0},
+ {"throw",   f_throw,  0},
+ {0}};
+
 /* section 16.2/3/4: tail-call optimization */
 L eval(L x,L e) {
  I a; L f,v,d;
@@ -177,6 +190,7 @@ L eval(L x,L e) {
   x = cdr(car(f)); e = d;
  }
 }
+
 /* section 12: adding readline with history */
 void look() {
  if (in) {
@@ -187,7 +201,7 @@ void look() {
   in = NULL;
  }
  if (see == '\n') {
-  if (line) free(line);
+  if (line) { ptr = line; line = NULL; free(ptr); }
   while (!(ptr = line = readline(ps))) freopen("/dev/tty","r",stdin);
   add_history(line);
   strcpy(ps,"? ");
@@ -196,6 +210,7 @@ void look() {
 }
 I seeing(char c) { return c == ' ' ? see > 0 && see <= c : see == c; }
 char get() { char c = see; look(); return c; }
+
 /* section 7: parsing lisp expressions */
 char scan() {
  I i = 0;
@@ -205,6 +220,7 @@ char scan() {
  return buf[i] = 0,*buf;
 }
 L Read() { return scan(),parse(); }
+
 /* section 16.1: replacing recursion with loops (in list parsing) */
 L list() {
  L t = nil,*p = &t;
@@ -220,6 +236,7 @@ L parse() {
  if (*buf == '\'') return cons(atom("quote"),cons(Read(),nil));
  return sscanf(buf,"%lg%n",&n,&i) > 0 && !buf[i] ? n : atom(buf);
 }
+
 /* section 8: printing lisp expressions */
 void printlist(L t) {
  putchar('(');
@@ -240,12 +257,18 @@ void print(L x) {
  else if (T(x) == MACR) printf("[%u]",ord(x));
  else printf("%.10lg",x);
 }
+
 /* section 9: garbage collection */
 void gc() {
  I i;
  for (hp = 0,i = sp = ord(env); i < N; ++i) if (T(cell[i]) == ATOM && ord(cell[i]) > hp) hp = ord(cell[i]);
  hp += strlen(A+hp)+1;
 }
+
+/* section 14: error handling and exceptions */
+void stop(int i) { if (line) longjmp(jb,5); else abort(); }
+
+/* section 10: read-eval-print loop (REPL) with additions */
 int main(int argc, char **argv) {
  I i; printf("tinylisp");
  nil = box(NIL,0); atom("nan"); tru = atom("#t"); env = pair(tru,tru,nil);
@@ -253,5 +276,6 @@ int main(int argc, char **argv) {
  in = fopen((argc > 1 ? argv[1] : "common.lisp"),"r");
  using_history();
  if ((i = setjmp(jb)) > 0) printf("ERR %u", i);
- while (1) { gc(); putchar('\n'); snprintf(ps,20,"%u>",sp-hp/8); print(eval(Read(),env)); }
+ signal(SIGINT, stop);
+ while (1) { putchar('\n'); snprintf(ps,20,"%u>",sp-hp/8); print(eval(Read(),env)); gc(); }
 }

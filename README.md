@@ -66,7 +66,7 @@ The `bas2img` option `-l0x400` adds line numbers to the C source automatically.
 
 ### Numbers
 
-Double precision floating point numbers, including `inf`, `-inf` and `nan` (`nan` gives `ERR`).  Numbers may also be entered in hexadecimal `0xh...h` format.
+Double precision floating point numbers, including `inf`, `-inf` and `nan` (`nan` is the same as `ERR`).  Numbers may also be entered in hexadecimal `0xh...h` format.
 
 ### Symbols
 

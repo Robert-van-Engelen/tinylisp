@@ -15,7 +15,7 @@
         x,y  any Lisp expression
         n    number
         t    list
-        f    function or Lisp primitive
+        f    function, a lambda closure or Lisp primitive
         p    pair, a cons of two Lisp expressions
         e,d  environment, a list of pairs, e.g. created with (define v x)
         v    the name of a variable (an atom) or a list of variables */
