@@ -14,7 +14,7 @@
         x,y  any Lisp expression
         n    number
         t    list
-        f,   function, a lambda closure or Lisp primitive
+        f    function, a lambda closure or Lisp primitive
         p    pair, a cons of two Lisp expressions
         e,d  environment, a list of pairs, e.g. created with (define v x)
         v    the name of a variable (an atom) or a list of variables */
@@ -43,8 +43,8 @@ jmp_buf jb;
 L err(I i) { longjmp(jb,i); }
 
 /* section 4: constructing Lisp expressions */
+enum { ATOM = 0x7ff8,PRIM = 0x7ff9,CONS = 0x7ffa,CLOS = 0x7ffb,MACR = 0x7ffc,NIL = 0x7ffd };
 I hp = 0,sp = N;
-I ATOM = 0x7ff8,PRIM = 0x7ff9,CONS = 0x7ffa,CLOS = 0x7ffb,MACR = 0x7ffc,NIL = 0x7ffd;
 L cell[N],nil,tru,env;
 L box(I t,I i) { L x; *(unsigned long long*)&x = (unsigned long long)t<<48|i; return x; }
 I ord(L x) { return *(unsigned long long*)&x; }
@@ -133,11 +133,11 @@ L f_setcdr(L t,L *e) {
 }
 L f_macro(L t,L *_) { return macro(car(t),car(cdr(t))); }
 L f_read(L t,L *_) { L x; char c = see; see = ' '; x = Read(); see = c; return x; }
-L f_print(L t,L *e) { I a = 0; L x; while (!not(t)) print(evarg(&t,e,&a)); return nil; }
+L f_print(L t,L *e) { I a = 0; while (!not(t)) print(evarg(&t,e,&a)); return nil; }
 L f_println(L t,L *e) { f_print(t,e); putchar('\n'); return nil; }
 
 /* section 12: adding readline with history */
-L f_load(L t,L *e) { L x = car(t); if (!in && T(x) == ATOM) in = fopen(A+ord(x),"r"); return x; }
+L f_load(L t,L *_) { L x = car(t); if (!in && T(x) == ATOM) in = fopen(A+ord(x),"r"); return x; }
 
 /* section 14: error handling and exceptions */
 L f_catch(L t,L *e) {
