@@ -27,7 +27,7 @@
 /* address of the atom heap is at the bottom of the cell stack */
 #define A (char*)cell
 
-/* number of cells for the shared stack and atom heap, increase N as desired */
+/* number of cells for the shared stack of cells and atom heap, increase N as desired */
 #define N 8192
 
 /* section 12: adding readline with history */
@@ -43,28 +43,51 @@ jmp_buf jb;
 L err(I i) { longjmp(jb,i); }
 
 /* section 4: constructing Lisp expressions */
-enum { ATOM = 0x7ff8,PRIM = 0x7ff9,CONS = 0x7ffa,CLOS = 0x7ffb,MACR = 0x7ffc,NIL = 0x7ffd };
+/* hp: atom heap pointer, A+hp with hp=0 points to the first atom string in cell[]
+   sp: cell stack pointer, the stack starts at the top of cell[] with sp=N
+   safety invariant: hp <= sp<<3 */
 I hp = 0,sp = N;
-L cell[N],nil,tru,env;
+/* atom, primitive, cons, closure and nil tags for NaN boxing */
+enum { ATOM = 0x7ff8,PRIM = 0x7ff9,CONS = 0x7ffa,CLOS = 0x7ffb,MACR = 0x7ffc,NIL = 0x7ffd };
+/* cell[N] array of Lisp expressions, shared by the stack and atom heap */
+L cell[N];
+/* Lisp constant expressions () (nil), #t, and the global environment env */
+L nil,tru,env;
+/* NaN-boxing specific functions:
+   box(t,i): returns a new NaN-boxed double with tag t and ordinal i
+   ord(x):   returns the ordinal of the NaN-boxed double x
+   num(n):   convert or check number n (does nothing, e.g. could check for NaN)
+   equ(x,y): returns nonzero if x equals y */
 L box(I t,I i) { L x; *(unsigned long long*)&x = (unsigned long long)t<<48|i; return x; }
 I ord(L x) { return *(unsigned long long*)&x; }
 L num(L n) { return n; }
 I equ(L x,L y) { return *(unsigned long long*)&x == *(unsigned long long*)&y; }
+/* interning of atom names (Lisp symbols), returns a unique NaN-boxed ATOM */
 L atom(const char *s) {
  I i = 0; while (i < hp && strcmp(A+i,s)) i += strlen(A+i)+1;
  if (i == hp && (hp += strlen(strcpy(A+i,s))+1) > sp<<3) err(4);
  return box(ATOM,i);
 }
+/* construct pair (x . y) returns a NaN-boxed CONS */
 L cons(L x,L y) { cell[--sp] = x; cell[--sp] = y; if (hp > sp<<3) err(4); return box(CONS,sp); }
+/* return the car of a pair or throw err(1) if not a pair */
 L car(L p) { return T(p) == CONS || T(p) == CLOS || T(p) == MACR ? cell[ord(p)+1] : err(1); }
+/* return the cdr of a pair or throw err(1) if not a pair */
 L cdr(L p) { return T(p) == CONS || T(p) == CLOS || T(p) == MACR ? cell[ord(p)] : err(1); }
+/* construct a pair to add to environment e, returns the list ((v . x) . e) */
 L pair(L v,L x,L e) { return cons(cons(v,x),e); }
+/* construct a closure, returns a NaN-boxed CLOS */
 L closure(L v,L x,L e) { return box(CLOS,ord(pair(v,x,equ(e,env) ? nil : e))); }
+/* construct a macro, returns a NaN-boxed MACR */
 L macro(L v,L x) { return box(MACR,ord(cons(v,x))); }
+/* look up a symbol in an environment, return its value or throw err(2) if not found */
 L assoc(L v,L e) { while (T(e) == CONS && !equ(v,car(car(e)))) e = cdr(e); return T(e) == CONS ? cdr(car(e)) : err(2); }
+/* not(x) is nonzero if x is the Lisp () empty list */
 I not(L x) { return T(x) == NIL; }
+/* let(x) is nonzero if x is a Lisp let/let* pair */
 I let(L x) { return !not(x) && !not(cdr(x)); }
-L eval(L,L),Read(),parse(); void print(L); /* forward proto declarations */
+/* forward proto declarations */
+L eval(L,L),Read(),parse(); void print(L);
 
 /* section 16.1: replacing recursion with loops */
 L evlis(L t,L e) {
