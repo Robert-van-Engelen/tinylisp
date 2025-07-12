@@ -1,11 +1,33 @@
 /* tinylisp-extras.c with the article's extras by Robert A. van Engelen 2025 */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
+/* we only need two types to implement a Lisp interpreter:
+        I    unsigned integer (either 16 bit, 32 bit or 64 bit unsigned)
+        L    Lisp expression (double with NaN boxing)
+   I variables and function parameters are named as follows:
+        i    any unsigned integer, e.g. a NaN-boxed ordinal value
+        t    a NaN-boxed tag
+   L variables and function parameters are named as follows:
+        x,y  any Lisp expression
+        n    number
+        t    list
+        f,   function, a lambda closure or Lisp primitive
+        p    pair, a cons of two Lisp expressions
+        e,d  environment, a list of pairs, e.g. created with (define v x)
+        v    the name of a variable (an atom) or a list of variables */
 #define I unsigned
 #define L double
+
+/* T(x) returns the tag bits of a NaN-boxed Lisp expression x */
 #define T(x) *(unsigned long long*)&x>>48
+
+/* address of the atom heap is at the bottom of the cell stack */
 #define A (char*)cell
+
+/* number of cells for the shared stack and atom heap, increase N as desired */
 #define N 8192
 
 /* section 12: adding readline with history */
@@ -20,8 +42,9 @@ char buf[40],see = ' ',*ptr = "",*line = NULL,ps[20];
 jmp_buf jb;
 L err(I i) { longjmp(jb,i); }
 
-/* section 4: constructing lisp expressions */
-I hp=0,sp=N,ATOM=0x7ff8,PRIM=0x7ff9,CONS=0x7ffa,CLOS=0x7ffb,MACR=0x7ffc,NIL=0x7ffd;
+/* section 4: constructing Lisp expressions */
+I hp = 0,sp = N;
+I ATOM = 0x7ff8,PRIM = 0x7ff9,CONS = 0x7ffa,CLOS = 0x7ffb,MACR = 0x7ffc,NIL = 0x7ffd;
 L cell[N],nil,tru,env;
 L box(I t,I i) { L x; *(unsigned long long*)&x = (unsigned long long)t<<48|i; return x; }
 I ord(L x) { return *(unsigned long long*)&x; }
@@ -51,7 +74,7 @@ L evlis(L t,L e) {
  return s;
 }
 
-/* section 16.4: optimizing the lisp primitives */
+/* section 16.4: optimizing the Lisp primitives */
 L evarg(L *t,L *e,I *a) {
  L x;
  if (T(*t) == ATOM) *t = assoc(*t,*e),*a = 1;
@@ -59,7 +82,7 @@ L evarg(L *t,L *e,I *a) {
  return *a ? x : eval(x,*e);
 }
 
-/* section 6 lisp primitives (optimized with evarg per section 16.4) */
+/* section 6 Lisp primitives (optimized with evarg per section 16.4) */
 L f_eval(L t,L *e) { I a = 0; return evarg(&t,e,&a); }
 L f_quote(L t,L *_) { return car(t); }
 L f_cons(L t,L *e) { I a = 0; L x = evarg(&t,e,&a); return cons(x,evarg(&t,e,&a)); }
@@ -82,7 +105,7 @@ L f_leta(L t,L *e) { for (;let(t); t = cdr(t)) *e = pair(car(car(t)),eval(car(cd
 L f_lambda(L t,L *e) { return closure(car(t),car(cdr(t)),*e); }
 L f_define(L t,L *e) { env = pair(car(t),eval(car(cdr(t)),*e),env); return car(t); }
 
-/* section 11: additional lisp primitives (optimized with evarg per section 16.4) */
+/* section 11: additional Lisp primitives (optimized with evarg per section 16.4) */
 L f_assoc(L t,L *e) { I a = 0; L x = evarg(&t,e,&a); return assoc(x,evarg(&t,e,&a)); }
 L f_env(L _,L *e) { return *e; }
 L f_let(L t,L *e) {
@@ -91,12 +114,13 @@ L f_let(L t,L *e) {
  return car(t);
 }
 L f_letreca(L t,L *e) {
- for (; let(t); t = cdr(t)) *e = pair(car(car(t)),nil,*e),cell[sp+2] = eval(car(cdr(car(t))),*e);
+ L *x;
+ for (; let(t); t = cdr(t)) *e = pair(car(car(t)),nil,*e),x = &cell[sp+2],*x = eval(car(cdr(car(t))),*e);
  return car(t);
 }
 L f_setq(L t,L *e) {
  L d = *e,v = car(t),x = eval(car(cdr(t)),d);
- while (T(d) == CONS && !equ(v, car(car(d)))) d = cdr(d);
+ while (T(d) == CONS && !equ(v,car(car(d)))) d = cdr(d);
  return T(d) == CONS ? cell[ord(car(d))] = x : err(2);
 }
 L f_setcar(L t,L *e) {
@@ -109,7 +133,7 @@ L f_setcdr(L t,L *e) {
 }
 L f_macro(L t,L *_) { return macro(car(t),car(cdr(t))); }
 L f_read(L t,L *_) { L x; char c = see; see = ' '; x = Read(); see = c; return x; }
-L f_print(L t, L *e) { I a = 0; L x; while (!not(t)) print(evarg(&t,e,&a)); return nil; }
+L f_print(L t,L *e) { I a = 0; L x; while (!not(t)) print(evarg(&t,e,&a)); return nil; }
 L f_println(L t,L *e) { f_print(t,e); putchar('\n'); return nil; }
 
 /* section 12: adding readline with history */
@@ -211,7 +235,7 @@ void look() {
 I seeing(char c) { return c == ' ' ? see > 0 && see <= c : see == c; }
 char get() { char c = see; look(); return c; }
 
-/* section 7: parsing lisp expressions */
+/* section 7: parsing Lisp expressions */
 char scan() {
  I i = 0;
  while (seeing(' ') || seeing(';')) if (get() == ';') while (!seeing('\n')) get();
@@ -237,7 +261,7 @@ L parse() {
  return sscanf(buf,"%lg%n",&n,&i) > 0 && !buf[i] ? n : atom(buf);
 }
 
-/* section 8: printing lisp expressions */
+/* section 8: printing Lisp expressions */
 void printlist(L t) {
  putchar('(');
  while (1) {
@@ -269,13 +293,13 @@ void gc() {
 void stop(int i) { if (line) longjmp(jb,5); else abort(); }
 
 /* section 10: read-eval-print loop (REPL) with additions */
-int main(int argc, char **argv) {
+int main(int argc,char **argv) {
  I i; printf("tinylisp");
  nil = box(NIL,0); atom("nan"); tru = atom("#t"); env = pair(tru,tru,nil);
  for (i = 0; prim[i].s; ++i) env = pair(atom(prim[i].s),box(PRIM,i),env);
  in = fopen((argc > 1 ? argv[1] : "common.lisp"),"r");
  using_history();
- if ((i = setjmp(jb)) > 0) printf("ERR %u", i);
- signal(SIGINT, stop);
+ if ((i = setjmp(jb)) > 0) printf("ERR %u",i);
+ signal(SIGINT,stop);
  while (1) { putchar('\n'); snprintf(ps,20,"%u>",sp-hp/8); print(eval(Read(),env)); gc(); }
 }
