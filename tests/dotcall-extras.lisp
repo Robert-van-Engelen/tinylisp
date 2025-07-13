@@ -1,5 +1,14 @@
 (cons
     (if (equal?
+            (((lambda (f x)
+                (lambda args (f x . args))) + 1) 2 3)
+            6)
+        'passed
+        'failed)
+    '(currying))
+
+(cons
+    (if (equal?
             ((lambda (x y z) (list x y z)) '(1) '(2) '(3))
             '((1) (2) (3)))
         'passed
