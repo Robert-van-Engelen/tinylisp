@@ -4,7 +4,7 @@ In honor of the contributions made by Church and McCarthy, I wrote this project 
 
 ## Tinylisp running on a vintage Sharp PC-G850VS pocket computer
 
-![PC-G850](lisp850.jpg)
+![PC-G850](img/lisp850.jpg)
 
 A cool pocket computer with a built-in C compiler.  Tinylisp compiles and runs on this machine too with its native C!
 
@@ -30,6 +30,10 @@ Lisp in 99 lines is written in a Lisp-like functional style of structured C, lin
 TL;DR: the article's additions and optimizations implemented with section references:
 
 - [tinylisp-extras.c](src/tinylisp-extras.c) compile with `-lreadline`
+
+This version implements 15 additional Lisp primitives for Lisp source loading, readline, input and output Lisp expressions, exceptions, CTRL-C break, macros, and execution tracing as shown below:
+
+![tinylisp-extras](img/tracing.png)
 
 To compile tinylisp:
 
@@ -227,9 +231,9 @@ returns the Lisp expression read from input.
 
 prints the expressions.
 
-    (trace <0|1|2>)
+    (trace <0|1|2|3>)
 
-disables tracing (0), enables tracing (1), and enables tracing with ENTER key press (2).
+disables tracing (0), enables tracing (1), tracing with ENTER key press (2), and with memory dumping (3).
 
     (catch <expr>)
 

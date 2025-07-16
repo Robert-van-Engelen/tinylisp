@@ -45,8 +45,9 @@ L err(I i) { longjmp(jb,i); }
 /* section 4: constructing Lisp expressions */
 /* hp: atom heap pointer, A+hp with hp=0 points to the first atom string in cell[]
    sp: cell stack pointer, the stack starts at the top of cell[] with sp=N
+   tr: tracing off (0), on (1), wait on ENTER (2), dump and wait (3)
    safety invariant: hp <= sp<<3 */
-I hp = 0,sp = N;
+I hp = 0,sp = N,tr = 0;
 /* atom, primitive, cons, closure and nil tags for NaN boxing */
 enum { ATOM = 0x7ff8,PRIM = 0x7ff9,CONS = 0x7ffa,CLOS = 0x7ffb,MACR = 0x7ffc,NIL = 0x7ffd };
 /* cell[N] array of Lisp expressions, shared by the stack and atom heap */
@@ -174,6 +175,9 @@ L f_catch(L t,L *e) {
 }
 L f_throw(L t,L *_) { longjmp(jb,(I)num(car(t))); }
 
+/* section 13: execution tracing */
+L f_trace(L t,L *_) { tr = not(t) ? !tr : (I)num(car(t)); return num(tr); }
+
 struct { const char *s; L (*f)(L,L*); short t; } prim[] = {
  {"eval",    f_eval,   1},
  {"quote",   f_quote,  0},
@@ -210,19 +214,47 @@ struct { const char *s; L (*f)(L,L*); short t; } prim[] = {
  {"load",    f_load,   0},
  {"catch",   f_catch,  0},
  {"throw",   f_throw,  0},
+ {"trace",   f_trace,  0},
  {0}};
+
+/* section 13: tracing (trace 1) with colorful output, to wait on ENTER (trace 2), and memory dump (trace 3) */
+void dump(I i,I k) {
+ if (i < k) {
+  printf("\n\e[35m==== DUMP ====");
+  while (i < k) {
+   printf("\n\e[32m%u \e[35m",--k);
+   switch (T(cell[k])) {
+    case ATOM: printf("ATOM "); printf("\e[32m%u ",ord(cell[k])); break;
+    case PRIM: printf("PRIM "); break;
+    case CONS: printf("CONS "); printf("\e[32m%u ",ord(cell[k])); break;
+    case CLOS: printf("CLOS "); printf("\e[32m%u ",ord(cell[k])); break;
+    case MACR: printf("MACR "); printf("\e[32m%u ",ord(cell[k])); break;
+    case NIL:  printf("NIL  "); break;
+    default:   printf("     "); break;
+   }
+   printf("\e[33m"); print(cell[k]); printf("\e[m%s",k % 2 ? "" : "\n");
+  }
+  printf("\e[35m==============\e[m\t");
+ }
+}
+void trace(I s,L y,L x) {
+ printf("\n\e[32m%u \e[33m",sp); print(y); printf("\e[36m => \e[33m"); print(x); printf("\e[m\t");
+ if (tr > 2) dump(sp,s);
+ if (tr > 1) while (getchar() >= ' ') continue;
+}
 
 /* section 16.2/3/4: tail-call optimization */
 L eval(L x,L e) {
- I a; L f,v,d;
+ I a,s = sp; L f,v,d,y;
  while (1) {
-  if (T(x) == ATOM) return assoc(x,e);
-  if (T(x) != CONS) return x;
+  y = x;
+  if (T(x) == ATOM) { x = assoc(x,e); break; }
+  if (T(x) != CONS) break;
   f = eval(car(x),e); x = cdr(x);
   if (T(f) == PRIM) {
    x = prim[ord(f)].f(x,&e);
    if (prim[ord(f)].t) continue;
-   return x;
+   break;
   }
   if (T(f) == MACR) {
    for (d = env,v = car(f); T(v) == CONS; v = cdr(v),x = cdr(x)) d = pair(car(v),car(x),d);
@@ -235,7 +267,10 @@ L eval(L x,L e) {
   for (a = 0; T(v) == CONS; v = cdr(v)) d = pair(car(v),evarg(&x,&e,&a),d);
   if (T(v) == ATOM) d = pair(v,a ? x : evlis(x,e),d);
   x = cdr(car(f)); e = d;
+  if (tr) trace(s,y,x);
  }
+ if (tr) trace(s,y,x);
+ return x;
 }
 
 /* section 12: adding readline with history */
@@ -324,5 +359,5 @@ int main(int argc,char **argv) {
  using_history();
  if ((i = setjmp(jb)) > 0) printf("ERR %u",i);
  signal(SIGINT,stop);
- while (1) { putchar('\n'); snprintf(ps,20,"%u>",sp-hp/8); print(eval(Read(),env)); gc(); }
+ while (1) { gc(); putchar('\n'); snprintf(ps,20,"%u>",sp-hp/8); print(eval(Read(),env)); }
 }
