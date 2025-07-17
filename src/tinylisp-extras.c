@@ -218,11 +218,11 @@ struct { const char *s; L (*f)(L,L*); short t; } prim[] = {
  {0}};
 
 /* section 13: tracing (trace 1) with colorful output, to wait on ENTER (trace 2), and memory dump (trace 3) */
-void dump(I i,I k) {
+void dump(I i,I k,L e) {
  if (i < k) {
   printf("\n\e[35m==== DUMP ====");
-  while (i < k) {
-   printf("\n\e[32m%u \e[35m",--k);
+  while (i < k--) {
+   printf("\n\e[35m%s\e[32m%u \e[35m",k-1 == ord(e) ? "local env:\n" : k-1 == ord(env) ? "env:\n" : "",k);
    switch (T(cell[k])) {
     case ATOM: printf("ATOM "); printf("\e[32m%u ",ord(cell[k])); break;
     case PRIM: printf("PRIM "); break;
@@ -237,9 +237,9 @@ void dump(I i,I k) {
   printf("\e[35m==============\e[m\t");
  }
 }
-void trace(I s,L y,L x) {
+void trace(I s,L y,L x,L e) {
+ if (tr > 2) dump(sp,s,e);
  printf("\n\e[32m%u \e[33m",sp); print(y); printf("\e[36m => \e[33m"); print(x); printf("\e[m\t");
- if (tr > 2) dump(sp,s);
  if (tr > 1) while (getchar() >= ' ') continue;
 }
 
@@ -267,9 +267,9 @@ L eval(L x,L e) {
   for (a = 0; T(v) == CONS; v = cdr(v)) d = pair(car(v),evarg(&x,&e,&a),d);
   if (T(v) == ATOM) d = pair(v,a ? x : evlis(x,e),d);
   x = cdr(car(f)); e = d;
-  if (tr) trace(s,y,x);
+  if (tr) trace(s,y,x,e);
  }
- if (tr) trace(s,y,x);
+ if (tr) trace(s,y,x,e);
  return x;
 }
 
