@@ -27,11 +27,11 @@ Lisp in 99 lines is written in a Lisp-like functional style of structured C, lin
 - [list.lisp](src/list.lisp) list functions library, requires common.lisp definitions
 - [math.lisp](src/math.lisp) some Lisp math functions
 
-TL;DR: the article's additions and optimizations implemented with section references:
+TL;DR: the article's additions and optimizations fully implemented with comments, including section references:
 
 - [tinylisp-extras.c](src/tinylisp-extras.c) compile with `-lreadline`
 
-This version implements 15 additional Lisp primitives for Lisp source loading, readline, input and output Lisp expressions, exceptions, CTRL-C break, macros, and execution tracing as shown below:
+The extras version adds 15 Lisp primitives for Lisp source loading, readline, input and output Lisp expressions, exceptions, CTRL-C break, macros, and execution tracing as shown below:
 
 ![tinylisp-extras](img/tracing.png)
 

@@ -12,6 +12,58 @@
 
 (cons
     (if (equal?
+            ((lambda (l) (+ . l)) '(1 2 3))
+            6)
+        'passed
+        'failed)
+    '(+))
+
+(cons
+    (if (equal?
+            ((lambda (l) (- . l)) '(1 2 3))
+            -4)
+        'passed
+        'failed)
+    '(-))
+
+(cons
+    (if (equal?
+            ((lambda (l) (* . l)) '(1 2 3))
+            6)
+        'passed
+        'failed)
+    '(*))
+
+(cons
+    (if (equal?
+            ((lambda (l) (/ . l)) '(1 2))
+            0.5)
+        'passed
+        'failed)
+    '(/))
+
+(cons
+    (if (equal?
+            (let*
+                (x 1) (y (+ 1 x))
+                (let* (z (+ x y)) z))
+            3)
+        'passed
+        'failed)
+    '(let*))
+
+(cons
+    (if (equal?
+            (let*
+                (x 2)
+                ((let* (f +) (x 1) (lambda (y) (f x y))) x))
+            3)
+        'passed
+        'failed)
+    '(static scoping))
+
+(cons
+    (if (equal?
             (((lambda (f x)
                 (lambda args (f x . args))) + 1) 2 3)
             6)
@@ -25,7 +77,7 @@
             '((1) (2) (3)))
         'passed
         'failed)
-    '(same-args))
+    '(same args))
 
 (cons
     (if (equal?
@@ -33,7 +85,7 @@
             '((1) (2)))
         'passed
         'failed)
-    '(extra-args))
+    '(extra args))
 
 (cons
     (if (equal?
@@ -41,7 +93,7 @@
             '((1) (2) ERR))
         'passed
         'failed)
-    '(scant-args))
+    '(scant args))
 
 (cons
     (if (equal?
@@ -50,7 +102,7 @@
             '((1) (2) (3)))
         'passed
         'failed)
-    '(caller-dot))
+    '(caller dot))
 
 (cons
     (if (equal?
@@ -58,7 +110,7 @@
             '((1) (2) ((3))))
         'passed
         'failed)
-    '(callee-dot))
+    '(callee dot))
 
 (cons
     (if (equal?
@@ -67,7 +119,7 @@
             '((1) (2) ((3))))
         'passed
         'failed)
-    '(both-dot))
+    '(both dot))
 
 (cons
     (if (equal?
@@ -76,7 +128,7 @@
             '((1) ((2) (3))))
         'passed
         'failed)
-    '(extra-dot))
+    '(extra dot))
 
 (cons
     (if (equal?
@@ -85,7 +137,7 @@
             '((1) ((2) (3))))
         'passed
         'failed)
-    '(scant-dot))
+    '(scant dot))
 
 (cons
     (if (equal?
@@ -94,38 +146,6 @@
             '((1) (2) ((3))))
         'passed
         'failed)
-    '(early-dot))
-
-(cons
-    (if (equal?
-            ((lambda (l) (+ . l)) '(1 2 3))
-            6)
-        'passed
-        'failed)
-    '(builtin-add))
-
-(cons
-    (if (equal?
-            ((lambda (l) (- . l)) '(1 2 3))
-            -4)
-        'passed
-        'failed)
-    '(builtin-sub))
-
-(cons
-    (if (equal?
-            ((lambda (l) (* . l)) '(1 2 3))
-            6)
-        'passed
-        'failed)
-    '(builtin-mul))
-
-(cons
-    (if (equal?
-            ((lambda (l) (/ . l)) '(1 2))
-            0.5)
-        'passed
-        'failed)
-    '(builtin-div))
+    '(early dot))
 
 'OK

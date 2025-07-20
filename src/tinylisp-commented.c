@@ -10,7 +10,7 @@
         L    Lisp expression (double with NaN boxing)
    I variables and function parameters are named as follows:
         i    any unsigned integer, e.g. a NaN-boxed ordinal value
-        t    a NaN-boxing tag
+        t    a NaN-boxed tag
    L variables and function parameters are named as follows:
         x,y  any Lisp expression
         n    number
@@ -31,8 +31,8 @@
 /* number of cells for the shared stack and atom heap, increase N as desired */
 #define N 1024
 
-/* hp: heap pointer, A+hp with hp=0 points to the first atom string in cell[]
-   sp: stack pointer, the stack starts at the top of cell[] with sp=N
+/* hp: atom heap pointer, A+hp with hp=0 points to the first atom string in cell[]
+   sp: cell stack pointer, the stack starts at the top of cell[] with sp=N
    safety invariant: hp <= sp<<3 */
 I hp = 0, sp = N;
 
@@ -75,7 +75,7 @@ L atom(const char *s) {
     i += strlen(A+i)+1;
   if (i == hp) {                                /* if not found */
     hp += strlen(strcpy(A+i, s))+1;             /*   allocate and add a new atom name to the heap */
-    if (hp > sp<<3)                             /* abort when out of memory */
+    if (hp >= sp<<3)                            /* abort when out of memory */
       abort();
   }
   return box(ATOM, i);
@@ -85,7 +85,7 @@ L atom(const char *s) {
 L cons(L x, L y) {
   cell[--sp] = x;                               /* push the car value x */
   cell[--sp] = y;                               /* push the cdr value y */
-  if (hp > sp<<3)                               /* abort when out of memory */
+  if (hp >= sp<<3)                              /* abort when out of memory */
     abort();
   return box(CONS, sp);
 }
@@ -105,24 +105,24 @@ L pair(L v, L x, L e) {
   return cons(cons(v, x), e);
 }
 
-/* construct a closure, returns a NaN-boxed CLOS */
+/* construct a lambda closure with variables v body x environment e, returns a NaN-boxed CLOS */
 L closure(L v, L x, L e) {
   return box(CLOS, ord(pair(v, x, equ(e, env) ? nil : e)));
 }
 
-/* look up a symbol in an environment, return its value or ERR if not found */
+/* look up a symbol v in environment e, return its value or ERR if not found */
 L assoc(L v, L e) {
   while (T(e) == CONS && !equ(v, car(car(e))))
     e = cdr(e);
   return T(e) == CONS ? cdr(car(e)) : err;
 }
 
-/* not(x) is nonzero if x is the Lisp () empty list */
+/* not(x) is nonzero if x is the Lisp () empty list a.k.a. nil or false */
 I not(L x) {
   return T(x) == NIL;
 }
 
-/* let(x) is nonzero if x is a Lisp let/let* pair */
+/* let(x) is nonzero if x is a non-empty list, used by let* */
 I let(L x) {
   return !not(x) && !not(cdr(x));
 }
@@ -139,16 +139,17 @@ L evlis(L t, L e) {
    (cons x y)          construct pair (x . y)
    (car p)             car of pair p
    (cdr p)             cdr of pair p
-   (add n1 n2 ... nk)  sum of n1 to nk
-   (sub n1 n2 ... nk)  n1 minus sum of n2 to nk
-   (mul n1 n2 ... nk)  product of n1 to nk
-   (div n1 n2 ... nk)  n1 divided by the product of n2 to nk
+   (+ n1 n2 ... nk)    sum of n1 to nk
+   (- n1 n2 ... nk)    n1 minus sum of n2 to nk
+   (* n1 n2 ... nk)    product of n1 to nk
+   (/ n1 n2 ... nk)    n1 divided by the product of n2 to nk
    (int n)             integer part of n
    (< n1 n2)           #t if n1<n2, otherwise ()
    (eq? x y)           #t if x equals y, otherwise ()
-   (not x)             #t if x is (), otherwise ()
+   (pair? x)           #t if x is a non-empty list, a cons cell or closure
    (or x1 x2 ... xk)   first x that is not (), otherwise ()
    (and x1 x2 ... xk)  last x if all x are not (), otherwise ()
+   (not x)             #t if x is (), otherwise ()
    (cond (x1 y1)
          (x2 y2)
          ...

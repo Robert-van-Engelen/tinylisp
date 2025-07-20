@@ -15,10 +15,10 @@ L num(L n) { return n; }
 I equ(L x,L y) { return *(uint32_t*)&x == *(uint32_t*)&y; }
 L atom(const char *s) {
  I i = 0; while (i < hp && strcmp(A+i,s)) i += strlen(A+i)+1;
- if (i == hp && (hp += strlen(strcpy(A+i,s))+1) > sp<<2) abort();
+ if (i == hp && (hp += strlen(strcpy(A+i,s))+1) >= sp<<2) abort();
  return box(ATOM,i);
 }
-L cons(L x,L y) { cell[--sp] = x; cell[--sp] = y; if (hp > sp<<2) abort(); return box(CONS,sp); }
+L cons(L x,L y) { cell[--sp] = x; cell[--sp] = y; if (hp >= sp<<2) abort(); return box(CONS,sp); }
 L car(L p) { return (T(p)&~(CONS^CLOS)) == CONS ? cell[ord(p)+1] : err; }
 L cdr(L p) { return (T(p)&~(CONS^CLOS)) == CONS ? cell[ord(p)] : err; }
 L pair(L v,L x,L e) { return cons(cons(v,x),e); }
@@ -92,8 +92,7 @@ void print(L x) {
 }
 void gc() { sp = ord(env); }
 int main() {
- int i;
- printf("tinylisp");
+ I i; printf("tinylisp");
  nil = box(NIL,0); err = atom("ERR"); tru = atom("#t"); env = pair(tru,tru,nil);
  for (i = 0; prim[i].s; ++i) env = pair(atom(prim[i].s),box(PRIM,i),env);
  while (1) { printf("\n%u>",sp-hp/4); print(eval(Read(),env)); gc(); }

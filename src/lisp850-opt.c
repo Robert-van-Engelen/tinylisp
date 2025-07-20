@@ -11,10 +11,10 @@ I ord(L x) { T x &= 15; return (I)x-10; }
 L num(L n) { T n &= 159; return n; }
 L atom(const char *s) {
  I i = 0; while (i < hp && strcmp(A+i,s)) i += strlen(A+i)+1;
- if (i == hp && (hp += strlen(strcpy(A+i,s))+1) > sp<<3) abort();
+ if (i == hp && (hp += strlen(strcpy(A+i,s))+1) >= sp<<3) abort();
  return box(ATOM,i);
 }
-L cons(L x,L y) { cell[--sp] = x; cell[--sp] = y; if (hp > sp<<3) abort(); return box(CONS,sp); }
+L cons(L x,L y) { cell[--sp] = x; cell[--sp] = y; if (hp >= sp<<3) abort(); return box(CONS,sp); }
 L car(L p) { return (T p&224) == CONS ? cell[T p &= 15,(I)p-9] : err; }
 L cdr(L p) { return (T p&224) == CONS ? cell[T p &= 15,(I)p-10] : err; }
 L pair(L v,L x,L e) { return cons(cons(v,x),e); }

@@ -7,20 +7,23 @@ $ ./tinylisp < dotcall.lisp
 tinylisp
 925>equal?
 841>list
-820>(passed same-args)
-817>(passed extra-args)
-816>(passed scant-args)
-814>(passed caller-dot)
-813>(passed callee-dot)
-811>(passed both-dot)
-810>(passed extra-dot)
-809>(passed scant-dot)
-808>(passed early-dot)
-806>(passed builtin-add)
-805>(passed builtin-sub)
-803>(passed builtin-mul)
-802>(passed builtin-div)
-800>OK
+820>(passed +)
+818>(passed -)
+818>(passed *)
+818>(passed /)
+818>(passed let*)
+818>(passed static scoping)
+816>(passed currying)
+815>(passed same args)
+814>(passed extra args)
+813>(passed scant args)
+813>(passed caller dot)
+811>(passed callee dot)
+810>(passed both dot)
+810>(passed extra dot)
+810>(passed scant dot)
+810>(passed early dot)
+809>OK
 ```
 
 When the article's additional Lisp features are implemented, then test with [dotcall-extras.lisp](dotcall-extras.lisp):
@@ -29,25 +32,33 @@ When the article's additional Lisp features are implemented, then test with [dot
 $ ./tinylisp-extras
 tinylisp
 ...
-7431>(load dotcall-extras.lisp)
+7427>(load dotcall-extras.lisp)
 dotcall-extras.lisp
-(passed same-args)
-(passed extra-args)
-(passed caller-dot)
-(passed callee-dot)
-(passed both-dot)
-(passed extra-dot)
-(passed scant-dot)
-(passed early-dot)
-(passed builtin-add)
-(passed builtin-sub)
-(passed builtin-mul)
-(passed builtin-div)
+(passed +)
+(passed -)
+(passed *)
+(passed /)
 (passed let*)
 (passed let)
 (passed letrec*)
+(passed letrec* consing left)
+(passed letrec* consing right)
+(passed static scoping)
+(passed currying)
+(passed same args)
+(passed extra args)
+(passed caller dot)
+(passed callee dot)
+(passed both dot)
+(passed extra dot)
+(passed scant dot)
+(passed early-dot)
 (passed macro)
 (passed assoc)
+(passed catch throw)
+(passed setq)
+(passed set-car!)
 OK
+7427>
 ```
 
