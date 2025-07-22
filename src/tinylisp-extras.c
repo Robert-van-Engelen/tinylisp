@@ -268,6 +268,7 @@ L eval(L x,L e) {
   if (T(f) == MACR) {
    /* bind macro f variables v to the given arguments literally (i.e. without evaluating the arguments) */
    for (d = env,v = car(f); T(v) == CONS; v = cdr(v),x = cdr(x)) d = pair(car(v),car(x),d);
+   if (T(v) == ATOM) d = pair(v,x,d);
    /* expand macro f, then continue evaluating the expanded x */
    x = eval(cdr(f),d);
    continue;
@@ -381,5 +382,5 @@ int main(int argc,char **argv) {
  using_history();
  if ((i = setjmp(jb)) > 0) printf("ERR %u",i);
  signal(SIGINT,stop);
- while (1) { gc(); putchar('\n'); snprintf(ps,20,"%u>",sp-hp/8); print(eval(Read(),env)); }
+ while (1) { gc(); putchar('\n'); snprintf(ps,sizeof(ps),"%u>",sp-hp/8); print(eval(Read(),env)); }
 }

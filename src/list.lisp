@@ -51,9 +51,10 @@
             args)))
 (define max
     (lambda args
-        (foldl (lambda (x y) (if (< x y) y x))
-        -inf
-        args)))
+        (foldl
+            (lambda (x y) (if (< x y) y x))
+            -inf
+            args)))
 (define filter
     (lambda (f t)
         (if t
