@@ -19,6 +19,13 @@
                         1))))
          n)))
 
+; using function seq defined in list.lisp and the dot operator
+(define factseq
+    (lambda (n)
+        (let*
+            (range (seq 2 (+ n 1)))
+            (* 1 . range))))
+
 ; standard recursive factorial function is not tail-recursive
 (define dumbfact
     (lambda (n)
