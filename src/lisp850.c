@@ -12,10 +12,10 @@ L num(L n) { T n &= 159; return n; }
 I equ(L x,L y) { return x == y; }
 L atom(const char *s) {
  I i = 0; while (i < hp && strcmp(A+i,s)) i += strlen(A+i)+1;
- if (i == hp && (hp += strlen(strcpy(A+i,s))+1) >= sp<<3) abort();
+ if (i == hp && (hp += strlen(strcpy(A+i,s))+1) > sp<<3) abort();
  return box(ATOM,i);
 }
-L cons(L x,L y) { cell[--sp] = x; cell[--sp] = y; if (hp >= sp<<3) abort(); return box(CONS,sp); }
+L cons(L x,L y) { cell[--sp] = x; cell[--sp] = y; if (hp > sp<<3) abort(); return box(CONS,sp); }
 L car(L p) { return (T p&~(CONS^CLOS)) == CONS ? cell[ord(p)+1] : err; }
 L cdr(L p) { return (T p&~(CONS^CLOS)) == CONS ? cell[ord(p)] : err; }
 L pair(L v,L x,L e) { return cons(cons(v,x),e); }

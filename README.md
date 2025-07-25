@@ -181,7 +181,7 @@ Locals are declared with the following `let*` special form.  This form differs s
 
     (let* (v1 x1) (v2 x2) ... (vk xk) y)
 
-evaluates `y` with a local scope of bindings for symbols `v` sequentially bound from the first to the last to the corresponding values of `x`.
+evaluates `y` with a local scope of bindings for symbols `v` subsequently bound from the first to the last to the corresponding values of `x`.
 
 > Note that most Lisp use a syntax with binding pairs in a list and one or more body expressions:
 > 
@@ -203,11 +203,15 @@ returns the current environment.  When executed in the REPL, returns the global 
 
     (let (v1 x1) (v2 x2) ... (vk xk) y)
 
-evaluates `y` with a local scope of bindings for symbols `v` simultaneously bound to the values of `x`.
+evaluates `y` with a local scope of bindings for symbols `v` bound to the values of `x` evaluated in the outer scope.
 
     (letrec* (v1 x1) (v2 x2) ... (vk xk) y)
 
-evaluates `y` with a local scope of recursive bindings for symbols `v` sequentually bound to the values of `x`.
+evaluates `y` with a local scope of self-recursive bindings for symbols `v` subsequently bound from the first to the last to the values of `x`.
+
+    (letrec (v1 x1) (v2 x2) ... (vk xk) y)
+
+evaluates `y` with a local scope of mutually-recursive simultaneous bindings for symbols `v` bound to the values of `x`.
 
     (setq <symbol> x)
 

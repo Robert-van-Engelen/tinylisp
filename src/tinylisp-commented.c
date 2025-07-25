@@ -31,7 +31,7 @@
 /* number of cells for the shared stack and atom heap, increase N as desired */
 #define N 1024
 
-/* hp: atom heap pointer, A+hp with hp=0 points to the first atom string in cell[]
+/* hp: top of the atom heap pointer, A+hp with hp=0 points to the first atom string in cell[]
    sp: cell stack pointer, the stack starts at the top of cell[] with sp=N
    safety invariant: hp <= sp<<3 */
 I hp = 0, sp = N;
@@ -75,7 +75,7 @@ L atom(const char *s) {
     i += strlen(A+i)+1;
   if (i == hp) {                                /* if not found */
     hp += strlen(strcpy(A+i, s))+1;             /*   allocate and add a new atom name to the heap */
-    if (hp >= sp<<3)                            /* abort when out of memory */
+    if (hp > sp<<3)                            /* abort when out of memory */
       abort();
   }
   return box(ATOM, i);
@@ -85,7 +85,7 @@ L atom(const char *s) {
 L cons(L x, L y) {
   cell[--sp] = x;                               /* push the car value x */
   cell[--sp] = y;                               /* push the cdr value y */
-  if (hp >= sp<<3)                              /* abort when out of memory */
+  if (hp > sp<<3)                              /* abort when out of memory */
     abort();
   return box(CONS, sp);
 }

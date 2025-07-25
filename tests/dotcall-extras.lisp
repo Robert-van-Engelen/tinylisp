@@ -55,17 +55,18 @@
         'failed)
     '(let))
 
-; check letrec*
+; check letrec* recursion
 (cons
     (if (equal?
-            (let* (x 5)
+            (let*
+                (x 5)
                 (letrec* (f (lambda (n) (if (< n 2) 1 (* n (f (- n 1)))))) (f x)))
             120)
         'passed
         'failed)
     '(letrec*))
 
-; check letrec* tail-recursive consing
+; check letrec* tail-recursive consing in left argument
 (cons
     (if (equal?
             (letrec* (f (lambda (xs n) (if (< n 1) xs (f (cons n xs) (- n 1))))) (f () 9))
@@ -74,7 +75,7 @@
         'failed)
     '(letrec* consing left))
 
-; check letrec* tail-recursive consing
+; check letrec* tail-recursive consing in right argument
 (cons
     (if (equal?
             (letrec* (f (lambda (n xs) (if (< n 1) xs (f (- n 1) (cons n xs))))) (f 9 ()))
@@ -82,6 +83,38 @@
         'passed
         'failed)
     '(letrec* consing right))
+
+; check letrec mutual recursion
+(cons
+    (if (equal?
+            (let*
+                (x 5)
+                (letrec
+                    (f (lambda (n) (if (< n 2) 1 (* n (g (- n 1))))))
+                    (g (lambda (n) (if (< n 2) 1 (* n (f (- n 1))))))
+                    (f x)))
+            120)
+        'passed
+        'failed)
+    '(letrec))
+
+; check letrec tail-recursive consing in left argument
+(cons
+    (if (equal?
+            (letrec (f (lambda (xs n) (if (< n 1) xs (f (cons n xs) (- n 1))))) (f () 9))
+            '(1 2 3 4 5 6 7 8 9))
+        'passed
+        'failed)
+    '(letrec consing left))
+
+; check letrec tail-recursive consing in right argument
+(cons
+    (if (equal?
+            (letrec (f (lambda (n xs) (if (< n 1) xs (f (- n 1) (cons n xs))))) (f 9 ()))
+            '(1 2 3 4 5 6 7 8 9))
+        'passed
+        'failed)
+    '(letrec consing right))
 
 ; check static scoping
 (cons
@@ -186,9 +219,9 @@
     (if (equal?
             (let*
                 (delay (macro (x) (list 'lambda () x)))
-                (f (delay (+ 1 2)))
+                (f (delay (cons 1 (cons 2 (cons 3 ())))))
                 (f))
-            3)
+            '(1 2 3))
         'passed
         'failed)
     '(macro))

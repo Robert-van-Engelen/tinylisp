@@ -44,7 +44,7 @@ jmp_buf jb;
 L err(I i) { longjmp(jb,i); }
 
 /* section 4: constructing Lisp expressions */
-/* hp: atom heap pointer, A+hp with hp=0 points to the first atom string in cell[]
+/* hp: top of the atom heap pointer, A+hp with hp=0 points to the first atom string in cell[]
    sp: cell stack pointer, the stack starts at the top of cell[] with sp=N
    tr: tracing off (0), on (1), wait on ENTER (2), dump and wait (3)
    safety invariant: hp <= sp<<3 */
@@ -67,11 +67,11 @@ I equ(L x,L y) { return *(unsigned long long*)&x == *(unsigned long long*)&y; }
 /* interning of atom names (Lisp symbols), returns a unique NaN-boxed ATOM */
 L atom(const char *s) {
  I i = 0; while (i < hp && strcmp(A+i,s)) i += strlen(A+i)+1;
- if (i == hp && (hp += strlen(strcpy(A+i,s))+1) >= sp<<3) err(4);
+ if (i == hp && (hp += strlen(strcpy(A+i,s))+1) > sp<<3) err(4);
  return box(ATOM,i);
 }
 /* construct pair (x . y) returns a NaN-boxed CONS */
-L cons(L x,L y) { cell[--sp] = x; cell[--sp] = y; if (hp+16 >= sp<<3) err(4); return box(CONS,sp); }
+L cons(L x,L y) { cell[--sp] = x; cell[--sp] = y; if (hp+16 > sp<<3) err(4); return box(CONS,sp); }
 /* return the car of a pair or throw err(1) if not a pair */
 L car(L p) { return T(p) == CONS || T(p) == CLOS || T(p) == MACR ? cell[ord(p)+1] : err(1); }
 /* return the cdr of a pair or throw err(1) if not a pair */
@@ -139,8 +139,13 @@ L f_let(L t,L *e) {
  return car(t);
 }
 L f_letreca(L t,L *e) {
- L *x;
- for (; let(t); t = cdr(t)) *e = pair(car(car(t)),nil,*e),x = &cell[sp+2],*x = eval(car(cdr(car(t))),*e);
+ for (; let(t); t = cdr(t)) *e = pair(car(car(t)),nil,*e),cell[ord(car(*e))] = eval(car(cdr(car(t))),*e);
+ return car(t);
+}
+L f_letrec(L t,L *e) {
+ L s,d,*p;
+ for (s = t,d = *e,p = &d; let(s); s = cdr(s),p = &cell[ord(*p)]) *p = pair(car(car(s)),nil,*e);
+ for (*e = d; let(t); t = cdr(t),d = cdr(d)) cell[ord(car(d))] = eval(car(cdr(car(t))),*e);
  return car(t);
 }
 L f_setq(L t,L *e) {
@@ -149,12 +154,12 @@ L f_setq(L t,L *e) {
  return T(d) == CONS ? cell[ord(car(d))] = x : err(2);
 }
 L f_setcar(L t,L *e) {
- I a = 0; L x = evarg(&t,e,&a);
- return (T(x) == CONS) ? cell[ord(x)+1] = evarg(&t,e,&a) : err(1);
+ I a = 0; L p = evarg(&t,e,&a);
+ return (T(p) == CONS) ? cell[ord(p)+1] = evarg(&t,e,&a) : err(1);
 }
 L f_setcdr(L t,L *e) {
- I a = 0; L x = evarg(&t,e,&a);
- return (T(x) == CONS) ? cell[ord(x)] = evarg(&t,e,&a) : err(1);
+ I a = 0; L p = evarg(&t,e,&a);
+ return (T(p) == CONS) ? cell[ord(p)] = evarg(&t,e,&a) : err(1);
 }
 L f_macro(L t,L *_) { return macro(car(t),car(cdr(t))); }
 L f_read(L t,L *_) { L x; char c = see; see = ' '; x = Read(); see = c; return x; }
@@ -205,6 +210,7 @@ struct { const char *s; L (*f)(L,L*); short t; } prim[] = {
  {"env",     f_env,    0},
  {"let",     f_let,    1},
  {"letrec*", f_letreca,1},
+ {"letrec" , f_letrec, 1},
  {"setq",    f_setq,   0},
  {"set-car!",f_setcar, 0},
  {"set-cdr!",f_setcdr, 0},
