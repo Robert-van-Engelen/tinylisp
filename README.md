@@ -31,7 +31,7 @@ TL;DR: the article's additions and optimizations fully implemented with comments
 
 - [tinylisp-extras.c](src/tinylisp-extras.c) compile with `-lreadline`
 
-The extras version adds 16 Lisp primitives for Lisp source loading, readline, input and output Lisp expressions, exceptions, CTRL-C break, macros, and execution tracing as shown below:
+The extras version adds 16 Lisp primitives for Lisp source loading, readline, input and output Lisp expressions, exceptions, CTRL-C break, macros, backquoting, and execution tracing as shown below:
 
 ![tinylisp-extras](img/tracing.png)
 
@@ -225,6 +225,10 @@ destructively assigns a pair a new car or cdr value, respectively.
     (macro <variables> <expr>)
 
 a macro is like a function, except that it does not evaluate its arguments.  Macros typically construct Lisp code that is evaluated when the macro is expanded.  For example, `(define defun (macro (f v x) (list 'define f (list 'lambda v x))))` defines a `defun` shortcut: `(defun <symbol> <variables> <expr>)` expands to `(define <symbol> (lambda <variables> <expr>))`.  The `defun` macro uses `(define list (lambda args args))` to create lists of Lisp code.
+
+    `<expr>
+
+backquotes `<expr>`, which quotes `<expr>`, but evaluates all `,`-expressions before quoting.  For example, the macro example above can also be written as `(define defun (macro (f v x) `(define ,f (lambda ,v ,x))))` without using `list` to construct lists and "down quotes" to replace variables with their values.
 
     (read)
 

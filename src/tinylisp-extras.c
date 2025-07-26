@@ -326,7 +326,7 @@ char get() { char c = see; look(); return c; }
 char scan() {
  I i = 0;
  while (seeing(' ') || seeing(';')) if (get() == ';') while (!seeing('\n')) get();
- if (seeing('(') || seeing(')') || seeing('\'')) buf[i++] = get();
+ if (seeing('(') || seeing(')') || seeing('\'') || seeing('`') || seeing(',')) buf[i++] = get();
  else do buf[i++] = get(); while (i < sizeof(buf)-1 && !seeing('(') && !seeing(')') && !seeing(' '));
  return buf[i] = 0,*buf;
 }
@@ -334,17 +334,23 @@ L Read() { return scan(),parse(); }
 
 /* section 16.1: replacing recursion with loops (in list parsing) */
 L list() {
- L t = nil,*p = &t;
- while (1) {
+ L t,*p;
+ for (t = nil,p = &t; ; *p = cons(parse(),nil),p = cell+sp) {
   if (scan() == ')') return t;
   if (*buf == '.' && !buf[1]) return *p = Read(),scan(),t;
-  *p = cons(parse(),nil),p = cell+sp;
  }
+}
+L tick() {
+ L t,*p;
+ if (*buf == ',') return Read();
+ if (*buf != '(') return cons(atom("quote"),cons(parse(),nil));
+ for (t = cons(atom("list"),nil),p = cell+sp; ; *p = cons(tick(),nil),p = cell+sp) if (scan() == ')') return t;
 }
 L parse() {
  L n; I i;
  if (*buf == '(') return list();
  if (*buf == '\'') return cons(atom("quote"),cons(Read(),nil));
+ if (*buf == '`') return scan(),tick();
  return sscanf(buf,"%lg%n",&n,&i) > 0 && !buf[i] ? n : atom(buf);
 }
 
