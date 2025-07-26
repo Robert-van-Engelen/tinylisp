@@ -31,7 +31,7 @@ TL;DR: the article's additions and optimizations fully implemented with comments
 
 - [tinylisp-extras.c](src/tinylisp-extras.c) compile with `-lreadline`
 
-The extras version adds 15 Lisp primitives for Lisp source loading, readline, input and output Lisp expressions, exceptions, CTRL-C break, macros, and execution tracing as shown below:
+The extras version adds 16 Lisp primitives for Lisp source loading, readline, input and output Lisp expressions, exceptions, CTRL-C break, macros, and execution tracing as shown below:
 
 ![tinylisp-extras](img/tracing.png)
 
@@ -207,11 +207,11 @@ evaluates `y` with a local scope of bindings for symbols `v` bound to the values
 
     (letrec* (v1 x1) (v2 x2) ... (vk xk) y)
 
-evaluates `y` with a local scope of self-recursive bindings for symbols `v` subsequently bound from the first to the last to the values of `x`.
+evaluates `y` with a local scope of bindings for symbols `v` subsequently bound from the first to the last to the values of `x`, supporting self-recursive lambda closures.
 
     (letrec (v1 x1) (v2 x2) ... (vk xk) y)
 
-evaluates `y` with a local scope of mutually-recursive simultaneous bindings for symbols `v` bound to the values of `x`.
+evaluates `y` with a local scope of bindings for symbols `v` bound to the values of `x` evaluated in the local scope, supporting muttually-callable (recursive) lambda closures.
 
     (setq <symbol> x)
 
