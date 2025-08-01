@@ -211,7 +211,7 @@ evaluates `y` with a local scope of bindings for symbols `v` subsequently bound 
 
     (letrec (v1 x1) (v2 x2) ... (vk xk) y)
 
-evaluates `y` with a local scope of bindings for symbols `v` bound to the values of `x` evaluated in the local scope, supporting muttually-callable (recursive) lambda closures.
+evaluates `y` with a local scope of bindings for symbols `v` bound to the values of `x` evaluated in the local scope, supporting mutual-callable and mutual-recursive lambda closures.
 
     (setq <symbol> x)
 
