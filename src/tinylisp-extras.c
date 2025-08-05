@@ -8,14 +8,14 @@
         I      unsigned integer (either 16 bit, 32 bit or 64 bit unsigned)
         L      Lisp expression (double with NaN boxing)
    I variables and function parameters are named as follows:
-        i      any unsigned integer, e.g. a NaN-boxed ordinal value
+        i      any unsigned integer, e.g. a NaN-boxed ordinal value or index
         t      a NaN-boxed tag
         a      dot operator argument flag, used with evarg()
    L variables and function parameters are named as follows:
         x,y    any Lisp expression
         n      number
         t      list
-        f,g    function, a lambda closure or Lisp primitive
+        f,g    function, a lambda closure or Lisp primitive or macro
         p      pair, a cons of two Lisp expressions
         e,d,h  environment, a list of pairs, e.g. created with (define v x)
         v      the name of a variable (an atom) or a list of variables */
@@ -37,11 +37,8 @@
 FILE *in = NULL;
 char buf[40],see = ' ',*ptr = "",*line = NULL,ps[20];
 
-/* section 14: error handling and exceptions */
-#include <setjmp.h>
-#include <signal.h>
-jmp_buf jb;
-L err(I i) { longjmp(jb,i); }
+/* forward proto declarations */
+L eval(L,L),Read(),parse(),err(I,L); void print(L);
 
 /* section 4: constructing Lisp expressions */
 /* hp: top of the atom heap pointer, A+hp with hp=0 points to the first atom string in cell[]
@@ -67,15 +64,30 @@ I equ(L x,L y) { return *(unsigned long long*)&x == *(unsigned long long*)&y; }
 /* interning of atom names (Lisp symbols), returns a unique NaN-boxed ATOM */
 L atom(const char *s) {
  I i = 0; while (i < hp && strcmp(A+i,s)) i += strlen(A+i)+1;
- if (i == hp && (hp += strlen(strcpy(A+i,s))+1) > sp<<3) err(4);
+ if (i == hp && (hp += strlen(strcpy(A+i,s))+1) > sp<<3) err(4,nil);
  return box(ATOM,i);
 }
+
+/* section 14: error handling and exceptions
+   ERR 1: cons pair expected
+   ERR 2: name not found
+   ERR 3: function expected
+   ERR 4: out of memory
+   ERR 5: program stopped */
+#include <setjmp.h>
+#include <signal.h>
+jmp_buf jb;
+L err(I i,L x) {
+ if (tr && T(x) != nil) { printf("\n\e[31;1mERR %u: ",i); print(x); printf("\e[m\n"); }
+ longjmp(jb,i);
+}
+
 /* construct pair (x . y) returns a NaN-boxed CONS */
-L cons(L x,L y) { cell[--sp] = x; cell[--sp] = y; if (hp+16 > sp<<3) err(4); return box(CONS,sp); }
+L cons(L x,L y) { cell[--sp] = x; cell[--sp] = y; if (hp+16 > sp<<3) err(4,nil); return box(CONS,sp); }
 /* return the car of a pair or throw err(1) if not a pair */
-L car(L p) { return T(p) == CONS || T(p) == CLOS || T(p) == MACR ? cell[ord(p)+1] : err(1); }
+L car(L p) { return T(p) == CONS || T(p) == CLOS || T(p) == MACR ? cell[ord(p)+1] : err(1,p); }
 /* return the cdr of a pair or throw err(1) if not a pair */
-L cdr(L p) { return T(p) == CONS || T(p) == CLOS || T(p) == MACR ? cell[ord(p)] : err(1); }
+L cdr(L p) { return T(p) == CONS || T(p) == CLOS || T(p) == MACR ? cell[ord(p)] : err(1,p); }
 /* construct a pair to add to environment e, returns the list ((v . x) . e) */
 L pair(L v,L x,L e) { return cons(cons(v,x),e); }
 /* construct a lambda closure with variables v body x environment e, returns a NaN-boxed CLOS */
@@ -83,13 +95,11 @@ L closure(L v,L x,L e) { return box(CLOS,ord(pair(v,x,equ(e,env) ? nil : e))); }
 /* construct a macro with variables v body x, returns a NaN-boxed MACR */
 L macro(L v,L x) { return box(MACR,ord(cons(v,x))); }
 /* look up a symbol v in environment e, return its value or throw err(2) if not found */
-L assoc(L v,L e) { while (T(e) == CONS && !equ(v,car(car(e)))) e = cdr(e); return T(e) == CONS ? cdr(car(e)) : err(2); }
+L assoc(L v,L e) { while (T(e) == CONS && !equ(v,car(car(e)))) e = cdr(e); return T(e) == CONS ? cdr(car(e)) : err(2,v); }
 /* not(x) is nonzero if x is the Lisp () empty list a.k.a. nil or false */
 I not(L x) { return T(x) == NIL; }
 /* let(x) is nonzero if x is a non-empty list, used by let* */
 I let(L x) { return !not(x) && !not(cdr(x)); }
-/* forward proto declarations */
-L eval(L,L),Read(),parse(); void print(L);
 
 /* section 16.1: replacing recursion with loops */
 L evlis(L t,L e) {
@@ -121,9 +131,9 @@ L f_int(L t,L *e) { I a = 0; L n = evarg(&t,e,&a); return n<1e16 && n>-1e16 ? (l
 L f_lt(L t,L *e) { I a = 0; L n = evarg(&t,e,&a); return n - evarg(&t,e,&a) < 0 ? tru : nil; }
 L f_eq(L t,L *e) { I a = 0; L x = evarg(&t,e,&a); return equ(x,evarg(&t,e,&a)) ? tru : nil; }
 L f_pair(L t,L *e) { I a = 0; L x = evarg(&t,e,&a); return T(x) == CONS ? tru : nil; }
-L f_not(L t,L *e) { I a = 0; return not(evarg(&t,e,&a)) ? tru : nil; }
 L f_or(L t,L *e) { I a = 0; L x = nil; while (!not(t) && not(x)) x = evarg(&t,e,&a); return x; }
 L f_and(L t,L *e) { I a = 0; L x = tru; while (!not(t) && !not(x)) x = evarg(&t,e,&a); return x; }
+L f_not(L t,L *e) { I a = 0; return not(evarg(&t,e,&a)) ? tru : nil; }
 L f_cond(L t,L *e) { while (!not(t) && not(eval(car(car(t)),*e))) t = cdr(t); return car(cdr(car(t))); }
 L f_if(L t,L *e) { return car(cdr(not(eval(car(t),*e)) ? cdr(t) : t)); }
 L f_leta(L t,L *e) { for (; let(t); t = cdr(t)) *e = pair(car(car(t)),eval(car(cdr(car(t))),*e),*e); return car(t); }
@@ -151,15 +161,15 @@ L f_letrec(L t,L *e) {
 L f_setq(L t,L *e) {
  L d = *e,v = car(t),x = eval(car(cdr(t)),d);
  while (T(d) == CONS && !equ(v,car(car(d)))) d = cdr(d);
- return T(d) == CONS ? cell[ord(car(d))] = x : err(2);
+ return T(d) == CONS ? cell[ord(car(d))] = x : err(2,v);
 }
 L f_setcar(L t,L *e) {
  I a = 0; L p = evarg(&t,e,&a);
- return (T(p) == CONS) ? cell[ord(p)+1] = evarg(&t,e,&a) : err(1);
+ return (T(p) == CONS) ? cell[ord(p)+1] = evarg(&t,e,&a) : err(1,p);
 }
 L f_setcdr(L t,L *e) {
  I a = 0; L p = evarg(&t,e,&a);
- return (T(p) == CONS) ? cell[ord(p)] = evarg(&t,e,&a) : err(1);
+ return (T(p) == CONS) ? cell[ord(p)] = evarg(&t,e,&a) : err(1,p);
 }
 L f_macro(L t,L *_) { return macro(car(t),car(cdr(t))); }
 L f_read(L t,L *_) { L x; char c = see; see = ' '; x = Read(); see = c; return x; }
@@ -174,10 +184,9 @@ L f_catch(L t,L *e) {
  L x; I i;
  jmp_buf savedjb;
  memcpy(savedjb,jb,sizeof(jb));
- i = setjmp(jb);
- x = i ? cons(atom("ERR"),i) : eval(car(t),*e);
+ if ((i = setjmp(jb)) == 0) x = eval(car(t),*e);
  memcpy(jb,savedjb,sizeof(jb));
- return x;
+ return i == 0 ? x : i == 4 ? err(4,nil) : cons(atom("ERR"),i);
 }
 L f_throw(L t,L *_) { longjmp(jb,(I)num(car(t))); }
 
@@ -279,7 +288,7 @@ L eval(L x,L e) {
    x = eval(cdr(f),d);
    continue;
   }
-  if (T(f) != CLOS) return err(3);
+  if (T(f) != CLOS) return err(3,f);
   /* get the list of variables v of closure f */
   v = car(car(f));
   /* if closure f is tail-recursive, then we update its previous environment e, otherwise obey static scoping */
@@ -294,7 +303,7 @@ L eval(L x,L e) {
    /* delete let-locals of tail-recursive closure f, but don't delete other stacked data */
    for (; !equ(d,h) && sp == ord(d); d = cdr(d)) sp += 4;
   }
-  /* evaluate the body x of closure f in environment e = d, track tail-recursive closures g = f, also save h = e */
+  /* next, evaluate body x of closure f in environment e = d, track tail-recursive closures g = f, also save h = e */
   x = cdr(car(f)); e = d; g = f; h = e;
   if (tr) trace(s,y,x,e);
  }
@@ -383,7 +392,7 @@ void gc() {
 }
 
 /* section 14: error handling and exceptions */
-void stop(int i) { if (line) longjmp(jb,5); else abort(); }
+void stop(int i) { if (line) err(5,nil); else abort(); }
 
 /* section 10: read-eval-print loop (REPL) with additions */
 int main(int argc,char **argv) {
