@@ -98,7 +98,7 @@ L macro(L v,L x) { return box(MACR,ord(cons(v,x))); }
 L assoc(L v,L e) { while (T(e) == CONS && !equ(v,car(car(e)))) e = cdr(e); return T(e) == CONS ? cdr(car(e)) : err(2,v); }
 /* not(x) is nonzero if x is the Lisp () empty list a.k.a. nil or false */
 I not(L x) { return T(x) == NIL; }
-/* let(x) is nonzero if x is a non-empty list, used by let* */
+/* let(x) is nonzero if x has more than one item, used by let* */
 I let(L x) { return !not(x) && !not(cdr(x)); }
 
 /* section 16.1: replacing recursion with loops */

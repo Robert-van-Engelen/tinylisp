@@ -122,7 +122,7 @@ I not(L x) {
   return T(x) == NIL;
 }
 
-/* let(x) is nonzero if x is a non-empty list, used by let* */
+/* let(x) is nonzero if x has more than one item, used by let* */
 I let(L x) {
   return !not(x) && !not(cdr(x));
 }
