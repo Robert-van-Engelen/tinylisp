@@ -92,6 +92,7 @@ applies a function to the rest of the list of expresssions as its arguments.  Th
 
 ### Quoting and unquoting
 
+    '<expr>
     (quote <expr>)
 
 protects `<expr>` from evaluation by quoting, same as `'<expr>`.  For example, `'(1 () foo (bar 7))` is a list containing unevaluated expressions protected by the quote.
@@ -228,7 +229,7 @@ a macro is like a function, except that it does not evaluate its arguments.  Mac
 
     `<expr>
 
-backquotes `<expr>`, which quotes `<expr>`, but evaluates all `,`-expressions before quoting.  For example, the macro example above can also be written as ``(define defun (macro (f v x) `(define ,f (lambda ,v ,x))))`` without using `list` to construct lists and "down quotes" to replace variables with their values.
+backquotes `<expr>`, which quotes `<expr>`, but evaluates all `,<expr>` subexpressions therein before quoting.  For example, the macro example above can also be written as ``(define defun (macro (f v x) `(define ,f (lambda ,v ,x))))`` without using `list` to construct lists and "down quotes" to replace variables with their values.
 
     (read)
 
