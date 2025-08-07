@@ -15,11 +15,9 @@
             (symbol? x))))
 (define list?
     (lambda (x)
-        (if (not x)
-            #t
-            (if (pair? x)
-                (list? (cdr x))
-                ()))))
+        (if (pair? x)
+            (list? (cdr x))
+            (not x))))
 (define equal?
     (lambda (x y)
         (or
