@@ -228,7 +228,7 @@ a macro is like a function, except that it does not evaluate its arguments.  Mac
 
     `<expr>
 
-backquotes `<expr>`, which quotes `<expr>`, but evaluates all `,`-expressions before quoting.  For example, the macro example above can also be written as `(define defun (macro (f v x) `(define ,f (lambda ,v ,x))))` without using `list` to construct lists and "down quotes" to replace variables with their values.
+backquotes `<expr>`, which quotes `<expr>`, but evaluates all `,`-expressions before quoting.  For example, the macro example above can also be written as ``(define defun (macro (f v x) `(define ,f (lambda ,v ,x))))`` without using `list` to construct lists and "down quotes" to replace variables with their values.
 
     (read)
 
