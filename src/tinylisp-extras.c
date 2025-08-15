@@ -14,7 +14,7 @@
    L variables and function parameters are named as follows:
         x,y    any Lisp expression
         n      number
-        t      list
+        t,s    list
         f,g    function, a lambda closure or Lisp primitive or macro
         p      pair, a cons of two Lisp expressions
         e,d,h  environment, a list of pairs, e.g. created with (define v x)
@@ -69,9 +69,9 @@ L atom(const char *s) {
 }
 
 /* section 14: error handling and exceptions
-   ERR 1: cons pair expected
-   ERR 2: name not found
-   ERR 3: function expected
+   ERR 1: not a pair
+   ERR 2: unbound symbol
+   ERR 3: cannot apply
    ERR 4: out of memory
    ERR 5: program stopped */
 #include <setjmp.h>

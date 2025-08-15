@@ -65,15 +65,15 @@
 (define all?
     (lambda (f t)
         (if t
-            (and
-                (f (car t))
-                (all? f (cdr t)))
+            (if (f (car t))
+                (all? f (cdr t))
+                ())
             #t)))
 (define any?
     (lambda (f t)
         (if t
-            (or
-                (f (car t))
+            (if (f (car t))
+                #t
                 (any? f (cdr t)))
             ())))
 (define mapcar
