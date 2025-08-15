@@ -1,4 +1,4 @@
-**Tinylisp proto version with reference count garbage collection **
+**Tinylisp proto version with reference count garbage collection**
 
 See [#20](https://github.com/Robert-van-Engelen/tinylisp/issues/20)
 
