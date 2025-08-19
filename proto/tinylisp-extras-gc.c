@@ -1,4 +1,4 @@
-/* tinylisp-extras-gc.c with the article's extras and ref count garbage collection by Robert A. van Engelen 2025 */
+/* tinylisp-extras-gc.c optimized and article's extras and ref count garbage collection by Robert A. van Engelen 2025 */
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -113,7 +113,7 @@ L cons(L x,L y) {
  if (i < lp) lp = i;                                    /* update lowest cell pair used */
  if (hp > lp<<3) err(4,nil);
  fp = ref[i]; ref[i] = 1; --fn;                         /* claim the cell pair from the free pool */
- ref[i+1] = 0;                                          /* clear markers in upper ref */
+ ref[i+1] = 0;                                          /* clear markers in upper ref+1 */
  cell[i+1] = x; cell[i] = y;                            /* store car x and cdr y */
  LOG(box(CONS,i),"\n\e[32mcons => %u\e[m\t",i);
  return box(CONS,i);
@@ -147,7 +147,7 @@ L dup(L x) {
 /* garbage collect: if x is a pair then collect pair x by decrementing its ref count, remving it if count drops to 0 */
 L gc(L x) { if (T(x) == CONS || T(x) == CLOS || T(x) == MACR) collect(x); return x; }
 
-/* garbage collection upper ref markers and masks */
+/* garbage collection upper ref+1 markers and masks */
 const I FREE = (I)~0UL,VISIT = ~(FREE>>1),MARKY = VISIT>>1,MARKZ = MARKY>>1,MARK = MARKY|MARKZ,MASK = ~(VISIT|MARK);
 
 /* recursively mark all cyclic paths in the strongly connected component x, origin cell[i], ignore paths to cell[k] */
@@ -282,9 +282,9 @@ void sweep() {
  I i;
  for (hp = 0,i = 0; i < N; ++i) if (ref[i&~1] > 0 && T(cell[i]) == ATOM && ord(cell[i]) > hp) hp = ord(cell[i]);
  hp += strlen(A+hp)+1;
- for (lp = N-2,fn = 1,fp = 0,i = 2; i < N; i += 2)
+ for (fp = 0,lp = N-2,fn = 1,i = 2; i < N; i += 2)
   if (ref[i] == 0) { ref[i] = fp; fp = i; ++fn; }       /* reclaim cell pair at i in the free pool */
-  else if (lp > i) lp = i;                              /* find lowest cell pair used */
+  else if (i < lp) lp = i;                              /* find lowest cell pair used */
 }
 
 /* rebuild memory to retain the global environment env and delete everything else */
@@ -304,18 +304,17 @@ void rebuild() {
   }
  }
  if (k < fn) printf("\ncollected %u unused cells",2*(fn-k));
- for (i = 0; i < N; i += 2) ref[i+1] = 0;               /* clear all cell pair upper ref for letrec cycle detection */
- for (i = fp; i > 0; i = ref[i]) ref[i+1] = FREE;       /* mark free cell pair upper ref for double free detection */
+ for (i = 0; i < N; i += 2) ref[i+1] = 0;               /* clear all cell pair upper ref+1 for letrec cycle detection */
+ for (i = fp; i > 0; i = ref[i]) ref[i+1] = FREE;       /* mark free cell pair upper ref+1 for double free detection */
  xb = xp = NULL;                                        /* clear exception stack pointers */
 }
 
-/* section 16.1: replacing recursion with loops (combining d = pair(v,evlis(t,e),d) into one for gc) */
-L evlis(L v,L t,L e,L *d) {
- L *p;
- for (*d = pair(v,nil,*d),p = &cell[ord(car(*d))]; T(t) == CONS; p = &cell[ord(*p)],t = cdr(t))
-  *p = cons(eval(car(t),e),nil);
+/* section 16.1: replacing recursion with loops */
+L evlis(L t,L e) {
+ L s,*p;
+ for (s = nil,p = &s; T(t) == CONS; p = &cell[ord(*p)],t = cdr(t)) *p = cons(eval(car(t),e),nil);
  if (T(t) == ATOM) *p = dup(assoc(t,e));
- return *d;
+ return s;
 }
 
 /* section 16.4: optimizing the lisp primitives */
@@ -514,12 +513,12 @@ L eval(L x,L e) {
    continue;
   }
   if (T(f) != CLOS) return err(3,f);
-  /* get the list of variables v of closure f */
+  /* get the list of variables v of closure f and its local environment d (use global env when nil) */
   v = car(car(f)); d = dup(cdr(f));
   if (T(d) == NIL) d = dup(env);
   /* bind closure f variables v to the evaluated argument values */
   for (a = 0; T(v) == CONS; v = cdr(v)) d = pair(car(v),evarg(&x,&e,&a),d);
-  if (T(v) == ATOM) d = a ? pair(v,dup(x),d) : evlis(v,x,e,&d);
+  if (T(v) == ATOM) d = pair(v,a ? dup(x) : evlis(x,e),d);
   /* next, evaluate body x of closure f in environment e = d while keeping f in memory as long as x */
   x = cdr(car(f));
   /* discard copy of the old environment e to use new environment d */
@@ -615,7 +614,7 @@ void stop(int i) { if (line) err(5,nil); else abort(); }
 
 /* section 10: read-eval-print loop (REPL) with additions */
 int main(int argc,char **argv) {
- I i; L x; printf("tinylisp");
+ I i; printf("tinylisp-extras-gc");
  for (i = 2; i < N; i += 2) ref[i] = i-2;
  nil = box(NIL,0); atom("ERR"); tru = atom("#t"); env = pair(tru,tru,nil);
  for (i = 0; prim[i].s; ++i) env = pair(atom(prim[i].s),box(PRIM,i),env);
@@ -623,5 +622,5 @@ int main(int argc,char **argv) {
  using_history();
  if ((i = setjmp(jb)) > 0) printf("ERR %u",i);
  signal(SIGINT,stop);
- while (1) { rebuild(); putchar('\n'); snprintf(ps,20,"%u>",2*fn-hp/8); print(gc(eval(x = Read(),env))); gc(x); }
+ while (1) { L x; rebuild(); putchar('\n'); snprintf(ps,20,"%u>",2*fn-hp/8); print(gc(eval(x = Read(),env))); gc(x); }
 }
