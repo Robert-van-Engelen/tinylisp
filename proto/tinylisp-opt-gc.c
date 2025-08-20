@@ -1,4 +1,4 @@
-/* tinylisp-opt-gc.c optimized and ref count garbage collection by Robert A. van Engelen 2025 */
+/* tinylisp-opt-gc.c optimized and ref count garbage collection and error handling by Robert A. van Engelen 2025 */
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -9,25 +9,25 @@
 #define N 8192
 #include <setjmp.h>
 jmp_buf jb; /* we longjmp(jb,1) to REPL on memory overflow then mark-sweep garbage collect, instead of abort() */
+L err(I i) { longjmp(jb,i); }
 I ref[N/2],hp,fp,lp,fn,ATOM=0x7ff8,PRIM=0x7ff9,CONS=0x7ffa,CLOS=0x7ffb,NIL=0x7ffc;
-L cell[N],nil,tru,err,env;
+L cell[N],nil,tru,env;
 L box(I t,I i) { L x; *(unsigned long long*)&x = (unsigned long long)t<<48|i; return x; }
 I ord(L x) { return *(unsigned long long*)&x; }
 L num(L n) { return n; }
 I equ(L x,L y) { return *(unsigned long long*)&x == *(unsigned long long*)&y; }
 L atom(const char *s) {
  I i = 0; while (i < hp && strcmp(A+i,s)) i += strlen(A+i)+1;
- if (i == hp && (hp += strlen(strcpy(A+i,s))+1) > lp<<3) longjmp(jb,1);
- return box(ATOM,i);
+ return i == hp && (hp += strlen(strcpy(A+i,s))+1) > lp<<3 ? err(4) : box(ATOM,i);
 }
 I lomem(I i) { return lp = i < lp ? i : lp; }
-L alloc() { I i = fp; fp = ref[i/2]; ref[i/2] = 1; --fn; if (hp > lomem(i)<<3) longjmp(jb,1); return box(CONS,i); }
+L alloc() { I i = fp; fp = ref[i/2]; ref[i/2] = 1; --fn; return hp > lomem(i)<<3 ? err(4) : box(CONS,i); }
 L cons(L x,L y) { L p = alloc(); cell[ord(p)+1] = x; cell[ord(p)] = y; return p; }
-L car(L p) { return (T(p)&~(CONS^CLOS)) == CONS ? cell[ord(p)+1] : err; }
-L cdr(L p) { return (T(p)&~(CONS^CLOS)) == CONS ? cell[ord(p)] : err; }
+L car(L p) { return (T(p)&~(CONS^CLOS)) == CONS ? cell[ord(p)+1] : err(1); }
+L cdr(L p) { return (T(p)&~(CONS^CLOS)) == CONS ? cell[ord(p)] : err(1); }
 L pair(L v,L x,L e) { return cons(cons(v,x),e); }
 L closure(L v,L x,L e) { return box(CLOS,ord(pair(v,x,e))); }
-L assoc(L v,L e) { while (T(e) == CONS && !equ(v,car(car(e)))) e = cdr(e); return T(e) == CONS ? cdr(car(e)) : err; }
+L assoc(L v,L e) { while (T(e) == CONS && !equ(v,car(car(e)))) e = cdr(e); return T(e) == CONS ? cdr(car(e)) : err(2); }
 I not(L x) { return T(x) == NIL; }
 I let(L x) { return !not(x) && !not(cdr(x)); }
 L dup(L x) { if ((T(x)&~(CONS^CLOS)) == CONS) ++ref[ord(x)/2]; return x; }
@@ -84,7 +84,7 @@ L eval(L x,L e) {
    if (prim[ord(f)].t) continue;
    break;
   }
-  if (T(f) != CLOS) { x = err; break; }
+  if (T(f) != CLOS) err(3);
   v = car(car(f)); d = dup(not(cdr(f)) ? env : cdr(f));
   for (a = 0; T(v) == CONS; v = cdr(v)) d = pair(car(v),evarg(&x,&e,&a),d);
   if (T(v) == ATOM) d = pair(v,a ? dup(x) : evlis(x,e),d);
@@ -145,8 +145,8 @@ void rebuild() { memset(ref,0,sizeof(ref)); mark(env); sweep(); }
 int main() {
  I i; printf("tinylisp-opt-gc");
  env = 0; rebuild();
- nil = box(NIL,0); err = atom("ERR"); tru = atom("#t"); env = pair(tru,tru,nil);
+ nil = box(NIL,0); atom("ERR"); tru = atom("#t"); env = pair(tru,tru,nil);
  for (i = 0; prim[i].s; ++i) env = pair(atom(prim[i].s),box(PRIM,i),env);
- if (setjmp(jb)) printf("\e[31;1mout of memory\e[m");
+ if ((i = setjmp(jb)) > 0) printf("\e[31;1mERR %u%s\e[m",i,i == 4 ? " out of memory" : "");
  while (1) { L x,y; rebuild(); printf("\n%u>",2*fn-hp/8); print(y = eval(x = Read(),env)); gc(y); gc(x); }
 }

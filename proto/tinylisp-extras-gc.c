@@ -78,8 +78,7 @@ I equ(L x,L y) { return *(unsigned long long*)&x == *(unsigned long long*)&y; }
 /* interning of atom names (Lisp symbols), returns a unique NaN-boxed ATOM */
 L atom(const char *s) {
  I i = 0; while (i < hp && strcmp(A+i,s)) i += strlen(A+i)+1;
- if (i == hp && (hp += strlen(strcpy(A+i,s))+1) > lp<<3) err(4,nil);
- return box(ATOM,i);
+ return i == hp && (hp += strlen(strcpy(A+i,s))+1) > lp<<3 ? err(4,nil) : box(ATOM,i);
 }
 
 /* section 14: error handling and exceptions

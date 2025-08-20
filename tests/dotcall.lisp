@@ -89,14 +89,6 @@
 
 (cons
     (if (equal?
-            ((lambda (x y z) (list x y z)) '(1) '(2))
-            '((1) (2) ERR))
-        'passed
-        'failed)
-    '(scant args))
-
-(cons
-    (if (equal?
             ((lambda (l)
                 ((lambda (x y z) (list x y z)) '(1) '(2) . l)) '((3)))
             '((1) (2) (3)))
