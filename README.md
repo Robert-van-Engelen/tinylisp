@@ -144,11 +144,11 @@ returns `#t` (true) if values `x` and `y` are identical.  Otherwise, returns `()
 
     (or x1 x2 ... xk)
 
-returns the value of the first `x` that is not `()`.  Otherwise, returns `()` (empty list means false).  Only evaluates the `x` until the first is not `()`, i.e. the `or` is conditional.
+returns the value of the first `x` that is true, i.e. not `()`.  Otherwise, returns `()` (empty list means false).  Only evaluates the `x` until the first is true, therefore `or` is conditional.
 
     (and x1 x2 ... xk)
 
-returns the value of the last `x` if all `x` are not `()`.  Otherwise, returns `()` (empty list means false).  Only evaluates the `x` until the first is `()`, i.e. the `and` is conditional.
+returns the value of the last `x` if all `x` are not `()`.  Otherwise, returns `()` (empty list means false).  Only evaluates the `x` until the first is `()`, therefore `and` is conditional.
 
     (not x)
 
@@ -158,11 +158,11 @@ returns `#t` if `x` is not `()`.  Otherwise, returns `()` (empty list means fals
 
     (cond (x1 y1) (x2 y2) ... (xk yk))
 
-returns the value of `y` corresponding to the first `x` that is not `()` (meaning not false, i.e. true.)
+returns the value of `y` corresponding to the first `x` that is true, i.e. not `()` meaning not false, where at least one condition must be true.
 
     (if x y z)
 
-if `x` is not `()` (meaning not false, i.e. true), then return `y` else return `z`.
+if `x` is true, i.e. not `()` meaning not false, then return `y` else return `z`.
 
 ### Lambdas
 

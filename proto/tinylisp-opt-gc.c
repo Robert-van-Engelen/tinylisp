@@ -6,10 +6,10 @@
 #define L double
 #define T(x) *(unsigned long long*)&x>>48
 #define A (char*)cell
-#define N 1024
+#define N 8192
 #include <setjmp.h>
-jmp_buf jb;
-I ref[N/2],hp=0,fp=N-2,lp=N-2,fn=N/2,ATOM=0x7ff8,PRIM=0x7ff9,CONS=0x7ffa,CLOS=0x7ffb,NIL=0x7ffc;
+jmp_buf jb; /* we longjmp(jb,1) to REPL on memory overflow then mark-sweep garbage collect, instead of abort() */
+I ref[N/2],hp,fp,lp,fn,ATOM=0x7ff8,PRIM=0x7ff9,CONS=0x7ffa,CLOS=0x7ffb,NIL=0x7ffc;
 L cell[N],nil,tru,err,env;
 L box(I t,I i) { L x; *(unsigned long long*)&x = (unsigned long long)t<<48|i; return x; }
 I ord(L x) { return *(unsigned long long*)&x; }
@@ -20,7 +20,7 @@ L atom(const char *s) {
  if (i == hp && (hp += strlen(strcpy(A+i,s))+1) > lp<<3) longjmp(jb,1);
  return box(ATOM,i);
 }
-I lomem(I i) { return lp = (i < lp ? i : lp); }
+I lomem(I i) { return lp = i < lp ? i : lp; }
 L alloc() { I i = fp; fp = ref[i/2]; ref[i/2] = 1; --fn; if (hp > lomem(i)<<3) longjmp(jb,1); return box(CONS,i); }
 L cons(L x,L y) { L p = alloc(); cell[ord(p)+1] = x; cell[ord(p)] = y; return p; }
 L car(L p) { return (T(p)&~(CONS^CLOS)) == CONS ? cell[ord(p)+1] : err; }
@@ -31,6 +31,8 @@ L assoc(L v,L e) { while (T(e) == CONS && !equ(v,car(car(e)))) e = cdr(e); retur
 I not(L x) { return T(x) == NIL; }
 I let(L x) { return !not(x) && !not(cdr(x)); }
 L dup(L x) { if ((T(x)&~(CONS^CLOS)) == CONS) ++ref[ord(x)/2]; return x; }
+void del(I i) { ref[i/2] = fp; fp = i; ++fn; }
+void gc(L x) { I i; if ((T(x)&~(CONS^CLOS)) == CONS && !--ref[(i = ord(x))/2]) { del(i); gc(cell[i+1]); gc(cell[i]); } }
 L eval(L,L),parse();
 L evlis(L t,L e) {
  L s,*p;
@@ -44,8 +46,6 @@ L evarg(L *t,L *e,I *a) {
  x = car(*t); *t = cdr(*t);
  return *a ? dup(x) : eval(x,*e);
 }
-void del(I i) { ref[i/2] = fp; fp = i; ++fn; }
-void gc(L x) { if ((T(x)&~(CONS^CLOS)) == CONS && !--ref[ord(x)/2]) del(ord(x)),gc(cell[ord(x)+1]),gc(cell[ord(x)]); }
 L f_eval(L t,L *e) { I a = 0; L x = evarg(&t,e,&a),y = eval(x,*e); gc(x); return y; }
 L f_quote(L t,L *_) { return dup(car(t)); }
 L f_cons(L t,L *e) { I a = 0; L x = evarg(&t,e,&a); return cons(x,evarg(&t,e,&a)); }
@@ -62,7 +62,7 @@ L f_pair(L t,L *e) { I a = 0; L x = evarg(&t,e,&a); gc(x); return T(x) == CONS ?
 L f_not(L t,L *e) { I a = 0; L x = evarg(&t,e,&a); gc(x); return not(x) ? tru : nil; }
 L f_or(L t,L *e) { I a = 0; L x = nil; for (; !not(t) && not(x); x = evarg(&t,e,&a)) gc(x); return x; }
 L f_and(L t,L *e) { I a = 0; L x = tru; for (; !not(t) && !not(x); x = evarg(&t,e,&a)) gc(x); return x; }
-L f_cond(L t,L *e) { L x; for (; !not(t) && not(x = eval(car(car(t)),*e)); t = cdr(t)) gc(x); return car(cdr(car(t))); }
+L f_cond(L t,L *e) { L x; while (x = eval(car(car(t)),*e),gc(x),not(x)) t = cdr(t); return car(cdr(car(t))); }
 L f_if(L t,L *e) { L x,y = car(cdr(not(x = eval(car(t),*e)) ? cdr(t) : t)); gc(x); return y; }
 L f_leta(L t,L *e) { for (; let(t); t = cdr(t)) *e = pair(car(car(t)),eval(car(cdr(car(t))),*e),*e); return car(t); }
 L f_lambda(L t,L *e) { return closure(dup(car(t)),dup(car(cdr(t))),equ(*e,env) ? nil : dup(*e)); }
@@ -135,7 +135,7 @@ void print(L x) {
  else if (T(x) == CLOS) printf("{%u}",ord(x));
  else printf("%.10lg",x);
 }
-void mark(L x) { if ((T(x)&~(CONS^CLOS)) == CONS && !ref[ord(x)/2]++) mark(cell[ord(x)+1]),mark(cell[ord(x)]); }
+void mark(L x) { if ((T(x)&~(CONS^CLOS)) == CONS && !ref[ord(x)/2]++) { mark(cell[ord(x)+1]); mark(cell[ord(x)]); } }
 void sweep() {
  I i; for (hp = 0,i = 0; i < N; ++i) if (ref[i/2] && T(cell[i]) == ATOM && ord(cell[i]) > hp) hp = ord(cell[i]);
  hp += strlen(A+hp)+1;
@@ -144,7 +144,7 @@ void sweep() {
 void rebuild() { memset(ref,0,sizeof(ref)); mark(env); sweep(); }
 int main() {
  I i; printf("tinylisp-opt-gc");
- sweep();
+ env = 0; rebuild();
  nil = box(NIL,0); err = atom("ERR"); tru = atom("#t"); env = pair(tru,tru,nil);
  for (i = 0; prim[i].s; ++i) env = pair(atom(prim[i].s),box(PRIM,i),env);
  if (setjmp(jb)) printf("\e[31;1mout of memory\e[m");

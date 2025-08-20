@@ -1,4 +1,4 @@
-; n-queens example for tinylisp-extras-gc
+; n-queens example for tinylisp-extras-gc (requires extras + garbage collection)
 ; requires common.lisp
 
 ; some list.lisp definitions w/o loading list.lisp

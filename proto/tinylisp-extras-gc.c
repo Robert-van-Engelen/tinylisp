@@ -342,7 +342,7 @@ L f_pair(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return T(x) == CONS ? tr
 L f_or(L t,L *e) { I a = 0; L x = nil; while (!not(t) && not(x = evarg(&t,e,&a))) gc(x); return x; }
 L f_and(L t,L *e) { I a = 0; L x = tru; while (!not(t) && !not(x = evarg(&t,e,&a))) gc(x); return x; }
 L f_not(L t,L *e) { I a = 0; return not(gc(evarg(&t,e,&a))) ? tru : nil; }
-L f_cond(L t,L *e) { while (!not(t) && not(gc(eval(car(car(t)),*e)))) t = cdr(t); return car(cdr(car(t))); }
+L f_cond(L t,L *e) { while (not(gc(eval(car(car(t)),*e)))) t = cdr(t); return car(cdr(car(t))); }
 L f_if(L t,L *e) { return car(cdr(not(gc(eval(car(t),*e))) ? cdr(t) : t)); }
 L f_leta(L t,L *e) { for (; let(t); t = cdr(t)) *e = pair(car(car(t)),eval(car(cdr(car(t))),*e),*e); return car(t); }
 L f_lambda(L t,L *e) { return closure(dup(car(t)),dup(car(cdr(t))),equ(*e,env) ? nil : dup(*e)); }
