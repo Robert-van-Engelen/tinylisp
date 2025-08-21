@@ -65,7 +65,7 @@ L reduce(L f,L t,L e) { L x = eval(cdr(car(f)),e = bind(car(car(f)),t = evlis(t,
 L apply(L f,L t,L e) { return T(f) == PRIM ? prim[ord(f)].f(t,e) : T(f) == CLOS ? reduce(f,t,e) : err(3); }
 L eval(L x,L e) { L f = nil; x = T(x) == ATOM ? dup(assoc(x,e)) : T(x) == CONS ? apply(f = eval(car(x),e),cdr(x),e) : dup(x); gc(f); return x; }
 char buf[40],see = ' ';
-void look() { int c = getchar(); see = c; if (c == EOF) exit(0); }
+void look() { int c = getchar(); if (c == EOF) freopen("/dev/tty","r",stdin),c = ' '; see = c; }
 I seeing(char c) { return c == ' ' ? see > 0 && see <= c : see == c; }
 char get() { char c = see; look(); return c; }
 char scan() {

@@ -4,7 +4,8 @@
   - the smallest simplest tinylisp version with gc, based on tinylisp.c (+15 lines of C)
   - adds reference count garbage collection to continuously release unused memory cells
   - performs a mark-sweep cleanup when returning to the REPL
-  - adds error handling to return to the REPL with an error message
+  - extra: error handling to return to the REPL with an error message
+  - extra: reopens on EOF so `cat common.lisp list.lisp | ./tinylisp` parses files before REPL
   - passes `tests/dotcall.lisp` tests
   - compile with `cc -O2 -o tinylisp tinylisp-gc.c`
 
@@ -12,7 +13,8 @@
   - a simple tinylisp version with gc, based on tinylisp-opt.c (+11 lines of C)
   - adds reference count garbage collection to continuously release unused memory cells
   - performs a mark-sweep cleanup when returning to the REPL
-  - adds error handling to return to the REPL with an error message
+  - extra: error handling to return to the REPL with an error message
+  - extra: reopens on EOF so `cat common.lisp list.lisp | ./tinylisp` parses files before REPL
   - passes `tests/dotcall.lisp` tests
   - compile with `cc -O2 -o tinylisp tinylisp-opt-gc.c`
 

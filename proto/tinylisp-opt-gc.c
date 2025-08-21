@@ -94,7 +94,7 @@ L eval(L x,L e) {
  return x;
 }
 char buf[40],see = ' ';
-void look() { int c = getchar(); see = c; if (c == EOF) exit(0); }
+void look() { int c = getchar(); if (c == EOF) freopen("/dev/tty","r",stdin),c = ' '; see = c; }
 I seeing(char c) { return c == ' ' ? see > 0 && see <= c : see == c; }
 char get() { char c = see; look(); return c; }
 char scan() {
