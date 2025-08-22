@@ -60,10 +60,10 @@ I ref[N/2],hp,fp,lp,fn
 ```
 
 Hence, we remove the stack pointer `sp` from tinylisp, but add a new `fp` free
-cell pairs list pointer, a pointer to the lowest allocated and used cell pair
-pointer `lp` to detect memory overflows, and the number of free cell pairs
-`fn`.  Note that when we say "pointer" we mean an index into the `cell[]` array
-that it points to.
+cell pairs list pointer, a pointer `lp` to the lowest allocated and used cell
+pair to detect memory overflows, and `fn` the number of free cell pairs.  Note
+that when we say "pointer" we mean an index into the `cell[]` array that it
+points to.
 
 The lowest allocated and used cell pair pointer `lp` is updated in a new
 `lomem()` function:
@@ -72,7 +72,7 @@ The lowest allocated and used cell pair pointer `lp` is updated in a new
 I lomem(I i) { return lp = i < lp ? i : lp; }
 ```
 
-When a new cell pair `cell[i]` and `cell[i+1]` is allocated and returned as a
+A new cell pair `cell[i]` and `cell[i+1]` is allocated and returned as a
 NaN-boxed `box(CONS,i)` with a new `alloc()` function.  It also checks if
 `lomem(i)` does not overflow into the atom heap:
 
@@ -84,20 +84,20 @@ Because `ref[i/2]` becomes unused when the corresponding cell pair is
 allocated, we will reuse `ref[i/2]` to store the reference count of the cell
 pair, which is initially one, i.e. `ref[i/2] = 1`.
 
-The updated tinylisp `cons()` function calls `alloc()` and stores the car `x`
-and cdr `y` of the new pair `p`:
+The following updated tinylisp `cons()` function calls `alloc()` and stores the
+car `x` and cdr `y` of the new pair `p`:
 
 ```c
 L cons(L x,L y) { L p = alloc(); cell[ord(p)+1] = x; cell[ord(p)] = y; return p; }
 ```
 
 With reference count garbage collection we need to "duplicate" a Lisp
-expression whenever we want to use it without risking it from being garabge
-collected in another part of the Lisp interpreter.  This "duplication" only
+expression whenever we want to use it without risking it from being garbage
+collected in some other part of the Lisp interpreter.  This "duplication" only
 applies to `CONS` and `CLOS` values that point to cell pairs.  To duplicate, we
-increase the reference count `ref[i/2]` by one when the expression to duplicate
-is a `CONS` or `CLOS` value that uses `cell[ord(x)+1]` for its car and
-`cell[ord(x)]` for its cdr:
+simply increase the reference count `ref[i/2]` by one when the expression to
+duplicate is a `CONS` or `CLOS` value that uses `cell[ord(x)+1]` for its car
+and `cell[ord(x)]` for its cdr:
 
 ```c
 L dup(L x) { if ((T(x)&~(CONS^CLOS)) == CONS) ++ref[ord(x)/2]; return x; }
@@ -112,17 +112,18 @@ void gc(L x) { I i; if ((T(x)&~(CONS^CLOS)) == CONS && !--ref[(i = ord(x))/2]) {
 ```
 
 This decrements the reference count `ref[i/2]` of a `CONS` or `CLOS` value `x`
-with ordinal `ord(x)` and calls `del(i)` to reclaim the cell pair car
-`cell[i+1]` and cdr `cell[i]` by adding it to the head of the free list pointed
-to by `fp`.  The number of free cell pairs `fn` is increased by one.  This is
-recursively repeated for the car `cell[i+1]` and cdr `cell[i]` to collect them.
+with cell pair index `i = ord(x)` and calls `del(i)` to reclaim the cell pair
+car `cell[i+1]` and cdr `cell[i]` by adding it to the head of the free list
+pointed to by `fp`.  The number of free cell pairs `fn` is increased by one.
+This is recursively repeated for the car `cell[i+1]` and cdr `cell[i]` to
+collect them.
 
 Note that cyclic data structures formed by lists cannot be garbage collected
 with reference counting, because there is at least one cell pair that is
 referenced by a back-edge from the data and this cell pair's reference count
 never drops to zero.  Cyclic data structures cannot be created in tinylisp
 though, as long as we don't extend the implementation with `letrec` and
-`letrec*` local recursive lamnbda closures and with `setq`, `set-car!` and
+`letrec*` local recursive lambda closures and with `setq`, `set-car!` and
 `set-cdr!` that allow destructive assignments with which cyclic data structures
 can be created.
 
@@ -150,8 +151,8 @@ Rebuilding the cell memory has another advantage by effectively "linearizing"
 the free cell pairs list to run from the top-most free cell to the bottom-most
 free cell in the pool.  This helps to avoid allocating bottom cells first that
 may run into the atom heap below when the atom heap grows.  This would block
-new `define` even when we have plenty of free cells available in the middle of
-the pool.
+new `define` global named definitions even when we have plenty of free cells
+available in the middle of the pool.
 
 If we also want to delete unused atoms from the atom heap, then we can do this
 effectively by adding the following two lines to `sweep()` similar to the
@@ -180,8 +181,9 @@ int main() {
 Besides these changes to the tinylisp interpreter, also the Lisp primitives and
 the tinylisp interpreter logic must be updated throughout the code to call
 `dup()` and `gc()` at the necessary points.  Furthermore, the `eval()`,
-`evlis()` and `evarg()` functions return a new value or new list, which doesn't
-need a `dup()`, but the returned lists must eventually be `gc()` collected.
+`evlis()` and `evarg()` functions return a new value including new lists, which
+doesn't need a `dup()`, but the returned lists must eventually be `gc()`
+collected.
 
 **Garbage collection in the tinylisp "extras" version**
 
