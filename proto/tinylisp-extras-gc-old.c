@@ -52,14 +52,14 @@ L eval(L,L),Read(),parse(),err(I,L),gc(L); void collect(L),print(L);
 
 /* section 4: constructing Lisp expressions (using a cell pool managed with reference count garbage collection) */
 /* hp: top of the atom heap pointer, A+hp with hp=0 points to the first atom string in cell[]
-   fp: free cell pairs list pointer, ref[fp/2] is the head of the linked list of free cell pairs
+   fp: free cell pairs list pointer, fp->ref[fp]->ref[ref[fp]]->...->0 forms a linked list of free cell pair indices
    lp: pointer to the lowest allocated and used cell pair in cell[]
    fn: number of free cell cons pairs in cell[] (not taking atoms stored in cell[] into account)
    tr: tracing off (0), on (1), wait on ENTER (2), dump and wait (3)
    safety invariant: hp < lp<<3 */
 I hp = 0,fp = N-2,lp = N-2,fn = N/2,tr = 0;
-/* ref[] array with ref count of a used cell pair or ref to next free cell pair in the free list */
-I ref[N/2];
+/* ref[N] array with ref count of a used cell pair or ref to next free cell pair in the free list */
+I ref[N];
 /* atom, primitive, cons, closure and nil tags for NaN boxing */
 enum { ATOM = 0x7ff8,PRIM = 0x7ff9,CONS = 0x7ffa,CLOS = 0x7ffb,MACR = 0x7ffc,NIL = 0x7ffd };
 /* cell[N] pool of allocatable Lisp expressions shared by the atom heap */
@@ -105,22 +105,18 @@ L err(I i,L x) {
  while (xp != xb) gc(**--xp);
  longjmp(jb,i);
 }
-/* register x with initial value y to collect with rg(x) or in a f_catch exception handler when an error occurred */
-L rc(L *x,L y) { return !xp ? (*x = y) : xp >= xstk+5*K ? err(4,nil) : (*(*xp++ = x) = y); }
-/* remove x from catch-throw registry and garbage collect x */
-L rg(L x) { if (xp) --xp; return gc(x); }
-/* remove n registrations without garbage collecting them */
-void rr(I k) { if (xp) xp -= k; }
-
-/* memory management with ref[] array using free and SCC marker bits */
-const I FREE = ~((I)~0UL>>1),MARK = FREE,SCC = MARK>>1;
-/* lowest pointer to allocated cells in memory */
-I lomem(I i) { return lp = i < lp ? i : lp; }
-/* allocate a new pair */
-L alloc() { I i = fp; fp = ref[i/2] & ~FREE; ref[i/2] = 1; --fn; return hp > lomem(i)<<3 ? err(4,nil) : box(CONS,i); }
 
 /* construct pair (x . y) returns a NaN-boxed CONS */
-L cons(L x,L y) { L p = alloc(); I i = ord(p); cell[i+1] = x; cell[i] = y; LOG(p,"\n\e[32mcons %u\e[m\t",i); return p; }
+L cons(L x,L y) {
+ I i = fp;                                              /* get a cell pair from the free pool */
+ if (i < lp) lp = i;                                    /* update lowest cell pair used */
+ if (hp > lp<<3) err(4,nil);
+ fp = ref[i]; ref[i] = 1; --fn;                         /* claim the cell pair from the free pool */
+ ref[i+1] = 0;                                          /* clear markers in upper ref+1 */
+ cell[i+1] = x; cell[i] = y;                            /* store car x and cdr y */
+ LOG(box(CONS,i),"\n\e[32mcons => %u\e[m\t",i);
+ return box(CONS,i);
+}
 /* return the car of a pair or throw err(1) if not a pair */
 L car(L p) { return T(p) == CONS || T(p) == CLOS || T(p) == MACR ? cell[ord(p)+1] : err(1,p); }
 /* return the cdr of a pair or throw err(1) if not a pair */
@@ -141,51 +137,113 @@ I let(L x) { return !not(x) && !not(cdr(x)); }
 /* duplicate expression x: if x is a pair then increment its ref count by one */
 L dup(L x) {
  if (T(x) == CONS || T(x) == CLOS || T(x) == MACR) {
-  I i = ord(x);
-  if (ref[i/2] & SCC) i = ref[i/2] & ~SCC;              /* if x is in an SCC then update SCC representative ref count */
-  ++ref[i/2];                                           /* increment ref count */
-  LOG(x,"\n\e[32m++#%u=%u\e[m\t",i,ref[i/2]);
+  ++ref[ord(x)];
+  LOG(x,"\n\e[32m++ref[%u] == %u\e[m\t",ord(x),ref[ord(x)]);
  }
  return x;
 }
 
-/* garbage collect: if x is a pair then collect pair x by decrementing its ref count, deleting it if count drops to 0 */
+/* garbage collect: if x is a pair then collect pair x by decrementing its ref count, remving it if count drops to 0 */
 L gc(L x) { if (T(x) == CONS || T(x) == CLOS || T(x) == MACR) collect(x); return x; }
-/* delete the pair cell[i] cell[i+1] to reuse by adding it to the free cell pair list */
-void del(I i) { ref[i/2] = FREE|fp; fp = i; ++fn; }
-/* from cell pair x onwards, delete entire SCC identified by representative k with SCC bit set, gc non-SCC branches */
-void delscc(I k,L x) {
- I i; L y;
- while (!(ref[(i = ord(x))/2] & FREE)) {                /* repeat until all SCC cell pairs x are deleted */
-  LOG(x,"\n\e[36mfree %u\e[m\t",i);
-  del(i);                                               /* delete the SCC cell pair x to reuse */
-  x = cell[i]; y = cell[i+1];                           /* recurse on y = car(x) and x = cdr(x) */
-  if (T(y) == CONS || T(y) == CLOS || T(y) == MACR) {
-   if (T(x) == CONS || T(x) == CLOS || T(x) == MACR) {
-    if (ref[ord(y)/2] != k) collect(y);                 /* only cdr(x) is part of the SCC, car(x) is a pair */
-    else if (ref[ord(x)/2] == k) delscc(k,y);           /* both car(x) and cdr(x) are part of the SCC k */
-    else collect(x),x = y;                              /* only car(x) is part of the SCC, cdr(x) is a pair */
-   }
-   else x = y;                                          /* only car(x) is part of the SCC k */
+
+/* garbage collection upper ref+1 markers and masks */
+const I FREE = (I)~0UL,VISIT = ~(FREE>>1),MARKY = VISIT>>1,MARKZ = MARKY>>1,MARK = MARKY|MARKZ,MASK = ~(VISIT|MARK);
+
+/* recursively mark all cyclic paths in the strongly connected component x, origin cell[i], ignore paths to cell[k] */
+I cyclic(I i,L x,I k) {
+ if (T(x) == CONS || T(x) == CLOS || T(x) == MACR) {
+  I j = ord(x);
+  if (i != j && ref[j+1] == 0) {
+   L y = cell[j+1],z = j == k ? nil : cell[j];                  /* y = car(x) and z = cdr(x) if not cell[k] */
+   if (cyclic(i,y,k)) ref[j+1] |= VISIT | MARKY;                /* mark cyclic paths through car(x) */
+   if (cyclic(i,z,k)) ref[j+1] |= VISIT | MARKZ;                /* mark cyclic paths through cdr(x) */
+  }
+  if (i == j || (ref[j+1] & VISIT)) {
+   ++ref[j+1];                                                  /* increase cyclic ref count through x by one */
+   LOG(x,"\n\e[36m++cycle[%u] == %u\e[m\t",j,ref[j+1] & MASK);
+   return 1;                                                    /* path through x is cyclic */
+  }
+ }
+ return 0;                                                      /* path through x is not cyclic */
+}
+/* unvisit the strongly connected component x, removes all VISIT marks */
+void leave(L x) {
+ I i,k; L y;
+ while ((k = ref[(i = ord(x))+1]) & VISIT) {
+  x = cell[i]; y = cell[i+1];
+  ref[i+1] &= ~VISIT;
+  if (k & MARKY) {
+   if (k & MARKZ) leave(y);
+   else x = y;
   }
  }
 }
-/* collect pair x: decrement ref count by one, if count drops to zero then remove x and collect car(x) and cdr(x) */
+/* if x is strongly connected, then mark all cyclic paths through x, ignore paths to cell[k] */
+void scc(L x,I k) {
+ I i = ord(x); L y = cell[i+1],z = i == k ? nil : cell[i];      /* y = car(x) and z = cdr(x) if not cell[k] */
+ if (cyclic(i,y,k)) ref[i+1] |= VISIT | MARKY;                  /* mark cyclic paths through car(x) */
+ if (cyclic(i,z,k)) ref[i+1] |= VISIT | MARKZ;                  /* mark cyclic paths through cdr(x) */
+ leave(x);
+}
+
+/* returns nonzero if strongly connected component through all cyclic paths from cell pair x has become isolated */
+I isocyclic(L x) {
+ I i,k; L y;
+ while (!((k = ref[(i = ord(x))+1]) & VISIT)) {
+  LOG(x,"\n\e[36mcycle[%u] == %u %c= \e[35m%u\e[m\t",i,k & MASK,(k & MASK) == ref[i] ? '=' : '!',ref[i]);
+  if ((k & MASK) < ref[i]) return 0;
+  ref[i+1] |= VISIT;
+  x = cell[i]; y = cell[i+1];                           /* y = car(x) and x = cdr(x) */
+  if (k & MARKY) {
+   if (!(k & MARKZ)) x = y;                             /* only recurse on car(x) */
+   else if (!isocyclic(y)) return 0;                    /* recurse on both car(x) and cdr(x) */
+  }
+ }
+ return 1;
+}
+/* returns nonzero if x is a strongly connected component that has become isolated and can be garbage collected */
+I isoscc(L x) {
+ I i = ord(x),k;
+ if (!(ref[i+1] & MARK)) return 0;                      /* x is not a strongly connected component */
+ k = isocyclic(x);
+ leave(x);
+ return k;
+}
+/* garbage collect strongly connected component x */
+void gcscc(L x) {
+ I i,k; L y;
+ while ((k = ref[(i = ord(x))+1]) != FREE) {            /* repeat until all free */
+  LOG(x,"\n\e[36mfree cyclic %u\e[m\t",i);
+  ref[i] = fp; fp = i; ++fn;                            /* reclaim cell pair x in the free pool */
+  ref[i+1] = FREE;                                      /* mark it free */
+  x = cell[i]; y = cell[i+1];                           /* recurse on y = car(x) and x = cdr(x) */
+  if (T(y) == CONS || T(y) == CLOS || T(y) == MACR) {
+   if (T(x) == CONS || T(x) == CLOS || T(x) == MACR) {
+    if (!(k & MARKY)) collect(y);                       /* only cdr(x) is part of the SCC, car(x) is a pair */
+    else if (k & MARKZ) gcscc(y);                       /* both car(x) and cdr(x) are part of the SCC */
+    else collect(x),x = y;                              /* only car(x) is part of the SCC, cdr(x) is a pair */
+   }
+   else x = y;                                          /* only car(x) is part of the SCC */
+  }
+ }
+}
+
+/* collect pair x: decrement ref count by one, if count drops to 0 then remove x and collect car(x) and cdr(x) */
 void collect(L x) {
  I i; L y;
  while (1) {
-  if (ref[(i = ord(x))/2] & FREE) {                     /* detect double free (which will or should never happen) */
+  i = ord(x);
+  if (ref[i+1] == FREE) {                               /* detect double free (should never happen!) */
    printf("\n\e[31;1mdouble free %u\e[m\t",i);
    err(4,nil);
   }
-  if (ref[i/2] & SCC) {                                 /* if this is an SCC cell pair to collect */
-   i = ref[i/2] & ~SCC;                                 /* then get the SCC representative identified by i */
-   if (!(ref[i/2] & FREE) && --ref[i/2]) break;         /* if the representative was deleted or its ref drops to zero */
-   return delscc(SCC|i,x);                              /* then delete the entire SCC and gc its branches */
+  if (--ref[i]) {                                       /* decrement ref count by one, if not yet zero then ... */
+   if (isoscc(x)) return gcscc(x);                      /* if it is an isolated SCC then garbage collect it */
+   break;                                               /* else do nothing */
   }
-  if (--ref[i/2]) break;                                /* if ref count drops to zero (of a non-SCC cell pair x) */
-  LOG(x,"\n\e[35mfree %u\e[m\t",i);
-  del(i);                                               /* then delete the cell pair to reuse */
+  LOG(x,"\n\e[35mfree %u -> %u%s\e[m\t",i,fp,ref[i+1] ? " \e[36mcycle" : "");
+  ref[i] = fp; fp = i; ++fn;                            /* reclaim cell pair x in the free pool */
+  ref[i+1] = FREE;                                      /* mark it free */
   x = cell[i]; y = cell[i+1];                           /* recurse on y = car(x) and x = cdr(x) */
   if (T(y) == CONS || T(y) == CLOS || T(y) == MACR) {
    if (T(x) == CONS || T(x) == CLOS || T(x) == MACR) collect(y);
@@ -193,13 +251,22 @@ void collect(L x) {
   }
   else if (T(x) != CONS && T(x) != CLOS && T(x) != MACR) return;
  }
- LOG(x,"\n\e[35m--#%u=%u\e[m\t",i,ref[i/2]);
+ LOG(x,"\n\e[35m--ref[%u] == %u%s\e[m\t",i,ref[i],ref[i+1] ? " \e[36mcycle" : "");
 }
 
-/* rebuild ref count by incrementing the ref counts of all cells reachable from cell pair x */
+/* register x with initial value y to collect with rg(x) or in a f_catch exception handler when an error occurred */
+L rc(L *x,L y) { return !xp ? (*x = y) : xp >= xstk+5*K ? err(4,nil) : (*(*xp++ = x) = y); }
+
+/* remove x from catch-throw registry and garbage collect */
+L rg(L x) { if (xp) --xp; return gc(x); }
+
+/* remove n registrations without garbage collecting them */
+void rr(I k) { if (xp) xp -= k; }
+
+/* mark to rebuild ref count by marking used cells recursively and by incrementing ref counts */
 void mark(L x) {
  L y; I i;
- while (!ref[(i = ord(x))/2]++) {                       /* increment ref count, but recurse at most once on x */
+ while (ref[i = ord(x)]++ == 0) {                       /* increment ref count, but recurse at most once on x */
   x = cell[i]; y = cell[i+1];                           /* recurse on y = car(x) and x = cdr(x) */
   if (T(y) == CONS || T(y) == CLOS || T(y) == MACR) {
    if (T(x) == CONS || T(x) == CLOS || T(x) == MACR) mark(y);
@@ -208,65 +275,37 @@ void mark(L x) {
   else if (T(x) != CONS && T(x) != CLOS && T(x) != MACR) return;
  }
 }
-/* sweep unused cells after mark() into the free cell pair list, shrink the atom heap when possible */
+
+/* sweep unused cells after mark() into the free list, also shrink the atom heap when possible */
 void sweep() {
- I i; for (hp = 0,i = 0; i < N; ++i) if (ref[i/2] && T(cell[i]) == ATOM && ord(cell[i]) > hp) hp = ord(cell[i]);
+ I i;
+ for (hp = 0,i = 0; i < N; ++i) if (ref[i&~1] > 0 && T(cell[i]) == ATOM && ord(cell[i]) > hp) hp = ord(cell[i]);
  hp += strlen(A+hp)+1;
- for (fp = 0,lp = N-2,fn = 1,i = 2; i < N; i += 2) if (ref[i/2]) lomem(i); else del(i);
-}
-/* rebuild memory to retain the global environment env and delete everything else */
-void rebuild() {
- I k = fn;
-#if DEBUG
- I i,r[N/2];
- memcpy(r,ref,sizeof(ref));
-#endif
- memset(ref,0,sizeof(ref));
- mark(env);
- sweep();
-#if DEBUG                                               /* report on memory management when debugging is enabled */
- for (i = 0; i < N/3; ++i) {
-  if (!(ref[i] & FREE) && (r[i] & FREE))
-   LOG(cell[i+1],"\n\e[31;1muse after free ref[%u] = %u\e[m\t",i,ref[i]),LOG(cell[2*i],"\t");
-  else if ((ref[i] & FREE) && !(r[i] & FREE))
-   LOG(cell[i+1],"\n\e[31;1mnot freed pair ref[%u] = %u\e[m\t",i,r[i]),LOG(cell[2*i],"\t");
-  else if (!(ref[i] & FREE) && !(r[i] & FREE) && ref[i] != r[i])
-   LOG(cell[i+1],"\n\e[31;1mref[%u] want %u have %u\e[m\t",i,ref[i],r[i]),LOG(cell[2*i],"\t");
- }
-#endif
- if (k < fn) printf("\ncollected %u unused cells",2*(fn-k));
- xb = xp = NULL;                                        /* clear exception stack pointers */
+ for (fp = 0,lp = N-2,fn = 1,i = 2; i < N; i += 2)
+  if (ref[i] == 0) { ref[i] = fp; fp = i; ++fn; }       /* reclaim cell pair at i in the free pool */
+  else if (i < lp) lp = i;                              /* find lowest cell pair used */
 }
 
-/* detect SCC from origin cell[i] while visiting x, ignore paths to cell[k] */
-I cyclic(I i,L x,I k) {
- if (T(x) == CONS || T(x) == CLOS || T(x) == MACR) {
-  I j = ord(x);
-  if (i != j && !(ref[j/2] & SCC)) {
-   L y = cell[j+1],z = j == k ? nil : cell[j];          /* y = car(x) and z = cdr(x) if not cell[k] */
-   ref[i/2] |= MARK;
-   if (cyclic(i,y,k)) ref[j/2] = SCC|i;                 /* car(x) is in the SCC identified by representative i */
-   if (cyclic(i,z,k)) ref[j/2] = SCC|i;                 /* cdr(x) is in the SCC identified by representative i */
-   ref[i/2] &= ~MARK;
-  }
-  if (i == j) {
-   --ref[i/2];
-   LOG(x,"\n\e[36m--#@%u=%u\e[m\t",i,ref[i/2]);
-   return 1;                                            /* x is in the SCC identified by representative i */
-  }
-  if (ref[j/2] & MARK) return 0;                        /* ignore cycles that are not in the SCC */
-  if (ref[j/2] == (SCC|i)) {
-   LOG(x,"\n\e[36m%u @%u\e[m\t",j,i);
-   return 1;                                            /* x is in the SCC identified by representative i */
+/* rebuild memory to retain the global environment env and delete everything else */
+void rebuild() {
+ I i,k = fn;
+ for (i = 0; i < N; i += 2) { ref[i+1] = ref[i]; ref[i] = 0; }
+ mark(env);
+ sweep();
+ for (i = 0; i < N; i += 2) {                           /* report on memory management when debugging is enabled */
+  if (ref[i] != ref[i+1]) {
+   if (ref[i] < hp/8 && ref[i+1] < hp/8)
+    LOG(cell[i+1],"\n\e[31;1mref[%u] want %u have %u\e[m\t",i,ref[i],ref[i+1]),LOG(cell[i],"\t");
+   else if (ref[i] < hp/8)
+    LOG(cell[i+1],"\n\e[31;1muse after free ref[%u] = %u\e[m\t",i,ref[i]),LOG(cell[i],"\t");
+   else if (ref[i+1] < hp/8)
+    LOG(cell[i+1],"\n\e[31;1mnot freed pair ref[%u] = %u\e[m\t",i,ref[i+1]),LOG(cell[i],"\t");
   }
  }
- return 0;                                              /* x is not in an SCC */
-}
-/* if x is strongly connected, then all cyclic paths that go through x are in the SCC, ignore paths to cell[k] */
-void scc(L x,I k) {
- I i = ord(x); L y = cell[i+1],z = i == k ? nil : cell[i];      /* y = car(x) and z = cdr(x) if not cell[k] */
- cyclic(i,y,k);
- cyclic(i,z,k);
+ if (k < fn) printf("\ncollected %u unused cells",2*(fn-k));
+ for (i = 0; i < N; i += 2) ref[i+1] = 0;               /* clear all cell pair upper ref+1 for letrec cycle detection */
+ for (i = fp; i > 0; i = ref[i]) ref[i+1] = FREE;       /* mark free cell pair upper ref+1 for double free detection */
+ xb = xp = NULL;                                        /* clear exception stack pointers */
 }
 
 /* section 16.1: replacing recursion with loops */
@@ -332,18 +371,18 @@ L f_letreca(L t,L *e) {
  I i,k;
  for (; let(t); t = cdr(t)) {
   *e = pair(car(car(t)),nil,*e);
-  k = ref[(i = ord(*e))/2];
+  k = ref[i = ord(*e)];
   cell[ord(car(*e))] = eval(car(cdr(car(t))),*e);
-  if (ref[i/2] > k) scc(*e,i);                  /* use of *e detected in a CLOS: mark strongly connected component */
+  if (ref[i] > k) scc(*e,i);                    /* use of *e detected in a CLOS: mark strongly connected component */
  }
  return car(t);
 }
 L f_letrec(L t,L *e) {
  I i,k;L s,d,*p;
  for (s = t,d = *e,p = &d; let(s); s = cdr(s),p = &cell[ord(*p)]) *p = pair(car(car(s)),nil,*e);
- k = ref[ord(d)/2];
+ k = ref[ord(d)];
  for (*e = d; let(t); t = cdr(t),i = ord(d),d = cdr(d)) cell[ord(car(d))] = eval(car(cdr(car(t))),*e);
- if (ref[ord(*e)/2] > k) scc(*e,i);             /* use of *e detected in a CLOS: mark strongly connected component */
+ if (ref[ord(*e)] > k) scc(*e,i);               /* use of *e detected in a CLOS: mark strongly connected component */
  return car(t);
 }
 L f_setq(L t,L *e) {
@@ -377,14 +416,14 @@ L f_load(L t,L *_) { L x = car(t); if (!in && T(x) == ATOM) in = fopen(A+ord(x),
 
 /* section 14: error handling and exceptions */
 L f_catch(L t,L *e) {
- I i; L x,**saved[2] = {xb,xp};                         /* save old xb and xp exception stack pointers */
+ I i; L x,**saved[2] = {xb,xp};                                 /* save old xb and xp exception stack pointers */
  jmp_buf savedjb;
  memcpy(savedjb,jb,sizeof(jb));
- if (!xp) xp = xstk;                                    /* set exception stack pointer xp if not set */
- xb = xp;                                               /* set base stack pointer xb for evals after f_catch */
+ if (!xp) xp = xstk;                                            /* set exception stack pointer xp if not set */
+ xb = xp;                                                       /* set base stack pointer xb for evals after f_catch */
  if ((i = setjmp(jb)) == 0) x = eval(car(t),*e);
  memcpy(jb,savedjb,sizeof(jb));
- xb = saved[0]; xp = saved[1];                          /* restore xb and xp exception stack pointers */
+ xb = saved[0]; xp = saved[1];                                  /* restore xb and xp exception stack pointers */
  return i == 0 ? x : i == 4 ? err(4,nil) : cons(atom("ERR"),i);
 }
 L f_throw(L t,L *_) { return err(num(car(t)),nil); }
@@ -575,7 +614,7 @@ void stop(int i) { if (line) err(5,nil); else abort(); }
 /* section 10: read-eval-print loop (REPL) with additions */
 int main(int argc,char **argv) {
  I i; printf("tinylisp-extras-gc");
- env = 0; rebuild();
+ for (i = 2; i < N; i += 2) ref[i] = i-2;
  nil = box(NIL,0); atom("ERR"); tru = atom("#t"); env = pair(tru,tru,nil);
  for (i = 0; prim[i].s; ++i) env = pair(atom(prim[i].s),box(PRIM,i),env);
  in = fopen((argc > 1 ? argv[1] : "common.lisp"),"r");

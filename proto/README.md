@@ -19,7 +19,7 @@
   - compile with `cc -O2 -o tinylisp tinylisp-opt-gc.c`
 
 - [tinylisp-extras-gc.c](tinylisp-extras-gc.c)
-  - based on tinylisp-extras.c that includes all of the article's extras (+220 lines of C)
+  - based on tinylisp-extras.c that includes all of the article's extras (+180 lines of C)
   - adds reference count garbage collection to continuously release unused memory cells
   - garbage collects cycles in `letrec` and `letrec*` recursive local functions using strongly connected component analysis
   - cleans up `catch`-`throw` exceptions in Lisp using a temporary stack when `catch` is used
@@ -162,13 +162,13 @@ article's recommendation:
 void sweep() {
  I i; for (hp = 0,i = 0; i < N; ++i) if (ref[i/2] && T(cell[i]) == ATOM && ord(cell[i]) > hp) hp = ord(cell[i]);
  hp += strlen(A+hp)+1;
- for (fp = 0,lp = N-2,fn = 1,i = 2; i < N; i += 2) if (!ref[i/2]) del(i); else lomem(i);
+ for (fp = 0,lp = N-2,fn = 1,i = 2; i < N; i += 2) if (ref[i/2]) lomem(i); else del(i);
 }
 ```
 
 The main program initializes the free cell pairs pool with `env = 0; rebuild()`.
-It performs garbage collection in the REPL on the `Read()` Lisp expression `x`
-parsed from the input and the evaluated value `y` produced:
+Then performs garbage collection in the REPL on the `Read()` Lisp expression
+`x` parsed from the input and the evaluated value `y` produced:
 
 ```c
 int main() {
@@ -190,9 +190,18 @@ collected.
 The tinylisp-extras-gc version implements features that may construct cyclic
 data structures from lists.  In particular `letrec` and `letrec*` construct
 cyclic local environments for recursive lambda closures.  Since it is known
-when and where this happens, I am using strongly connected component analysis
-to identify these structures to delete them later as part of the reference
-count garbage collection strategy in this "extras" version.
+when and where this happens, I am using strongly connected component (SCC)
+analysis to identify these structures to delete them later as part of the
+reference count garbage collection strategy implemented in this "extras"
+version.
+
+Constructing an SCC, when it is detected in a `letrec` or `letrec*` for
+recursive functions, takes *O(n)* time for *n* cells that constitute the source
+code lists of the recursive local `letrec` and `letrec*` function definitions.
+This is done only once when evaluating the `letrec` or `letrec*`, even when the
+local functions recurses many times.  Garbage collecting the SCC afterwards
+only takes *O(1)* unit time to check if all references to the SCC are gone,
+then it takes *O(n)* time to delete the entire SCC.
 
 Furthermore, since this version also implements `catch` and `throw`, I've added
 an exception stack that is used whenever `catch` is called.  This exception
