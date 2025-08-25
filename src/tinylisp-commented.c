@@ -255,7 +255,7 @@ L f_not(L t, L e) {
 }
 
 L f_cond(L t, L e) {
-  while (!not(t) && not(eval(car(car(t)), e)))
+  while (not(eval(car(car(t)), e)))
     t = cdr(t);
   return eval(car(cdr(car(t))), e);
 }

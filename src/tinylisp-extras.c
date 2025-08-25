@@ -1,4 +1,4 @@
-/* tinylisp-extras.c with the article's extras by Robert A. van Engelen 2025 */
+/* tinylisp-extras.c optimized and article's extras by Robert A. van Engelen 2025 */
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -64,8 +64,7 @@ I equ(L x,L y) { return *(unsigned long long*)&x == *(unsigned long long*)&y; }
 /* interning of atom names (Lisp symbols), returns a unique NaN-boxed ATOM */
 L atom(const char *s) {
  I i = 0; while (i < hp && strcmp(A+i,s)) i += strlen(A+i)+1;
- if (i == hp && (hp += strlen(strcpy(A+i,s))+1) > sp<<3) err(4,nil);
- return box(ATOM,i);
+ return i == hp && (hp += strlen(strcpy(A+i,s))+1) > sp<<3 ? err(4,nil) : box(ATOM,i);
 }
 
 /* section 14: error handling and exceptions
@@ -134,7 +133,7 @@ L f_pair(L t,L *e) { I a = 0; L x = evarg(&t,e,&a); return T(x) == CONS ? tru : 
 L f_or(L t,L *e) { I a = 0; L x = nil; while (!not(t) && not(x)) x = evarg(&t,e,&a); return x; }
 L f_and(L t,L *e) { I a = 0; L x = tru; while (!not(t) && !not(x)) x = evarg(&t,e,&a); return x; }
 L f_not(L t,L *e) { I a = 0; return not(evarg(&t,e,&a)) ? tru : nil; }
-L f_cond(L t,L *e) { while (!not(t) && not(eval(car(car(t)),*e))) t = cdr(t); return car(cdr(car(t))); }
+L f_cond(L t,L *e) { while (not(eval(car(car(t)),*e))) t = cdr(t); return car(cdr(car(t))); }
 L f_if(L t,L *e) { return car(cdr(not(eval(car(t),*e)) ? cdr(t) : t)); }
 L f_leta(L t,L *e) { for (; let(t); t = cdr(t)) *e = pair(car(car(t)),eval(car(cdr(car(t))),*e),*e); return car(t); }
 L f_lambda(L t,L *e) { return closure(car(t),car(cdr(t)),*e); }

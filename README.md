@@ -74,7 +74,7 @@ Double precision floating point numbers, including `inf`, `-inf` and `nan` (`nan
 
 ### Symbols
 
-Lisp symbols consist of a sequence of non-space characters, excluding `(`, `)` and quotes.  When used in a Lisp expression, a symbol is looked-up for its value, like a variable typically refers to its value.  Symbols can be '-quoted like `'foo` to use symbols literally and to pass them to functions.
+Lisp symbols consist of a sequence of non-space characters, excluding parenthesis `(` `)` and quotes.  When used in a Lisp expression, a symbol is looked-up for its value, like a variable typically refers to its value.  Symbols can be '-quoted like `'foo` to use symbols literally and to pass them to functions.
 
 ### Booleans
 

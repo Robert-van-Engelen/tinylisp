@@ -21,7 +21,7 @@
 - [tinylisp-extras-gc.c](tinylisp-extras-gc.c)
   - based on tinylisp-extras.c that includes all of the article's extras (+180 lines of C)
   - adds reference count garbage collection to continuously release unused memory cells
-  - garbage collects cycles in `letrec` and `letrec*` recursive local functions using strongly connected component analysis
+  - collects unused cyclic lists created by `letrec` and `letrec*` recursive local functions
   - cleans up `catch`-`throw` exceptions in Lisp using a temporary stack when `catch` is used
   - performs a mark-sweep cleanup when returning to the REPL
   - includes a memory debugger, compile with `-DDEBUG` or `-DDEBUG=2` (verbose) to enable
@@ -38,7 +38,7 @@ Lisp values.  Two cells are needed to store the car and the cdr of a `CONS` or
 `CLOS` value.  The ordinal of a `CONS` and `CLOS` NaN-boxed value is the index
 of the cell pair on the stack.  In this way, allocation is fast and simple.
 But deallocation and reuse is not possible until we return to the REPL to throw
-everytying away that was computed, except for the global environemnt `env`.
+everytying away that was computed, except for the global environment `env`.
 
 To collect cells that are no longer used to reuse them later, i.e. to *garbage
 collect* them, we need a pool of cells instead of a stack.  With a pool of free
