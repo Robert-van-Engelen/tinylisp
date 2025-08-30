@@ -51,8 +51,8 @@ A quick investigation (not scientific) shows the performance difference on a
 Mac M1 machine compiled with clang 14.0.0 option -O2 to solve the
 [nqueens.lisp](nqueens.lisp) problem for N=8:
 
-| implementation | GC | mem size | time |
-| -------------- | -- | -------: | ---: |
+| implementation | GC | mem size (cells) | time (ms) |
+| -------------- | -- | ---------------: | --------: |
 | tinylisp-extras-gc                                        | ref count  |  8192 |  534 ms |
 | [lisp](https://github.com/Robert-van-Engelen/lisp)        | mark-sweep |  8192 |  920 ms |
 | [lisp](https://github.com/Robert-van-Engelen/lisp)        | mark-sweep | 16384 |  895 ms |
