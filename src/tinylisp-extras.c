@@ -349,10 +349,17 @@ L list() {
  }
 }
 L tick() {
- L t,*p;
  if (*buf == ',') return Read();
+ if (*buf == ')') return nil;
  if (*buf != '(') return cons(atom("quote"),cons(parse(),nil));
- for (t = cons(atom("list"),nil),p = cell+sp; ; *p = cons(tick(),nil),p = cell+sp) if (scan() == ')') return t;
+ L tick2();
+ return scan(), tick2();
+}
+L tick2() {
+ if (*buf == ')') return nil;
+ L car = tick();
+ scan();
+ return cons(atom("cons"), cons(car, cons(tick2(), nil)));
 }
 L parse() {
  L n; I i;
