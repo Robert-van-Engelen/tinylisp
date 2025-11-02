@@ -1,5 +1,6 @@
 /* tinylisp-extras.c optimized and article's extras by Robert A. van Engelen 2025 */
 
+#include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -63,6 +64,7 @@ L num(L n) { return n; }
 I equ(L x,L y) { return *(unsigned long long*)&x == *(unsigned long long*)&y; }
 /* interning of atom names (Lisp symbols), returns a unique NaN-boxed ATOM */
 L atom(const char *s) {
+ assert(*s != '('); assert(*s != ')'); assert(*s != '\''); assert(*s != '`'); assert(*s != ','); assert(*s != '@');
  I i = 0; while (i < hp && strcmp(A+i,s)) i += strlen(A+i)+1;
  return i == hp && (hp += strlen(strcpy(A+i,s))+1) > sp<<3 ? err(4,nil) : box(ATOM,i);
 }
@@ -285,6 +287,7 @@ L eval(L x,L e) {
    if (T(v) == ATOM) d = pair(v,x,d);
    /* expand macro f, then continue evaluating the expanded x */
    x = eval(cdr(f),d);
+//?    printf("macro expansion: "); print(x); printf("\n");
    continue;
   }
   if (T(f) != CLOS) return err(3,f);
@@ -334,7 +337,7 @@ char get() { char c = see; look(); return c; }
 char scan() {
  I i = 0;
  while (seeing(' ') || seeing(';')) if (get() == ';') while (!seeing('\n')) get();
- if (seeing('(') || seeing(')') || seeing('\'') || seeing('`') || seeing(',')) buf[i++] = get();
+ if (seeing('(') || seeing(')') || seeing('\'') || seeing('`') || seeing(',') || seeing('@')) buf[i++] = get();
  else do buf[i++] = get(); while (i < sizeof(buf)-1 && !seeing('(') && !seeing(')') && !seeing(' '));
  return buf[i] = 0,*buf;
 }
@@ -350,6 +353,7 @@ L list() {
 }
 L tick() {
  if (*buf == ',') return Read();
+ if (*buf == '@') return Read();
  if (*buf == ')') return nil;
  if (*buf != '(') return cons(atom("quote"),cons(parse(),nil));
  L tick2();
@@ -357,6 +361,13 @@ L tick() {
 }
 L tick2() {
  if (*buf == ')') return nil;
+ if (*buf == '@') {
+   L car = tick();
+   /* splice only supported at end of list */
+   scan();
+   assert(*buf == ')');
+   return car;
+ }
  L car = tick();
  scan();
  return cons(atom("cons"), cons(car, cons(tick2(), nil)));
@@ -366,6 +377,7 @@ L parse() {
  if (*buf == '(') return list();
  if (*buf == '\'') return cons(atom("quote"),cons(Read(),nil));
  if (*buf == '`') return scan(),tick();
+ assert(*buf != ')');
  return sscanf(buf,"%lg%n",&n,&i) > 0 && !buf[i] ? n : atom(buf);
 }
 
