@@ -352,7 +352,10 @@ L tick() {
  L t,*p;
  if (*buf == ',') return Read();
  if (*buf != '(') return cons(atom("quote"),cons(parse(),nil));
- for (t = cons(atom("list"),nil),p = cell+sp; ; *p = cons(tick(),nil),p = cell+sp) if (scan() == ')') return t;
+ for (t = cons(atom("list"),nil),p = cell+sp; ; *p = cons(tick(),nil),p = cell+sp) {
+  if (scan() == ')') return t;
+  if (*buf == '.' && !buf[1]) return *p = Read(),scan(),t;
+ }
 }
 L parse() {
  L n; I i;

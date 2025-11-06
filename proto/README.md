@@ -19,7 +19,7 @@
   - compile with `cc -O2 -o tinylisp tinylisp-opt-gc.c`
 
 - [tinylisp-extras-gc.c](tinylisp-extras-gc.c)
-  - based on tinylisp-extras.c that includes all of the article's extras (+180 lines of C)
+  - based on tinylisp-extras.c that includes all of the article's extras (+182 lines of C)
   - adds reference count garbage collection to continuously release unused memory cells
   - collects unused cyclic lists created by `letrec` and `letrec*` recursive local functions
   - cleans up `catch`-`throw` exceptions in Lisp using a temporary stack when `catch` is used

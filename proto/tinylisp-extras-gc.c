@@ -465,7 +465,7 @@ L eval(L x,L e) {
   if (T(f) == MACR) {
    /* bind macro f variables v to the given arguments literally (i.e. without evaluating the arguments) */
    for (d = dup(env),v = car(f); T(v) == CONS; v = cdr(v),x = cdr(x)) d = pair(car(v),dup(car(x)),d);
-   if (T(v) == ATOM) d = pair(v,x,d);
+   if (T(v) == ATOM) d = pair(v,dup(x),d);
    /* expand macro f, then continue evaluating the expanded x */
    x = eval(cdr(f),d);
    /* garbage collect bindings d, gabage collect g = old f and old macro body h, save macro body h = x to gc later */
@@ -537,8 +537,10 @@ L tick() {
  L t,*p;
  if (*buf == ',') return Read();
  if (*buf != '(') return cons(atom("quote"),cons(parse(),nil));
- for (t = cons(atom("list"),nil),p = &cell[ord(t)]; ; *p = cons(tick(),nil),p = &cell[ord(*p)])
+ for (t = cons(atom("list"),nil),p = &cell[ord(t)]; ; *p = cons(tick(),nil),p = &cell[ord(*p)]) {
   if (scan() == ')') return t;
+  if (*buf == '.' && !buf[1]) return *p = Read(),scan(),t;
+ }
 }
 L parse() {
  L n; I i;
