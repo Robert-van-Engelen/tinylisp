@@ -279,6 +279,52 @@ L f_define(L t, L e) {
   return car(t);
 }
 
+L f_alloc(L t, L e)
+{
+  L x = car(evlis(t,e));
+  unsigned long long p = (unsigned long long)malloc((int)x);
+  double l = p & 0xffffffff;
+  p>>=32;
+  double h = p;
+
+  return cons(num(h), num(l));
+}
+
+L f_poke(L t, L e)
+{
+  L x = evlis(t,e);
+  L address = car(x);
+  int offset = (int)car(cdr(x));
+  int value = (int)car(cdr(cdr(x)));
+
+  L h = car(address);
+  L l = cdr(address);
+
+  unsigned long long p = ((unsigned long long)h << 32) + l;
+  unsigned char *ptr = (unsigned char *)p;
+  ptr[offset]=value;
+  return num(value);
+}
+
+L f_dump(L t, L e)
+{
+  L x = evlis(t,e);
+  L address = car(x);
+  int count = (int)car(cdr(x));
+
+  L h = car(address);
+  L l = cdr(address);
+
+  unsigned long long p = ((unsigned long long)h << 32) + l;
+  unsigned char *ptr = (unsigned char *)p;
+  for (int i = 0; i < count; i++)
+  {
+	  printf("%4d", ptr[i]);
+  }
+  printf("\n");
+  return num(0);
+}
+
 /* table of Lisp primitives, each has a name s and function pointer f */
 struct {
   const char *s;
@@ -305,6 +351,9 @@ struct {
   {"let*",   f_leta},
   {"lambda", f_lambda},
   {"define", f_define},
+  {"alloc", f_alloc},
+  {"poke", f_poke},
+  {"dump", f_dump},
   {0}};
 
 /* create environment by extending e with variables v bound to values t */
