@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 
 /* DEBUG: enable memory management activity logging (=1 enable, =2 include Lisp expression dumps) */
 #if DEBUG == 0
@@ -69,11 +70,11 @@ L nil,tru,env;
 /* NaN-boxing specific functions:
    box(t,i): returns a new NaN-boxed double with tag t and ordinal i
    ord(x):   returns the ordinal of the NaN-boxed double x
-   num(n):   convert or check number n (does nothing, e.g. could check for NaN)
+   num(n):   check number, return math.h NAN when not a number to avoid ref-count GC on a list when n is a list
    equ(x,y): returns nonzero if x equals y */
 L box(I t,I i) { L x; *(unsigned long long*)&x = (unsigned long long)t<<48|i; return x; }
 I ord(L x) { return *(unsigned long long*)&x; }
-L num(L n) { return n; }
+L num(L n) { return n == n ? n : NAN; }
 I equ(L x,L y) { return *(unsigned long long*)&x == *(unsigned long long*)&y; }
 /* interning of atom names (Lisp symbols), returns a unique NaN-boxed ATOM */
 L atom(const char *s) {
@@ -211,7 +212,7 @@ void mark(L x) {
 /* sweep unused cells after mark() into the free cell pair list, shrink the atom heap when possible */
 void sweep() {
  I i; for (hp = 0,i = 0; i < N; ++i) if (ref[i/2] && T(cell[i]) == ATOM && ord(cell[i]) > hp) hp = ord(cell[i]);
- hp += strlen(A+hp)+1;
+ if (hp) hp += strlen(A+hp)+1;
  for (fp = 0,lp = N-2,fn = 1,i = 2; i < N; i += 2) if (ref[i/2]) lomem(i); else del(i);
 }
 /* rebuild memory to retain the global environment env and delete everything else */

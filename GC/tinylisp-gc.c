@@ -100,7 +100,7 @@ void print(L x) {
 void mark(L x) { if ((T(x)&~(CONS^CLOS)) == CONS && !ref[ord(x)/2]++) { mark(cell[ord(x)+1]); mark(cell[ord(x)]); } }
 void sweep() {
  I i; for (hp = 0,i = 0; i < N; ++i) if (ref[i/2] && T(cell[i]) == ATOM && ord(cell[i]) > hp) hp = ord(cell[i]);
- hp += strlen(A+hp)+1;
+ if (hp) hp += strlen(A+hp)+1;
  for (fp = 0,lp = N-2,fn = 1,i = 2; i < N; i += 2) if (ref[i/2]) lomem(i); else del(i);
 }
 void rebuild() { memset(ref,0,sizeof(ref)); mark(env); sweep(); }
