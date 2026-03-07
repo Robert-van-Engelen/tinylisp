@@ -35,7 +35,7 @@ L evlis(L t,L e) {
 }
 L evarg(L *t,L *e,I *a) {
  L x;
- if (T(*t) == ATOM) *t = assoc(*t,*e),*a = 1;
+ if (T(*t) == ATOM && !*a) *t = assoc(*t,*e),*a = 1;
  x = car(*t); *t = cdr(*t);
  return *a ? x : eval(x,*e);
 }
