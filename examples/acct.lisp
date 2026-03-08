@@ -1,6 +1,7 @@
 ; balancing an account
-; from: https://sicp.sourceacademy.org/chapters/3.1.1.html
-;       originally by Harold Abelson and Gerald Jay Sussman with Julie Sussman
+; from: Section 3.1.1 https://web.mit.edu/6.001/6.037/sicp.pdf
+;                     https://sicp.sourceacademy.org/chapters/3.1.1.html
+;       by Harold Abelson and Gerald Jay Sussman with Julie Sussman
 ;
 ; requires tinylisp-extras for begin, setq
 ;
