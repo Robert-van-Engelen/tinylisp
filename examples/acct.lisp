@@ -10,7 +10,7 @@
 ; (acct1 10)
 ; (acct1 10)
 ; ...
-; insufficien funds
+; insufficient funds
 
 (define make-withdraw
     (lambda (balance)
@@ -19,4 +19,4 @@
                 (begin
                     (setq balance (- balance amount))
                     balance)
-                "insufficien funds"))))
+                "insufficient funds"))))
