@@ -55,7 +55,7 @@ L f_add(L t,L *e) { I a = 0; L n = evarg(&t,e,&a); while (!not(t)) n += evarg(&t
 L f_sub(L t,L *e) { I a = 0; L n = evarg(&t,e,&a); while (!not(t)) n -= evarg(&t,e,&a); return num(n); }
 L f_mul(L t,L *e) { I a = 0; L n = evarg(&t,e,&a); while (!not(t)) n *= evarg(&t,e,&a); return num(n); }
 L f_div(L t,L *e) { I a = 0; L n = evarg(&t,e,&a); while (!not(t)) n /= evarg(&t,e,&a); return num(n); }
-L f_int(L t,L *e) { I a = 0; L n = evarg(&t,e,&a); return n<1e16 && n>-1e16 ? (long long)n : n; }
+L f_int(L t,L *e) { I a = 0; L n = evarg(&t,e,&a); return n < 1e16 && n > -1e16 ? (long long)n : n; }
 L f_lt(L t,L *e) { I a = 0; L n = evarg(&t,e,&a); return n - evarg(&t,e,&a) < 0 ? tru : nil; }
 L f_eq(L t,L *e) { I a = 0; L x = evarg(&t,e,&a),y = evarg(&t,e,&a); gc(x); gc(y); return equ(x,y) ? tru : nil; }
 L f_pair(L t,L *e) { I a = 0; L x = evarg(&t,e,&a); gc(x); return T(x) == CONS ? tru : nil; }

@@ -44,7 +44,7 @@ L f_add(L t,L e) { L s = t = evlis(t,e),n = car(s); while (!not(s = cdr(s))) n +
 L f_sub(L t,L e) { L s = t = evlis(t,e),n = car(s); while (!not(s = cdr(s))) n -= car(s); gc(t); return num(n); }
 L f_mul(L t,L e) { L s = t = evlis(t,e),n = car(s); while (!not(s = cdr(s))) n *= car(s); gc(t); return num(n); }
 L f_div(L t,L e) { L s = t = evlis(t,e),n = car(s); while (!not(s = cdr(s))) n /= car(s); gc(t); return num(n); }
-L f_int(L t,L e) { L n = car(t = evlis(t,e)); n = n<1e16 && n>-1e16 ? (long long)n : n; gc(t); return n; }
+L f_int(L t,L e) { L n = car(t = evlis(t,e)); n = n < 1e16 && n > -1e16 ? (long long)n : n; gc(t); return n; }
 L f_lt(L t,L e) { L x; t = evlis(t,e); x = car(t) - car(cdr(t)) < 0 ? tru : nil; gc(t); return x; }
 L f_eq(L t,L e) { L x; t = evlis(t,e); x = equ(car(t),car(cdr(t))) ? tru : nil; gc(t); return x; }
 L f_pair(L t,L e) { L x = car(t = evlis(t,e)); x = T(x) == CONS ? tru : nil; gc(t); return x; }

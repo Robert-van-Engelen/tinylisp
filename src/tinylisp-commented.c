@@ -220,7 +220,7 @@ L f_div(L t, L e) {
 
 L f_int(L t, L e) {
   L n = car(evlis(t, e));
-  return n<1e16 && n>-1e16 ? (long long)n : n;
+  return n < 1e16 && n > -1e16 ? (long long)n : n;
 }
 
 L f_lt(L t, L e) {

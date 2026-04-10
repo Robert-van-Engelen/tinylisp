@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <math.h>
+#include <math.h> /* to return NAN from num() */
 
 /* DEBUG: enable memory management activity logging (=1 enable, =2 include Lisp expression dumps) */
 #if DEBUG == 0
@@ -70,7 +70,7 @@ L nil,tru,env;
 /* NaN-boxing specific functions:
    box(t,i): returns a new NaN-boxed double with tag t and ordinal i
    ord(x):   returns the ordinal of the NaN-boxed double x
-   num(n):   check number, return math.h NAN when not a number to avoid ref-count GC on a list when n is a list
+   num(n):   check number, return NAN = ERR = box(ATOM,0) when not a number to avoid ref-count GC on a list when n is a list
    equ(x,y): returns nonzero if x equals y */
 L box(I t,I i) { L x; *(unsigned long long*)&x = (unsigned long long)t<<48|i; return x; }
 I ord(L x) { return *(unsigned long long*)&x; }
@@ -296,7 +296,7 @@ L f_add(L t,L *e) { I a = 0; L n = gc(evarg(&t,e,&a)); while (!not(t)) n += gc(e
 L f_sub(L t,L *e) { I a = 0; L n = gc(evarg(&t,e,&a)); while (!not(t)) n -= gc(evarg(&t,e,&a)); return num(n); }
 L f_mul(L t,L *e) { I a = 0; L n = gc(evarg(&t,e,&a)); while (!not(t)) n *= gc(evarg(&t,e,&a)); return num(n); }
 L f_div(L t,L *e) { I a = 0; L n = gc(evarg(&t,e,&a)); while (!not(t)) n /= gc(evarg(&t,e,&a)); return num(n); }
-L f_int(L t,L *e) { I a = 0; L n = gc(evarg(&t,e,&a)); return n<1e16 && n>-1e16 ? (long long)n : n; }
+L f_int(L t,L *e) { I a = 0; L n = gc(evarg(&t,e,&a)); return n < 1e16 && n > -1e16 ? (long long)n : n; }
 L f_lt(L t,L *e) { I a = 0; L n = gc(evarg(&t,e,&a)); return n - gc(evarg(&t,e,&a)) < 0 ? tru : nil; }
 L f_eq(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return equ(x,gc(evarg(&t,e,&a))) ? tru : nil; }
 L f_pair(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return T(x) == CONS ? tru : nil; }
