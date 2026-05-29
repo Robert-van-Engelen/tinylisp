@@ -39,22 +39,29 @@ L evarg(L *t,L *e,I *a) {
  x = car(*t); *t = cdr(*t);
  return *a ? x : eval(x,*e);
 }
+I isevarg(L *t,L *e,I *a,L *x) {
+ if (T(*t) == ATOM && !*a) *t = assoc(*t,*e),*a = 1;
+ if (not(*t)) return 0;
+ *x = car(*t); *t = cdr(*t);
+ if (!*a) *x = eval(*x,*e);
+ return 1;
+}
 L f_eval(L t,L *e) { I a = 0; return evarg(&t,e,&a); }
 L f_quote(L t,L *_) { return car(t); }
 L f_cons(L t,L *e) { I a = 0; L x = evarg(&t,e,&a); return cons(x,evarg(&t,e,&a)); }
 L f_car(L t,L *e) { I a = 0; return car(evarg(&t,e,&a)); }
 L f_cdr(L t,L *e) { I a = 0; return cdr(evarg(&t,e,&a)); }
-L f_add(L t,L *e) { I a = 0; L n = evarg(&t,e,&a); while (!not(t)) n += evarg(&t,e,&a); return num(n); }
-L f_sub(L t,L *e) { I a = 0; L n = evarg(&t,e,&a); while (!not(t)) n -= evarg(&t,e,&a); return num(n); }
-L f_mul(L t,L *e) { I a = 0; L n = evarg(&t,e,&a); while (!not(t)) n *= evarg(&t,e,&a); return num(n); }
-L f_div(L t,L *e) { I a = 0; L n = evarg(&t,e,&a); while (!not(t)) n /= evarg(&t,e,&a); return num(n); }
+L f_add(L t,L *e) { I a = 0; L x,n = evarg(&t,e,&a); while (isevarg(&t,e,&a,&x)) n += x; return num(n); }
+L f_sub(L t,L *e) { I a = 0; L x,n = evarg(&t,e,&a); while (isevarg(&t,e,&a,&x)) n -= x; return num(n); }
+L f_mul(L t,L *e) { I a = 0; L x,n = evarg(&t,e,&a); while (isevarg(&t,e,&a,&x)) n *= x; return num(n); }
+L f_div(L t,L *e) { I a = 0; L x,n = evarg(&t,e,&a); while (isevarg(&t,e,&a,&x)) n /= x; return num(n); }
 L f_int(L t,L *e) { I a = 0; L n = evarg(&t,e,&a); return n < 1e7 && n > -1e7 ? (long long)n : n; }
 L f_lt(L t,L *e) { I a = 0; L n = evarg(&t,e,&a); return n - evarg(&t,e,&a) < 0 ? tru : nil; }
 L f_eq(L t,L *e) { I a = 0; L x = evarg(&t,e,&a); return equ(x,evarg(&t,e,&a)) ? tru : nil; }
 L f_pair(L t,L *e) { I a = 0; L x = evarg(&t,e,&a); return T(x) == CONS ? tru : nil; }
 L f_not(L t,L *e) { I a = 0; return not(evarg(&t,e,&a)) ? tru : nil; }
-L f_or(L t,L *e) { I a = 0; L x = nil; while (!not(t) && not(x)) x = evarg(&t,e,&a); return x; }
-L f_and(L t,L *e) { I a = 0; L x = tru; while (!not(t) && !not(x)) x = evarg(&t,e,&a); return x; }
+L f_or(L t,L *e) { I a = 0; L x = nil; while (isevarg(&t,e,&a,&x) && not(x)) continue; return x; }
+L f_and(L t,L *e) { I a = 0; L x = tru; while (isevarg(&t,e,&a,&x) && !not(x)) continue; return x; }
 L f_cond(L t,L *e) { while (not(eval(car(car(t)),*e))) t = cdr(t); return car(cdr(car(t))); }
 L f_if(L t,L *e) { return car(cdr(not(eval(car(t),*e)) ? cdr(t) : t)); }
 L f_leta(L t,L *e) { for (; let(t); t = cdr(t)) *e = pair(car(car(t)),eval(car(cdr(car(t))),*e),*e); return car(t); }

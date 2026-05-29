@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h> /* to return NAN from num() */
 #define I unsigned
 #define L double
 #define T(x) *(unsigned long long*)&x>>48
@@ -14,7 +15,7 @@ I ref[N/2],hp,fp,lp,fn,ATOM=0x7ff8,PRIM=0x7ff9,CONS=0x7ffa,CLOS=0x7ffb,NIL=0x7ff
 L cell[N],nil,tru,env;
 L box(I t,I i) { L x; *(unsigned long long*)&x = (unsigned long long)t<<48|i; return x; }
 I ord(L x) { return *(unsigned long long*)&x; }
-L num(L n) { return n; }
+L num(L n) { return n == n ? n : NAN; }
 I equ(L x,L y) { return *(unsigned long long*)&x == *(unsigned long long*)&y; }
 L atom(const char *s) {
  I i = 0; while (i < hp && strcmp(A+i,s)) i += strlen(A+i)+1;
@@ -46,22 +47,29 @@ L evarg(L *t,L *e,I *a) {
  x = car(*t); *t = cdr(*t);
  return *a ? dup(x) : eval(x,*e);
 }
+I isarg(L *t,L *e,I *a,L *x) {
+ if (T(*t) == ATOM && !*a) *t = assoc(*t,*e),*a = 1;
+ if (not(*t)) return 0;
+ *x = car(*t); *t = cdr(*t);
+ *x = *a ? dup(*x) : eval(*x,*e);
+ return 1;
+}
 L f_eval(L t,L *e) { I a = 0; L x = evarg(&t,e,&a),y = eval(x,*e); gc(x); return y; }
 L f_quote(L t,L *_) { return dup(car(t)); }
 L f_cons(L t,L *e) { I a = 0; L x = evarg(&t,e,&a); return cons(x,evarg(&t,e,&a)); }
 L f_car(L t,L *e) { I a = 0; L x = evarg(&t,e,&a),y = dup(car(x)); gc(x); return y; }
 L f_cdr(L t,L *e) { I a = 0; L x = evarg(&t,e,&a),y = dup(cdr(x)); gc(x); return y; }
-L f_add(L t,L *e) { I a = 0; L n = evarg(&t,e,&a); while (!not(t)) n += evarg(&t,e,&a); return num(n); }
-L f_sub(L t,L *e) { I a = 0; L n = evarg(&t,e,&a); while (!not(t)) n -= evarg(&t,e,&a); return num(n); }
-L f_mul(L t,L *e) { I a = 0; L n = evarg(&t,e,&a); while (!not(t)) n *= evarg(&t,e,&a); return num(n); }
-L f_div(L t,L *e) { I a = 0; L n = evarg(&t,e,&a); while (!not(t)) n /= evarg(&t,e,&a); return num(n); }
-L f_int(L t,L *e) { I a = 0; L n = evarg(&t,e,&a); return n < 1e16 && n > -1e16 ? (long long)n : n; }
-L f_lt(L t,L *e) { I a = 0; L n = evarg(&t,e,&a); return n - evarg(&t,e,&a) < 0 ? tru : nil; }
+L f_add(L t,L *e) { I a = 0; L x,n = evarg(&t,e,&a); for (gc(n); isarg(&t,e,&a,&x); gc(x)) n += x; return num(n); }
+L f_sub(L t,L *e) { I a = 0; L x,n = evarg(&t,e,&a); for (gc(n); isarg(&t,e,&a,&x); gc(x)) n -= x; return num(n); }
+L f_mul(L t,L *e) { I a = 0; L x,n = evarg(&t,e,&a); for (gc(n); isarg(&t,e,&a,&x); gc(x)) n *= x; return num(n); }
+L f_div(L t,L *e) { I a = 0; L x,n = evarg(&t,e,&a); for (gc(n); isarg(&t,e,&a,&x); gc(x)) n /= x; return num(n); }
+L f_int(L t,L *e) { I a = 0; L n = evarg(&t,e,&a); gc(n); return n < 1e16 && n > -1e16 ? (long long)n : n; }
+L f_lt(L t,L *e) { I a = 0; L x = evarg(&t,e,&a),y = evarg(&t,e,&a); gc(x); gc(y); return x - y < 0 ? tru : nil; }
 L f_eq(L t,L *e) { I a = 0; L x = evarg(&t,e,&a),y = evarg(&t,e,&a); gc(x); gc(y); return equ(x,y) ? tru : nil; }
 L f_pair(L t,L *e) { I a = 0; L x = evarg(&t,e,&a); gc(x); return T(x) == CONS ? tru : nil; }
 L f_not(L t,L *e) { I a = 0; L x = evarg(&t,e,&a); gc(x); return not(x) ? tru : nil; }
-L f_or(L t,L *e) { I a = 0; L x = nil; for (; !not(t) && not(x); x = evarg(&t,e,&a)) gc(x); return x; }
-L f_and(L t,L *e) { I a = 0; L x = tru; for (; !not(t) && !not(x); x = evarg(&t,e,&a)) gc(x); return x; }
+L f_or(L t,L *e) { I a = 0; L x = nil; while (isarg(&t,e,&a,&x) && not(x)) continue; return x; }
+L f_and(L t,L *e) { I a = 0; L x,y = tru; for (; isarg(&t,e,&a,&x) && !not(x); y = x) gc(y); return y; }
 L f_cond(L t,L *e) { L x; while (x = eval(car(car(t)),*e),gc(x),not(x)) t = cdr(t); return car(cdr(car(t))); }
 L f_if(L t,L *e) { L x,y = car(cdr(not(x = eval(car(t),*e)) ? cdr(t) : t)); gc(x); return y; }
 L f_leta(L t,L *e) { for (; let(t); t = cdr(t)) *e = pair(car(car(t)),eval(car(cdr(car(t))),*e),*e); return car(t); }

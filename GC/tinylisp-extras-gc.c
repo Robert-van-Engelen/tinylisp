@@ -285,6 +285,13 @@ L evarg(L *t,L *e,I *a) {
  x = car(*t); *t = cdr(*t);
  return *a ? dup(x) : eval(x,*e);
 }
+I isarg(L *t,L *e,I *a,L *x) {
+ if (T(*t) == ATOM && !*a) *t = assoc(*t,*e),*a = 1;
+ if (not(*t)) return 0;
+ *x = car(*t); *t = cdr(*t);
+ *x = *a ? dup(*x) : eval(*x,*e);
+ return 1;
+}
 
 /* section 6 lisp primitives (optimized with evarg per section 16.4) */
 L f_eval(L t,L *e) { I a = 0; L x,y; rc(&x,evarg(&t,e,&a)); y = eval(x,*e); rg(x); return y; }
@@ -292,16 +299,16 @@ L f_quote(L t,L *_) { return dup(car(t)); }
 L f_cons(L t,L *e) { I a = 0; L x = evarg(&t,e,&a); return cons(x,evarg(&t,e,&a)); }
 L f_car(L t,L *e) { I a = 0; L x = evarg(&t,e,&a),y = dup(car(x)); gc(x); return y; }
 L f_cdr(L t,L *e) { I a = 0; L x = evarg(&t,e,&a),y = dup(cdr(x)); gc(x); return y; }
-L f_add(L t,L *e) { I a = 0; L n = gc(evarg(&t,e,&a)); while (!not(t)) n += gc(evarg(&t,e,&a)); return num(n); }
-L f_sub(L t,L *e) { I a = 0; L n = gc(evarg(&t,e,&a)); while (!not(t)) n -= gc(evarg(&t,e,&a)); return num(n); }
-L f_mul(L t,L *e) { I a = 0; L n = gc(evarg(&t,e,&a)); while (!not(t)) n *= gc(evarg(&t,e,&a)); return num(n); }
-L f_div(L t,L *e) { I a = 0; L n = gc(evarg(&t,e,&a)); while (!not(t)) n /= gc(evarg(&t,e,&a)); return num(n); }
+L f_add(L t,L *e) { I a = 0; L x,n = gc(evarg(&t,e,&a)); while (isarg(&t,e,&a,&x)) n += gc(x); return num(n); }
+L f_sub(L t,L *e) { I a = 0; L x,n = gc(evarg(&t,e,&a)); while (isarg(&t,e,&a,&x)) n -= gc(x); return num(n); }
+L f_mul(L t,L *e) { I a = 0; L x,n = gc(evarg(&t,e,&a)); while (isarg(&t,e,&a,&x)) n *= gc(x); return num(n); }
+L f_div(L t,L *e) { I a = 0; L x,n = gc(evarg(&t,e,&a)); while (isarg(&t,e,&a,&x)) n /= gc(x); return num(n); }
 L f_int(L t,L *e) { I a = 0; L n = gc(evarg(&t,e,&a)); return n < 1e16 && n > -1e16 ? (long long)n : n; }
 L f_lt(L t,L *e) { I a = 0; L n = gc(evarg(&t,e,&a)); return n - gc(evarg(&t,e,&a)) < 0 ? tru : nil; }
 L f_eq(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return equ(x,gc(evarg(&t,e,&a))) ? tru : nil; }
 L f_pair(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return T(x) == CONS ? tru : nil; }
-L f_or(L t,L *e) { I a = 0; L x = nil; while (!not(t) && not(x = evarg(&t,e,&a))) gc(x); return x; }
-L f_and(L t,L *e) { I a = 0; L x = tru; while (!not(t) && !not(x = evarg(&t,e,&a))) gc(x); return x; }
+L f_or(L t,L *e) { I a = 0; L x = nil; while (isarg(&t,e,&a,&x) && not(x)) continue; return x; }
+L f_and(L t,L *e) { I a = 0; L x,y = tru; for (; isarg(&t,e,&a,&x) && !not(x); y = x) gc(y); return y; }
 L f_not(L t,L *e) { I a = 0; return not(gc(evarg(&t,e,&a))) ? tru : nil; }
 L f_cond(L t,L *e) { while (not(gc(eval(car(car(t)),*e)))) t = cdr(t); return car(cdr(car(t))); }
 L f_if(L t,L *e) { return car(cdr(not(gc(eval(car(t),*e))) ? cdr(t) : t)); }
@@ -370,7 +377,7 @@ L f_setcdr(L t,L *e) {
 }
 L f_macro(L t,L *_) { return macro(dup(car(t)),dup(car(cdr(t)))); }
 L f_read(L t,L *_) { L x; char c = see; see = ' '; x = Read(); see = c; return x; }
-L f_print(L t,L *e) { I a = 0; L x; for (; !not(t); gc(x)) print(x = evarg(&t,e,&a)); return nil; }
+L f_print(L t,L *e) { I a = 0; L x; for (; isarg(&t,e,&a,&x); gc(x)) print(x); return nil; }
 L f_println(L t,L *e) { f_print(t,e); putchar('\n'); return nil; }
 
 /* section 12: adding readline with history */
@@ -580,7 +587,7 @@ void stop(int i) { if (line) err(5,nil); else abort(); }
 /* section 10: read-eval-print loop (REPL) with additions */
 int main(int argc,char **argv) {
  I i; printf("tinylisp-extras-gc");
- env = 0; rebuild();
+ sweep(); /* sweep all cells to the free list (since all ref[] are zero and xb = xp = NULL) */
  nil = box(NIL,0); atom("ERR"); tru = atom("#t"); env = pair(tru,tru,nil);
  for (i = 0; prim[i].s; ++i) env = pair(atom(prim[i].s),box(PRIM,i),env);
  in = fopen((argc > 1 ? argv[1] : "common.lisp"),"r");
