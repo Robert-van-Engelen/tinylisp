@@ -185,6 +185,9 @@ L f_println(L t,L *e) { f_print(t,e); putchar('\n'); return nil; }
 /* section 12: adding readline with history */
 L f_load(L t,L *_) { L x = car(t); if (!in && T(x) == ATOM) in = fopen(A+ord(x),"r"); return x; }
 
+/* section 13: execution tracing */
+L f_trace(L t,L *_) { tr = not(t) ? !tr : (I)num(car(t)); return num(tr); }
+
 /* section 14: error handling and exceptions */
 L f_catch(L t,L *e) {
  L x; I i;
@@ -196,8 +199,11 @@ L f_catch(L t,L *e) {
 }
 L f_throw(L t,L *_) { longjmp(jb,(I)num(car(t))); }
 
-/* section 13: execution tracing */
-L f_trace(L t,L *_) { tr = not(t) ? !tr : (I)num(car(t)); return num(tr); }
+/* section 16.5: tail-call optimization */
+L f_progn(L t,L *e) {
+ for (; let(t); t = cdr(t)) eval(car(t),*e);
+ return car(t);
+}
 
 struct { const char *s; L (*f)(L,L*); short t; } prim[] = {
  {"eval",    f_eval,   1},
@@ -234,9 +240,10 @@ struct { const char *s; L (*f)(L,L*); short t; } prim[] = {
  {"print",   f_print,  0},
  {"println", f_println,0},
  {"load",    f_load,   0},
+ {"trace",   f_trace,  0},
  {"catch",   f_catch,  0},
  {"throw",   f_throw,  0},
- {"trace",   f_trace,  0},
+ {"progn",   f_progn,  1},
  {0}};
 
 /* section 13: tracing (trace 1) with colorful output, to wait on ENTER (trace 2), with memory dump (trace 3) */

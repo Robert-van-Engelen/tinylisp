@@ -260,6 +260,10 @@ throws error `n`, where `n` is a nonzero integer.
 
 parses and executes Lisp from a file with the name `<atom>`, for example `(load some.lisp)` (the atom name is not quoted).
 
+    (progn x1 x2 ... xk)
+
+evaluates all `x` and returns the value of `xk`, same as `(begin x1 x2 ... xk)` in [common.lisp](src/common.lisp), but faster.
+
 ## Additional Lisp functions defined in tinylisp itself
 
 The following functions are defined in [common.lisp](src/common.lisp).

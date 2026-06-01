@@ -67,7 +67,7 @@
 (define show
     (lambda (board)
         (if board
-            (begin
+            (progn
                 (println (car board))
                 (show (cdr board)))
             ())))
@@ -96,14 +96,14 @@
     (lambda (board x)
         (if (eq? x board-size)
             ; show solution
-            (begin
+            (progn
                 (show board)
 	        (println))
             ; continue searching for solutions
             (mapcar
 	        (lambda (y)
 		     (if (not (conflict? board x y))
-                         (begin
+                         (progn
                              (queen! board x y)
                              (solve-n board (+ x 1))
                              (clear! board x y))
@@ -112,7 +112,7 @@
 
 (define solve
     (lambda (board)
-        (begin
+        (progn
             (println 'start)
             (solve-n board 0)
             (println 'done))))
