@@ -77,7 +77,7 @@ L atom(const char *s) {
 #include <signal.h>
 jmp_buf jb;
 L err(I i,L x) {
- if (tr && T(x) != nil) { printf("\n\e[31;1mERR %u: ",i); print(x); printf("\e[m\n"); }
+ if (tr) { printf("\n\e[31;1mERR %u: ",i); print(x); printf("\e[m\n"); }
  longjmp(jb,i);
 }
 

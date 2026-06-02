@@ -99,9 +99,7 @@ jmp_buf jb;
 L err(I i,L x) {
  const char *msg[5] = {"not a pair","unbound","cannot apply","out of memory","stopped"};
  if (xp ? tr : i >= 1 && i <= 5) {
-  printf("\n\e[31;1mERR %u: ",i);
-  if (T(x) != NIL) print(x);
-  printf(" %s\e[m\n",i >= 1 && i <= 5 ? msg[i-1] : "");
+  printf("\n\e[31;1mERR %u: ",i); print(x); printf(" %s\e[m\n",i >= 1 && i <= 5 ? msg[i-1] : "");
  }
  while (xp != xb) gc(**--xp);
  longjmp(jb,i);
