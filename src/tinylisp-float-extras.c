@@ -44,7 +44,7 @@ L eval(L,L),Read(),parse(),err(I,L); void print(L);
 /* hp: top of the atom heap pointer, A+hp with hp=0 points to the first atom string in cell[]
    sp: cell stack pointer, the stack starts at the top of cell[] with sp=N
    tr: tracing off (0), on (1), wait on ENTER (2), dump and wait (3)
-   safety invariant: hp <= sp<<3 */
+   safety invariant: hp <= sp<<2 */
 I hp = 0,sp = N,tr = 0;
 /* atom, primitive, cons, closure and nil tags for NaN boxing */
 enum { ATOM = 0x7fc,PRIM = 0x7fd,CONS = 0x7fe,CLOS = 0x7ff,MACR = 0xffc,NIL = 0xfff };
@@ -64,7 +64,7 @@ I equ(L x,L y) { return *(uint32_t*)&x == *(uint32_t*)&y; }
 /* interning of atom names (Lisp symbols), returns a unique NaN-boxed ATOM */
 L atom(const char *s) {
  I i = 0; while (i < hp && strcmp(A+i,s)) i += strlen(A+i)+1;
- return i == hp && (hp += strlen(strcpy(A+i,s))+1) > sp<<3 ? err(4,nil) : box(ATOM,i);
+ return i == hp && (hp += strlen(strcpy(A+i,s))+1) > sp<<2 ? err(4,nil) : box(ATOM,i);
 }
 
 /* section 14: error handling and exceptions
@@ -82,7 +82,7 @@ L err(I i,L x) {
 }
 
 /* construct pair (x . y) returns a NaN-boxed CONS */
-L cons(L x,L y) { cell[--sp] = x; cell[--sp] = y; if (hp+16 > sp<<3) err(4,nil); return box(CONS,sp); }
+L cons(L x,L y) { cell[--sp] = x; cell[--sp] = y; if (hp+8 > sp<<2) err(4,nil); return box(CONS,sp); }
 /* return the car of a pair or throw err(1) if not a pair */
 L car(L p) { return T(p) == CONS || T(p) == CLOS || T(p) == MACR ? cell[ord(p)+1] : err(1,p); }
 /* return the cdr of a pair or throw err(1) if not a pair */
@@ -373,7 +373,7 @@ L tick() {
  }
 }
 L parse() {
- L n; I i;
+ L n; int i;
  if (*buf == '(') return list();
  if (*buf == '\'') return cons(atom("quote"),cons(Read(),nil));
  if (*buf == '`') return scan(),tick();

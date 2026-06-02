@@ -373,7 +373,7 @@ L tick() {
  }
 }
 L parse() {
- L n; I i;
+ L n; int i;
  if (*buf == '(') return list();
  if (*buf == '\'') return cons(atom("quote"),cons(Read(),nil));
  if (*buf == '`') return scan(),tick();
