@@ -421,5 +421,5 @@ int main(int argc,char **argv) {
  using_history();
  if ((i = setjmp(jb)) > 0) printf("ERR %u",i);
  signal(SIGINT,stop);
- while (1) { gc(); putchar('\n'); snprintf(ps,sizeof(ps),"%u>",sp-hp/8); print(eval(Read(),env)); }
+ while (1) { gc(); putchar('\n'); snprintf(ps,sizeof(ps),"%u>",sp-hp/4); print(eval(Read(),env)); }
 }
