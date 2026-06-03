@@ -5,3 +5,5 @@ Some of the tinylisp examples may require some additional Lisp features to run. 
 - apply.lisp uses `macro` and `letrec*`
 - fact.lisp uses `letrec*` in one of the definitions
 - hanoi.lisp uses `println` to output moves
+- list.lisp list functions (source from the article)
+- math.lisp math functions (source from the article)

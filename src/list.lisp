@@ -15,11 +15,11 @@
             (append1 t (append . args))
             t)))
 (define nthcdr
-    (lambda (t n)
+    (lambda (n t)
         (if (eq? n 0)
             t
-            (nthcdr (cdr t) (- n 1)))))
-(define nth (lambda (t n) (car (nthcdr t n))))
+            (nthcdr (- n 1) (cdr t)))))
+(define nth (lambda (n t) (car (nthcdr n t))))
 (define reverse-tr
     (lambda (r t)
         (if t
