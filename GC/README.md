@@ -27,6 +27,7 @@
   - includes a memory debugger, compile with `-DDEBUG` or `-DDEBUG=2` (verbose) to enable
   - the source code is commented to explain the code
   - passes `tests/dotcall-extras.lisp` tests and runs 8-queens `nqueens.lisp`
+  - optimized internal logic with unchecked CAR and CDR when safe to use
   - compile with `cc -O2 -o tinylisp tinylisp-extras-gc.c -lreadline`
 
 See also [#20](https://github.com/Robert-van-Engelen/tinylisp/issues/20)
@@ -55,7 +56,7 @@ Mac M1 compiled with clang 14.0.0 option -O2 to solve the
 
 | implementation | GC | mem size (cells) | time (ms) |
 | -------------- | -- | ---------------: | --------: |
-| tinylisp-extras-gc                                        | ref count  |  8192 |  534 ms |
+| tinylisp-extras-gc                                        | ref count  |  8192 |  396 ms |
 | [lisp](https://github.com/Robert-van-Engelen/lisp)        | mark-sweep |  8192 |  920 ms |
 | [lisp](https://github.com/Robert-van-Engelen/lisp)        | mark-sweep | 16384 |  895 ms |
 | [lisp-cheney](https://github.com/Robert-van-Engelen/lisp) | cheney     |  8192 | 1880 ms |

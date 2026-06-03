@@ -16,8 +16,8 @@
 #endif
 
 /* we only need two types to implement a Lisp interpreter:
-        I      unsigned integer (either 16 bit, 32 bit or 64 bit unsigned)
-        L      Lisp expression (double with NaN boxing)
+        I      unsigned integer
+        L      Lisp expression (floating point double with NaN boxing)
    I variables and function parameters are named as follows:
         i,j,k  any unsigned integer, e.g. a NaN-boxed ordinal value i or an index i or a counter k
         t      a NaN-boxed tag
@@ -31,7 +31,7 @@
         p      pair, a cons of two Lisp expressions
         e,d    environment, a list of pairs, e.g. created with (define v x)
         v      the name of a variable (an atom) or a list of variables */
-#define I unsigned
+#define I uint32_t
 #define L double
 
 /* T(x) returns the tag bits of a NaN-boxed Lisp expression x */
@@ -119,12 +119,16 @@ I lomem(I i) { return lp = i < lp ? i : lp; }
 /* allocate a new pair */
 L alloc() { I i = fp; fp = ref[i/2] & ~FREE; ref[i/2] = 1; --fn; return hp > lomem(i)<<3 ? err(4,nil) : box(CONS,i); }
 
+/* unsafe fast car and cdr, must be guarded to use: if (T(x) == CONS) { ... CAR(x) ... CDR(x) ... } */
+#define CAR(p) cell[ord(p)+1]
+#define CDR(p) cell[ord(p)]
+
 /* construct pair (x . y) returns a NaN-boxed CONS */
 L cons(L x,L y) { L p = alloc(); I i = ord(p); cell[i+1] = x; cell[i] = y; LOG(p,"\n\e[32mcons %u\e[m\t",i); return p; }
 /* return the car of a pair or throw err(1) if not a pair */
-L car(L p) { return T(p) == CONS || T(p) == CLOS || T(p) == MACR ? cell[ord(p)+1] : err(1,p); }
+L car(L p) { return T(p) == CONS || T(p) == CLOS || T(p) == MACR ? CAR(p) : err(1,p); }
 /* return the cdr of a pair or throw err(1) if not a pair */
-L cdr(L p) { return T(p) == CONS || T(p) == CLOS || T(p) == MACR ? cell[ord(p)] : err(1,p); }
+L cdr(L p) { return T(p) == CONS || T(p) == CLOS || T(p) == MACR ? CDR(p) : err(1,p); }
 /* construct a pair to add to environment e, returns the list ((v . x) . e) */
 L pair(L v,L x,L e) { return cons(cons(v,x),e); }
 /* construct a closure, returns a NaN-boxed CLOS */
@@ -132,11 +136,11 @@ L closure(L v,L x,L e) { return box(CLOS,ord(pair(v,x,e))); }
 /* construct a macro, returns a NaN-boxed MACR */
 L macro(L v,L x) { return box(MACR,ord(cons(v,x))); }
 /* look up a symbol in an environment, return its value or throw err(2) if not found */
-L assoc(L v,L e) { while (T(e) == CONS && !equ(v,car(car(e)))) e = cdr(e); return T(e) == CONS ? cdr(car(e)) : err(2,v); }
+L assoc(L v,L e) { while (T(e) == CONS && !equ(v,car(CAR(e)))) e = CDR(e); return T(e) == CONS ? cdr(CAR(e)) : err(2,v); }
 /* not(x) is nonzero if x is the Lisp () empty list */
 I not(L x) { return T(x) == NIL; }
-/* let(x) is nonzero if x has more than one item, used by let* */
-I let(L x) { return !not(x) && !not(cdr(x)); }
+/* let(x) is nonzero if x has more than one list item, used by let* */
+I let(L x) { return T(x) == CONS && T(CDR(x)) == CONS; }
 
 /* duplicate expression x: if x is a pair then increment its ref count by one */
 L dup(L x) {
@@ -272,7 +276,7 @@ void scc(L x,I k) {
 /* section 16.1: replacing recursion with loops */
 L evlis(L t,L e) {
  L s,*p;
- for (s = nil,p = &s; T(t) == CONS; p = &cell[ord(*p)],t = cdr(t)) *p = cons(eval(car(t),e),nil);
+ for (s = nil,p = &s; T(t) == CONS; p = &CDR(*p),t = CDR(t)) *p = cons(eval(CAR(t),e),nil);
  if (T(t) == ATOM) *p = dup(assoc(t,e));
  return s;
 }
@@ -311,17 +315,17 @@ L f_and(L t,L *e) { I a = 0; L x,y = tru; for (; isarg(&t,e,&a,&x) && !not(x); y
 L f_not(L t,L *e) { I a = 0; return not(gc(evarg(&t,e,&a))) ? tru : nil; }
 L f_cond(L t,L *e) { while (not(gc(eval(car(car(t)),*e)))) t = cdr(t); return car(cdr(car(t))); }
 L f_if(L t,L *e) { return car(cdr(not(gc(eval(car(t),*e))) ? cdr(t) : t)); }
-L f_leta(L t,L *e) { for (; let(t); t = cdr(t)) *e = pair(car(car(t)),eval(car(cdr(car(t))),*e),*e); return car(t); }
+L f_leta(L t,L *e) { for (; let(t); t = CDR(t)) *e = pair(car(CAR(t)),eval(car(cdr(CAR(t))),*e),*e); return car(t); }
 L f_lambda(L t,L *e) { return closure(dup(car(t)),dup(car(cdr(t))),equ(*e,env) ? nil : dup(*e)); }
 
 /* redefine f_define to garbage collect unreachable definitions when redefined */
 L f_define(L t,L *e) {
  L d = *e,v = car(t),x = eval(car(cdr(t)),d);
- while (T(d) == CONS && !equ(v,car(car(d)))) d = cdr(d);
+ while (T(d) == CONS && !equ(v,car(CAR(d)))) d = CDR(d);
  if (T(d) != CONS) env = pair(v,x,env);
  else {
-  gc(cell[ord(car(d))]);
-  cell[ord(car(d))] = x;
+  gc(CDR(CAR(d)));
+  CDR(CAR(d)) = x;
   printf("redefined symbol ");
  }
  return v;
@@ -332,46 +336,46 @@ L f_assoc(L t,L *e) { I a = 0; L d,x,v = gc(evarg(&t,e,&a)); rc(&d,evarg(&t,e,&a
 L f_env(L _,L *e) { return dup(*e); }
 L f_let(L t,L *e) {
  L d = *e;
- for (; let(t); t = cdr(t)) *e = pair(car(car(t)),eval(car(cdr(car(t))),d),*e);
+ for (; let(t); t = CDR(t)) *e = pair(car(CAR(t)),eval(car(cdr(CAR(t))),d),*e);
  return car(t);
 }
 L f_letreca(L t,L *e) {
  I i,k;
- for (; let(t); t = cdr(t)) {
-  *e = pair(car(car(t)),nil,*e);
+ for (; let(t); t = CDR(t)) {
+  *e = pair(car(CAR(t)),nil,*e);
   k = ref[(i = ord(*e))/2];
-  cell[ord(car(*e))] = eval(car(cdr(car(t))),*e);
+  CDR(CAR(*e)) = eval(car(cdr(CAR(t))),*e);
   if (ref[i/2] > k) scc(*e,i);                  /* use of *e detected in a CLOS: mark strongly connected component */
  }
  return car(t);
 }
 L f_letrec(L t,L *e) {
  I i,k;L s,d,*p;
- for (s = t,d = *e,p = &d; let(s); s = cdr(s),p = &cell[ord(*p)]) *p = pair(car(car(s)),nil,*e);
+ for (s = t,d = *e,p = &d; let(s); s = CDR(s),p = &CDR(*p)) *p = pair(car(CAR(s)),nil,*e);
  k = ref[ord(d)/2];
- for (*e = d; let(t); t = cdr(t),i = ord(d),d = cdr(d)) cell[ord(car(d))] = eval(car(cdr(car(t))),*e);
+ for (*e = d; let(t); t = CDR(t),i = ord(d),d = CDR(d)) CDR(CAR(d)) = eval(car(cdr(CAR(t))),*e);
  if (ref[ord(*e)/2] > k) scc(*e,i);             /* use of *e detected in a CLOS: mark strongly connected component */
  return car(t);
 }
 L f_setq(L t,L *e) {
  L d = *e,v = car(t),x = eval(car(cdr(t)),d);
- while (T(d) == CONS && !equ(v,car(car(d)))) d = cdr(d);
+ while (T(d) == CONS && !equ(v,car(CAR(d)))) d = CDR(d);
  if (T(d) != CONS) err(2,v);
- gc(cell[ord(car(d))]);
- return cell[ord(car(d))] = dup(x);
+ gc(CDR(CAR(d)));
+ return CDR(CAR(d)) = dup(x);
 }
 L f_setcar(L t,L *e) {
  I a = 0; L x,p;
  rc(&p,evarg(&t,e,&a));
  if (T(p) != CONS) err(1,p);
- x = dup(evarg(&t,e,&a)); gc(cell[ord(p)+1]); cell[ord(p)+1] = x; rg(p);
+ x = dup(evarg(&t,e,&a)); gc(CAR(p)); CAR(p) = x; rg(p);
  return x;
 }
 L f_setcdr(L t,L *e) {
  I a = 0; L x,p;
  rc(&p,evarg(&t,e,&a));
  if (T(p) != CONS) err(1,p);
- x = dup(evarg(&t,e,&a)); gc(cell[ord(p)]); cell[ord(p)] = x; rg(p);
+ x = dup(evarg(&t,e,&a)); gc(CDR(p)); CDR(p) = x; rg(p);
  return x;
 }
 L f_macro(L t,L *_) { return macro(dup(car(t)),dup(car(cdr(t)))); }
@@ -401,7 +405,7 @@ L f_throw(L t,L *_) { return err(num(car(t)),nil); }
 
 /* section 16.5: tail-call optimization */
 L f_progn(L t,L *e) {
- for (; let(t); t = cdr(t)) gc(eval(car(t),*e));
+ for (; let(t); t = CDR(t)) gc(eval(CAR(t),*e));
  return car(t);
 }
 
@@ -466,7 +470,7 @@ L eval(L x,L e) {
   if (T(x) == ATOM) { x = dup(assoc(x,e)); break; }
   if (T(x) != CONS) { x = dup(x); break; }
   /* save g = old f to garbage collect, evaluate f in the application (f . x) and get the list of arguments x */
-  g = f; f = eval(car(x),e); x = cdr(x);
+  g = f; f = eval(CAR(x),e); x = CDR(x);
   if (T(f) == PRIM) {
    /* apply Lisp primitive to argument list x, return value in x */
    x = prim[ord(f)].f(x,&e);
@@ -478,23 +482,23 @@ L eval(L x,L e) {
   }
   if (T(f) == MACR) {
    /* bind macro f variables v to the given arguments literally (i.e. without evaluating the arguments) */
-   for (d = dup(env),v = car(f); T(v) == CONS; v = cdr(v),x = cdr(x)) d = pair(car(v),dup(car(x)),d);
+   for (d = dup(env),v = CAR(f); T(v) == CONS; v = CDR(v),x = cdr(x)) d = pair(CAR(v),dup(car(x)),d);
    if (T(v) == ATOM) d = pair(v,dup(x),d);
    /* expand macro f, then continue evaluating the expanded x */
-   x = eval(cdr(f),d);
+   x = eval(CDR(f),d);
    /* garbage collect bindings d, gabage collect g = old f and old macro body h, save macro body h = x to gc later */
    gc(d); d = nil; gc(g); g = nil; gc(h); h = x;
    continue;
   }
   if (T(f) != CLOS) return err(3,f);
   /* get the list of variables v of closure f and its local environment d (use global env when nil) */
-  v = car(car(f)); d = dup(cdr(f));
+  v = car(CAR(f)); d = dup(CDR(f));
   if (T(d) == NIL) d = dup(env);
   /* bind closure f variables v to the evaluated argument values */
-  for (a = 0; T(v) == CONS; v = cdr(v)) d = pair(car(v),evarg(&x,&e,&a),d);
+  for (a = 0; T(v) == CONS; v = CDR(v)) d = pair(CAR(v),evarg(&x,&e,&a),d);
   if (T(v) == ATOM) d = pair(v,a ? dup(x) : evlis(x,e),d);
   /* next, evaluate body x of closure f in environment e = d while keeping f in memory as long as x */
-  x = cdr(car(f));
+  x = cdr(CAR(f));
   /* discard copy of the old environment e to use new environment d */
   gc(e); e = d; d = nil;
   /* garbage collect closure g = old f with old body x, garbage collect old macro body h */
@@ -543,7 +547,7 @@ L Read() { return scan(),parse(); }
 /* section 16.1: replacing recursion with loops (in list parsing) */
 L list() {
  L t,*p;
- for (t = nil,p = &t; ; *p = cons(parse(),nil),p = &cell[ord(*p)]) {
+ for (t = nil,p = &t; ; *p = cons(parse(),nil),p = &CDR(*p)) {
   if (scan() == ')') return t;
   if (*buf == '.' && !buf[1]) return *p = Read(),scan(),t;
  }
@@ -552,7 +556,7 @@ L tick() {
  L t,*p;
  if (*buf == ',') return Read();
  if (*buf != '(') return cons(atom("quote"),cons(parse(),nil));
- for (t = cons(atom("list"),nil),p = &cell[ord(t)]; ; *p = cons(tick(),nil),p = &cell[ord(*p)]) {
+ for (t = cons(atom("list"),nil),p = &CDR(t); ; *p = cons(tick(),nil),p = &CDR(*p)) {
   if (scan() == ')') return t;
   if (*buf == '.' && !buf[1]) return *p = Read(),scan(),t;
  }
@@ -570,8 +574,8 @@ L parse() {
 void printlist(L t) {
  putchar('(');
  while (1) {
-  print(car(t));
-  if (not(t = cdr(t))) break;
+  print(CAR(t));
+  if (not(t = CDR(t))) break;
   if (T(t) != CONS) { printf(" . "); print(t); break; }
   putchar(' ');
  }
