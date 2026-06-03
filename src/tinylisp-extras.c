@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 
 /* we only need two types to implement a Lisp interpreter:
         I      unsigned integer (either 16 bit, 32 bit or 64 bit unsigned)
@@ -23,7 +24,7 @@
 #define L double
 
 /* T(x) returns the tag bits of a NaN-boxed Lisp expression x */
-#define T(x) *(unsigned long long*)&x>>48
+#define T(x) *(uint64_t*)&x>>48
 
 /* address of the atom heap is at the bottom of the cell stack */
 #define A (char*)cell
@@ -57,10 +58,10 @@ L nil,tru,env;
    ord(x):   returns the ordinal of the NaN-boxed double x
    num(n):   convert or check number n (does nothing, e.g. could check for NaN)
    equ(x,y): returns nonzero if x equals y */
-L box(I t,I i) { L x; *(unsigned long long*)&x = (unsigned long long)t<<48|i; return x; }
-I ord(L x) { return *(unsigned long long*)&x; }
+L box(I t,I i) { L x; *(uint64_t*)&x = (uint64_t)t<<48|i; return x; }
+I ord(L x) { return *(uint64_t*)&x; }
 L num(L n) { return n; }
-I equ(L x,L y) { return *(unsigned long long*)&x == *(unsigned long long*)&y; }
+I equ(L x,L y) { return *(uint64_t*)&x == *(uint64_t*)&y; }
 /* interning of atom names (Lisp symbols), returns a unique NaN-boxed ATOM */
 L atom(const char *s) {
  I i = 0; while (i < hp && strcmp(A+i,s)) i += strlen(A+i)+1;

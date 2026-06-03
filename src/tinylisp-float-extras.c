@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 
 /* we only need two types to implement a Lisp interpreter:
         I      unsigned integer (either 16 bit, 32 bit or 64 bit unsigned)
@@ -47,7 +48,7 @@ L eval(L,L),Read(),parse(),err(I,L); void print(L);
    safety invariant: hp <= sp<<2 */
 I hp = 0,sp = N,tr = 0;
 /* atom, primitive, cons, closure and nil tags for NaN boxing */
-enum { ATOM = 0x7fc,PRIM = 0x7fd,CONS = 0x7fe,CLOS = 0x7ff,MACR = 0xffc,NIL = 0xfff };
+enum { ATOM = 0x7fc,PRIM = 0x7fd,CONS = 0xffc,CLOS = 0xffd,MACR = 0xffe,NIL = 0xfff };
 /* cell[N] array of Lisp expressions, shared by the stack and atom heap */
 L cell[N];
 /* Lisp constant expressions () (nil), #t, and the global environment env */

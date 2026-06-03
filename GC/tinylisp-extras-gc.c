@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 #include <math.h> /* to return NAN from num() */
 
 /* DEBUG: enable memory management activity logging (=1 enable, =2 include Lisp expression dumps) */
@@ -34,7 +35,7 @@
 #define L double
 
 /* T(x) returns the tag bits of a NaN-boxed Lisp expression x */
-#define T(x) *(unsigned long long*)&x>>48
+#define T(x) *(uint64_t*)&x>>48
 
 /* address of the atom heap is at the bottom of the cell pool */
 #define A (char*)cell
@@ -72,10 +73,10 @@ L nil,tru,env;
    ord(x):   returns the ordinal of the NaN-boxed double x
    num(n):   check number, return NAN = ERR = box(ATOM,0) when not a number to avoid ref-count GC on a list when n is a list
    equ(x,y): returns nonzero if x equals y */
-L box(I t,I i) { L x; *(unsigned long long*)&x = (unsigned long long)t<<48|i; return x; }
-I ord(L x) { return *(unsigned long long*)&x; }
+L box(I t,I i) { L x; *(uint64_t*)&x = (uint64_t)t<<48|i; return x; }
+I ord(L x) { return *(uint64_t*)&x; }
 L num(L n) { return n == n ? n : NAN; }
-I equ(L x,L y) { return *(unsigned long long*)&x == *(unsigned long long*)&y; }
+I equ(L x,L y) { return *(uint64_t*)&x == *(uint64_t*)&y; }
 /* interning of atom names (Lisp symbols), returns a unique NaN-boxed ATOM */
 L atom(const char *s) {
  I i = 0; while (i < hp && strcmp(A+i,s)) i += strlen(A+i)+1;
@@ -557,7 +558,7 @@ L tick() {
  }
 }
 L parse() {
- L n; I i;
+ L n; int i;
  if (*buf == '(') return list();
  if (*buf == '\'') return cons(atom("quote"),cons(Read(),nil));
  if (*buf == '`') return scan(),tick();
