@@ -76,8 +76,8 @@
     (lambda (board x y)
         (any?
             (lambda (n)
-	        (or ; check if there's no conflicting queen up
-	            (queen? board n y)
+                (or ; check if there's no conflicting queen up
+                    (queen? board n y)
                     ; check upper left
                     (let*
                         (z (+ y (- n x)))
@@ -98,16 +98,16 @@
             ; show solution
             (progn
                 (show board)
-	        (println))
+                (println))
             ; continue searching for solutions
             (mapcar
-	        (lambda (y)
-		     (if (not (conflict? board x y))
-                         (progn
-                             (queen! board x y)
-                             (solve-n board (+ x 1))
-                             (clear! board x y))
-                         ()))
+                (lambda (y)
+                    (if (not (conflict? board x y))
+                        (progn
+                            (queen! board x y)
+                            (solve-n board (+ x 1))
+                            (clear! board x y))
+                        ()))
                 (seq 0 board-size)))))
 
 (define solve
