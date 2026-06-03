@@ -4,12 +4,12 @@
 ; some list.lisp definitions w/o loading list.lisp
 
 (define nthcdr
-    (lambda (t n)
+    (lambda (n t)
         (if (eq? n 0)
             t
-            (nthcdr (cdr t) (- n 1)))))
+            (nthcdr (- n 1) (cdr t)))))
 
-(define nth (lambda (t n) (car (nthcdr t n))))
+(define nth (lambda (n t) (car (nthcdr n t))))
 
 (define seq-prepend
     (lambda (t n m)
@@ -50,15 +50,15 @@
 
 (define at
     (lambda (board x y)
-        (nth (nth board x) y)))
+        (nth y (nth x board))))
 
 (define queen!
     (lambda (board x y)
-        (set-car! (nthcdr (nth board x) y) '@)))
+        (set-car! (nthcdr y (nth x board)) '@)))
 
 (define clear!
     (lambda (board x y)
-        (set-car! (nthcdr (nth board x) y) '-)))
+        (set-car! (nthcdr y (nth x board)) '-)))
 
 (define queen?
     (lambda (board x y)
