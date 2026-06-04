@@ -311,7 +311,7 @@ L f_lt(L t,L *e) { I a = 0; L n = gc(evarg(&t,e,&a)); return n - gc(evarg(&t,e,&
 L f_eq(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return equ(x,gc(evarg(&t,e,&a))) ? tru : nil; }
 L f_pair(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return T(x) == CONS ? tru : nil; }
 L f_or(L t,L *e) { I a = 0; L x = nil; while (isarg(&t,e,&a,&x) && not(x)) continue; return x; }
-L f_and(L t,L *e) { I a = 0; L x,y = tru; for (; isarg(&t,e,&a,&x) && !not(x); y = x) gc(y); return y; }
+L f_and(L t,L *e) { I a = 0; L x = tru,y = nil; while (isarg(&t,e,&a,&x)) { gc(y); y = x; if (not(x)) break; } return x; }
 L f_not(L t,L *e) { I a = 0; return not(gc(evarg(&t,e,&a))) ? tru : nil; }
 L f_cond(L t,L *e) { while (not(gc(eval(car(car(t)),*e)))) t = cdr(t); return car(cdr(car(t))); }
 L f_if(L t,L *e) { return car(cdr(not(gc(eval(car(t),*e))) ? cdr(t) : t)); }
