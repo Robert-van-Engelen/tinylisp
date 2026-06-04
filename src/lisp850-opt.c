@@ -3,7 +3,7 @@
 #define L double
 #define T *(char*)&
 #define A (char*)cell
-#define N 1024
+#define N 800
 I hp=0,sp=N,ATOM=32,PRIM=48,CONS=64,CLOS=80,NIL=96;
 L cell[N],nil,tru,err,env;
 L box(I t,I i) { L x = i+10; T x = t; return x; }
