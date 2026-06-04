@@ -6,8 +6,8 @@
 #include <stdint.h>
 
 /* we only need two types to implement a Lisp interpreter:
-        I      unsigned integer (either 16 bit, 32 bit or 64 bit unsigned)
-        L      Lisp expression (double with NaN boxing)
+        I      unsigned integer
+        L      Lisp expression (floating point double with NaN boxing)
    I variables and function parameters are named as follows:
         i      any unsigned integer, e.g. a NaN-boxed ordinal value or index
         t      a NaN-boxed tag
@@ -20,7 +20,7 @@
         p      pair, a cons of two Lisp expressions
         e,d,h  environment, a list of pairs, e.g. created with (define v x)
         v      the name of a variable (an atom) or a list of variables */
-#define I unsigned
+#define I uint32_t
 #define L double
 
 /* T(x) returns the tag bits of a NaN-boxed Lisp expression x */
@@ -205,6 +205,12 @@ L f_progn(L t,L *e) {
  for (; let(t); t = cdr(t)) eval(car(t),*e);
  return car(t);
 }
+L f_while(L t, L*e) {
+ L s, x = nil;
+ while (!not(eval(car(t), *e)))
+  for (s = cdr(t); T(s) == CONS; s = cdr(s)) x = eval(car(s), *e);
+ return x;
+} 
 
 struct { const char *s; L (*f)(L,L*); short t; } prim[] = {
  {"eval",    f_eval,   1},
@@ -245,6 +251,7 @@ struct { const char *s; L (*f)(L,L*); short t; } prim[] = {
  {"catch",   f_catch,  0},
  {"throw",   f_throw,  0},
  {"progn",   f_progn,  1},
+ {"while",   f_while,  0},
  {0}};
 
 /* section 13: tracing (trace 1) with colorful output, to wait on ENTER (trace 2), with memory dump (trace 3) */

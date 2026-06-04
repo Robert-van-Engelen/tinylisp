@@ -408,6 +408,12 @@ L f_progn(L t,L *e) {
  for (; let(t); t = CDR(t)) gc(eval(CAR(t),*e));
  return car(t);
 }
+L f_while(L t, L *e) {
+ L s,x = nil,y = nil;
+ while (!not(gc(eval(car(t),*e))))
+  for (s = cdr(t); T(s) == CONS; s = cdr(s),gc(y),y = x) x = eval(car(s),*e);
+ return x;
+}
 
 struct { const char *s; L (*f)(L,L*); short t; } prim[] = {
  {"eval",    f_eval,   0}, /* no longer tail recursive to implement gc */
@@ -448,6 +454,7 @@ struct { const char *s; L (*f)(L,L*); short t; } prim[] = {
  {"throw",   f_throw,  0},
  {"trace",   f_trace,  0},
  {"progn",   f_progn,  1},
+ {"while",   f_while,  0},
  {0}};
 
 /* section 13: tracing (trace 1) with colorful output, to wait on ENTER (trace 2), with memory dump (trace 3) */
