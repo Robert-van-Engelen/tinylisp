@@ -200,13 +200,13 @@ evaluates `y` with a local scope of bindings for symbols `v` subsequently bound 
 
 Errors are necessarily simplistic in tinylisp to keep it small with no error messages.  All errors in tinylisp are represented by `ERR` which is the same as NaN (Not-a-Number).  The "extras" version with additional Lisp primitives adds error codes to make your life of Lisp adventures a bit more accomodating:
 
-    ERR | meaning
-    --: | -------
-    1   | not a pair
-    2   | unbound symbol
-    3   | cannot apply
-    4   | out of memory
-    5   | program stopped
+| ERR | meaning
+| --: | -------
+| 1   | not a pair
+| 2   | unbound symbol
+| 3   | cannot apply
+| 4   | out of memory
+| 5   | program stopped
 
 ## Additional Lisp primitives introduced in the [article](tinylisp.pdf)
 
@@ -264,13 +264,13 @@ disables tracing (0), enables tracing (1), tracing with ENTER key press (2), and
 
 catch exceptions in the evaluation of an expression, returns the value of the expression or `(ERR . n)` for nonzero error code `n`.  The built-in error codes are:
 
-    ERR | meaning
-    --: | -------
-    1   | not a pair
-    2   | unbound symbol
-    3   | cannot apply
-    4   | out of memory
-    5   | program stopped
+| ERR | meaning
+| --: | -------
+| 1   | not a pair
+| 2   | unbound symbol
+| 3   | cannot apply
+| 4   | out of memory
+| 5   | program stopped
 
     (throw n)
 
