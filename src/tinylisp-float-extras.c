@@ -205,10 +205,10 @@ L f_progn(L t,L *e) {
  for (; let(t); t = cdr(t)) eval(car(t),*e);
  return car(t);
 }
-L f_while(L t, L*e) {
- L s, x = nil;
- while (!not(eval(car(t), *e)))
-  for (s = cdr(t); T(s) == CONS; s = cdr(s)) x = eval(car(s), *e);
+L f_while(L t, L *e) {
+ L s,x = nil;
+ while (!not(eval(car(t),*e)))
+  for (s = cdr(t); T(s) == CONS; s = cdr(s)) x = eval(car(s),*e);
  return x;
 }
 
@@ -377,7 +377,7 @@ L tick() {
  if (*buf != '(') return cons(atom("quote"),cons(parse(),nil));
  for (t = cons(atom("list"),nil),p = cell+sp; ; *p = cons(tick(),nil),p = cell+sp) {
   if (scan() == ')') return t;
-  if (*buf == '.' && !buf[1]) return *p = Read(),scan(),t;
+  if (*buf == '.' && !buf[1]) return scan(),t = cons(atom("append"),cons(t,cons(tick(),nil))),scan(),t;
  }
 }
 L parse() {

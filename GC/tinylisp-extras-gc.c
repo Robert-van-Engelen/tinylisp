@@ -563,9 +563,9 @@ L tick() {
  L t,*p;
  if (*buf == ',') return Read();
  if (*buf != '(') return cons(atom("quote"),cons(parse(),nil));
- for (t = cons(atom("list"),nil),p = &CDR(t); ; *p = cons(tick(),nil),p = &CDR(*p)) {
+ for (t = cons(atom("list"),nil),p = &t; ; p = &CDR(*p),*p = cons(tick(),nil)) {
   if (scan() == ')') return t;
-  if (*buf == '.' && !buf[1]) return *p = Read(),scan(),t;
+  if (*buf == '.' && !buf[1]) return scan(),t = cons(atom("append"),cons(t,cons(tick(),nil))),scan(),t;
  }
 }
 L parse() {
