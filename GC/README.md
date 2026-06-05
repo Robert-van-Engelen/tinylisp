@@ -73,7 +73,8 @@ The performance of tinylisp versus the Common Lisp interpreter GNU
 is a high-performance Common Lisp implementation.  It runs 8-queens in 6 ms.
 However, Common Lisp (compiled or not) is not as flexible as tinylisp in which
 code and data are truly the same.  The dot operator is supported by tinylisp as
-should be and there is need for ugly `funcall` and other unnecessary additions.
+should be and there is no need for ugly `funcall` and other unnecessary
+additions.
 
 Perhaps I will build a compiler for tinylisp.  The fastest way to run tinylisp
 programs is to generate C code that is highly optimizable by a C compiler.
