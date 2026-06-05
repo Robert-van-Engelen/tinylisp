@@ -67,6 +67,19 @@ the running time of tinylisp (since there is no effect, different memory sizes
 are not shown in the table for tinylisp).  But memory size does impact
 mark-sweep and cheney, since more memory means fewer GC stages.
 
+The performance of tinylisp versus the Common Lisp interpreter GNU
+[CLISP](https://www.gnu.org/software/clisp) is reasonably comparable (tinylisp
+396 ms versus CLISP 296 ms) to solve 8-queens.  [SBCL](https://www.sbcl.org)
+is a high-performance Common Lisp implementation.  It runs 8-queens in 6 ms.
+However, Common Lisp (compiled or not) is not as flexible as tinylisp in which
+code and data are truly the same.  The dot operator is supported by tinylisp as
+should be and there is need for ugly `funcall` and other unnecessary additions.
+
+Perhaps I will build a compiler for tinylisp.  The fastest way to run tinylisp
+programs is to generate C code that is highly optimizable by a C compiler.
+Solving 8-queens in compiled tinylisp should take about 2 ms, a best estimate
+based on my prototype tinylisp compiler.
+
 **How does it work?**
 
 The original tinylisp uses a stack to allocate new cells for `CONS` and `CLOS`
