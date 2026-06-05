@@ -196,9 +196,9 @@ evaluates `y` with a local scope of bindings for symbols `v` subsequently bound 
 >
 > or we can use `(begin y1 y2 ... yn)` in the `let*` body, where `begin` is defined in [common.lisp](src/common.lisp).
 
-## Errors
+### Errors
 
-Errors are necessarily simplistic in tinylisp to keep it small with no error messages.  All errors in tinylisp are represented by `ERR` which is the same as NaN (Not-a-Number).  The "extras" version with additional Lisp primitives adds error codes to make your life of Lisp adventures a bit more accomodating:
+Errors are necessarily simplistic in tinylisp to keep it small with no error messages.  All errors in tinylisp are represented by `ERR` which is the same as NaN (Not-a-Number).  The "extras" versions with additional Lisp primitives (see next secion) add error codes to make your life of Lisp adventures a bit more accomodating:
 
 | ERR | meaning
 | --: | -------
