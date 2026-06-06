@@ -19,7 +19,8 @@
                         1))))
          n)))
 
-; using function seq defined in list.lisp and the dot operator
+; using function seq defined in list.lisp and the dot operator,
+; with (* 1 . range) starting with 1 so (factseq 0) returns 1
 (define factseq
     (lambda (n)
         (let*
