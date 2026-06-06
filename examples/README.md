@@ -6,6 +6,7 @@ Some of the tinylisp examples may require some additional Lisp features to run. 
 - fact.lisp uses `letrec*` in one of the definitions
 - hanoi.lisp uses `println` to output moves
 - list.lisp list functions (source from the article) with listtest.lisp test cases
+- magic.lisp computes a "magic square" uses `setq`, `progn`, `println`, `while`
 - math.lisp math functions (source from the article)
 - qsort.lisp recursive quicksort (requires list.lisp)
-- qsort-extras.lisp faster recursive quicksort, uses setq, progn, while
+- qsort-extras.lisp faster recursive quicksort, uses `setq`, `progn`, `while`
