@@ -375,6 +375,7 @@ L tick() {
  L t,*p;
  if (*buf == ',') return Read();
  if (*buf == '\'') return scan(),cons(atom("list"),cons(cons(atom("quote"),cons(atom("quote"),nil)),cons(tick(),nil)));
+ if (*buf == '"') return parse();
  if (*buf != '(') return cons(atom("quote"),cons(parse(),nil));
  for (t = cons(atom("list"),nil),p = cell+sp; ; *p = cons(tick(),nil),p = cell+sp) {
   if (scan() == ')') return t;
