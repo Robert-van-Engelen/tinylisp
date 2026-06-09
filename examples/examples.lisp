@@ -1,0 +1,103 @@
+; examples for tinylist-extras (tinylisp with article's extras)
+; requires list.lisp (load it first!)
+
+; compute the dot product of (1 2 3) and (4 5 6) using map
+(let*
+    (prod (map * '(1 2 3) '(4 5 6)))
+    (+ . prod))
+
+; compute the dot product of (1 2 3) and (4 5 6) using map and foldl to sum
+(foldl + 0 (map * '(1 2 3) '(4 5 6)))
+
+; define a function to sum the result of mapping a function on list(s):
+(define sum
+    (lambda (f . args)
+        (let*
+            (t (map f . args))
+            (+ . t))))
+
+; compute the dot product of (1 2 3) and (4 5 6)
+(sum * '(1 2 3) '(4 5 6))
+
+; define function map-reduce to map function f then reduce with function g
+(define map-reduce
+    (lambda (f g . args)
+        (let*
+            (t (map f . args))
+            (g . t))))
+
+; compute the dot product of (1 2 3) and (4 5 6)
+(map-reduce * + '(1 2 3) '(4 5 6))
+
+; multiply the first values of three lists
+(map-reduce car * '((1 2 3) (2 3 4) (3 4 5)))
+
+; fetch letters from four lists by the index in the first list and list them
+(map-reduce nth list '(1 1 2 3) '((a b c d) (e f g h) (i j k l) (m n o p)))
+
+; tetch lists from three lists by index and or them to find if they have a non-()
+(map-reduce nth or '(1 2 3)
+    '( (() ())
+       (() () 1)
+       (() () () ()))
+    )
+
+; zip three lists (transpose) and append them together
+(map-reduce list append '(1 2 3) '(4 5 6) '(7 8 9))
+
+; define a macro-defining macro
+(define defmacro
+    (macro (f v x)
+        `(define ,f (macro ,v ,x))))
+
+; define a function-defining macro
+(defmacro defun (f v x)
+    `(define ,f (lambda ,v ,x)))
+
+; define a macro to destructively swap-in a new value x for a variable v, returning its old value
+(defmacro swap! (v x)
+    `(let* (_ ,v)
+        (progn
+            (setq ,v ,x)
+            _)))
+
+; let's use it by iteratively computing the 7'th Fibonacci number
+(let*
+    (n 7)
+    (a 0)
+    (b 1)
+    (while
+        (< 0 (setq n (- n 1)))
+        (setq b (+ (swap! a b) b))))
+
+; and a list s of Fibonacci numbers iteratively constructed using swap!, set-cdr!, and setq on the tail node t of s
+(let*
+    (n 7)
+    (a 0)
+    (b 1)
+    (s '(1))
+    (t s)
+    (progn
+        (while
+            (< 0 (setq n (- n 1)))
+            (set-cdr! t (cons (setq b (+ (swap! a b) b)) ()))
+            (setq t (cdr t)))
+        s))
+
+; generalize the construction of a list of Fibonacci numbers in a new fibo function:
+(defun fibo (n)
+    (let*
+        (a 0)
+        (b 1)
+        (s '(1))
+        (t s)
+        (progn
+            (while
+                (< 0 (setq n (- n 1)))
+                (set-cdr! t (cons (setq b (+ (swap! a b) b)) ()))
+                (setq t (cdr t)))
+            s)))
+
+; the first 100 Fibonacci numbers
+(fibo 100)
+
