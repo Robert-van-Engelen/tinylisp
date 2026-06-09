@@ -1,3 +1,15 @@
+(define equal?
+    (lambda (x y)
+        (or
+            (eq? x y)
+            (and
+                (pair? x)
+                (pair? y)
+                (equal? (car x) (car y))
+                (equal? (cdr x) (cdr y))))))
+
+(define list (lambda args args))
+
 ; check addition
 (cons
     (if (equal?
@@ -248,39 +260,51 @@
         'failed)
     '(catch throw))
 
-; loop with destructive setq (when defined) to calculate 5! = 120
+; loop with destructive setq to calculate 5! = 120
 (cons
-    (if (equal? (catch setq) '(ERR . 2))
-        'skip
-        (if (equal?
-                (letrec*
-                    (n 5)
-                    (r 1)
-                    (f (lambda ()
-                        (if (< n 1)
-                            r
-                            (begin (setq r (* r n)) (setq n (- n 1))  (f)))))
-                    (f))
-                120)
-            'passed
-            'failed))
-        '(setq))
+    (if (equal?
+            (letrec*
+                (n 5)
+                (r 1)
+                (f (lambda ()
+                    (if (< n 1)
+                        r
+                        (progn (setq r (* r n)) (setq n (- n 1))  (f)))))
+                (f))
+            120)
+        'passed
+        'failed)
+    '(setq))
 
-; destructive set-car! (when defined) to set all list elements to 1
+; destructive set-car! to set all list elements to 1
 (cons
-    (if (equal? (catch setq) '(ERR . 2))
-        'skip
-        (if (equal?
-                (letrec*
-                    (xs (list 1 2 3))
-                    (f (lambda (xs)
-                        (if xs
-                            (f (begin (set-car! xs 1) (cdr xs)))
-                            ())))
-                    (begin (f xs) xs))
-                '(1 1 1))
-            'passed
-            'failed))
+    (if (equal?
+            (letrec*
+                (xs (list 1 2 3))
+                (f (lambda (xs)
+                    (if xs
+                        (f (progn (set-car! xs 1) (cdr xs)))
+                        ())))
+                (progn (f xs) xs))
+            '(1 1 1))
+        'passed
+        'failed)
     '(set-car!))
 
+; destructive set-cdr! to append (4 5) to list (1 2 3)
+(cons
+    (if (equal?
+            (letrec*
+                (xs (list 1 2 3))
+                (f (lambda (xs)
+                    (if (cdr xs)
+                        (f (cdr xs))
+                        (set-cdr! xs '(4 5)))))
+                (progn (f xs) xs))
+            '(1 2 3 4 5))
+        'passed
+        'failed)
+    '(set-cdr!))
+
 'OK
+(quit)

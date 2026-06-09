@@ -36,7 +36,12 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 FILE *in = NULL;
-char buf[256],see = ' ',*ptr = "",*line = NULL,ps[20];
+char buf[256],see = ' ',*ptr = "",*line = NULL,ps[80];
+
+/* prompt strings for readline (truncates to 80 chars max), use \001 to ignore codes up to \002 */
+/* NOTE: MacOS Darwin uses libedit as a libreadline "compatible", but that does not display prompt colors! */
+#define PS1 "\001\e[32;1m\002%u>\001\e[m\002"
+#define PS2 "\001\e[32;1m\002? \001\e[m\002"
 
 /* forward proto declarations */
 L eval(L,L),Read(),parse(),err(I,L); void print(L);
@@ -73,7 +78,8 @@ L atom(const char *s) {
    ERR 2: unbound symbol
    ERR 3: cannot apply
    ERR 4: out of memory
-   ERR 5: program stopped */
+   ERR 5: cannot open
+   ERR 6: program stopped */
 #include <setjmp.h>
 #include <signal.h>
 jmp_buf jb;
@@ -212,6 +218,8 @@ L f_while(L t, L *e) {
  return x;
 }
 
+L f_quit(L t,L *e) { I a = 0; L x; exit(isarg(&t,e,&a,&x) ? (int)num(x) : 0); }
+
 struct { const char *s; L (*f)(L,L*); short t; } prim[] = {
  {"eval",    f_eval,   1},
  {"quote",   f_quote,  0},
@@ -252,6 +260,7 @@ struct { const char *s; L (*f)(L,L*); short t; } prim[] = {
  {"throw",   f_throw,  0},
  {"progn",   f_progn,  1},
  {"while",   f_while,  0},
+ {"quit",    f_quit,   0},
  {0}};
 
 /* section 13: tracing (trace 1) with colorful output, to wait on ENTER (trace 2), with memory dump (trace 3) */
@@ -345,7 +354,7 @@ void look() {
   if (line) { ptr = line; line = NULL; free(ptr); }
   while (!(ptr = line = readline(ps))) freopen("/dev/tty","r",stdin);
   add_history(line);
-  strcpy(ps,"? ");
+  snprintf(ps,sizeof(ps),PS2);
  }
  if (!(see = *ptr++)) see = '\n';
 }
@@ -420,16 +429,16 @@ void gc() {
 }
 
 /* section 14: error handling and exceptions */
-void stop(int i) { if (line) err(5,nil); else abort(); }
+void stop(int i) { if (line) err(6,nil); else abort(); }
 
 /* section 10: read-eval-print loop (REPL) with additions */
 int main(int argc,char **argv) {
- I i; printf("tinylisp");
+ I i; printf("tinylisp-extras");
  nil = box(NIL,0); atom("ERR"); tru = atom("#t"); env = pair(tru,tru,nil);
  for (i = 0; prim[i].s; ++i) env = pair(atom(prim[i].s),box(PRIM,i),env);
- in = fopen((argc > 1 ? argv[1] : "common.lisp"),"r");
+ if (!(in = fopen((argc > 1 ? argv[1] : "common.lisp"),"r"))) printf("\nERR 5");
  using_history();
  if ((i = setjmp(jb)) > 0) printf("ERR %u",i);
  signal(SIGINT,stop);
- while (1) { gc(); putchar('\n'); snprintf(ps,sizeof(ps),"%u>",sp-hp/8); print(eval(Read(),env)); }
+ while (1) { gc(); putchar('\n'); snprintf(ps,sizeof(ps),PS1,sp-hp/8); print(eval(Read(),env)); }
 }

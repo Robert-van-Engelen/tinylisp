@@ -206,7 +206,8 @@ Errors are necessarily simplistic in tinylisp to keep it small with no error mes
 | 2   | unbound symbol
 | 3   | cannot apply
 | 4   | out of memory
-| 5   | program stopped
+| 5   | cannot open
+| 6   | program stopped
 
 ## Additional Lisp primitives introduced in the [article](tinylisp.pdf)
 
@@ -272,7 +273,8 @@ catch exceptions in the evaluation of an expression, returns the value of the ex
 | 2   | unbound symbol
 | 3   | cannot apply
 | 4   | out of memory
-| 5   | program stopped
+| 5   | cannot open
+| 6   | program stopped
 
     (throw n)
 
@@ -285,6 +287,15 @@ parses and executes Lisp from a file with the name `<atom>`, for example `(load 
     (progn x1 x2 ... xk)
 
 evaluates all `x` and returns the value of `xk`, same as `(begin x1 x2 ... xk)` in [common.lisp](src/common.lisp), but faster.
+
+    (while x y1 ... yk)
+
+while `x` is not `()` (meaning true), evaluates expressions `y`.  Returns the last value of `yk` or `()` when the loop never ran.  For example, `(let* (k 0) (while (< (setq k (+ k 1)) 11) (println k)))` prints 1 to 10 using a loop counter `k`.
+
+    (quit)
+    (quit n)
+
+exits Lisp with optional status code `n`.
 
 ## Additional Lisp functions defined in tinylisp itself
 
