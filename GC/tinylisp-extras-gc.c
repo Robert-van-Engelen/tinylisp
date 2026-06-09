@@ -588,6 +588,7 @@ void look() {
   see = c = getc(in[ld++]);
   if (c != EOF) return;
   fclose(in[--ld]);
+  see = '\n';
  }
  if (see == '\n') {
   if (line) { ptr = line; line = NULL; free(ptr); }

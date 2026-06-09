@@ -29,7 +29,7 @@
   - new primitive [`atomize`](atomize.lisp) (convert expressions to atom) (+35 lines of C)
   - new primitive `write-to` (redirect print/ln to a file) (+16 lines of C)
   - upgrades `read` to take an optional pathname to read a Lisp expression from a file (+12 lines of C)
-  - upgrades `load` to load multiple files and permit nesting up to 10 levels deep (+11 lines of C)
+  - upgrades `load` to load multiple files and permit nesting up to 10 levels deep (+12 lines of C)
   - the source code is commented to explain the code
   - passes `tests/dotcall-extras.lisp` tests and runs 8-queens `nqueens.lisp`
   - optimized internal logic with unchecked CAR and CDR when safe to use
