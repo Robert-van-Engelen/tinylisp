@@ -1,4 +1,4 @@
-/* tinylisp-extras-gc.c optimized and article's extras and ref count garbage collection by Robert A. van Engelen 2025 */
+/* tinylisp-extras-gc.c optimized, article's extras and more, using ref count GC by Robert A. van Engelen 2025 */
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -12,7 +12,7 @@
 #elif DEBUG == 1
 # define LOG(x,...) printf(__VA_ARGS__)
 #else
-# define LOG(x,...) (printf(__VA_ARGS__),printf("\e[33m"),print(x),printf("\e[m\t"))
+# define LOG(x,...) (printf(__VA_ARGS__),printf("\e[33m"),print(stdout,x),printf("\e[m\t"))
 #endif
 
 /* we only need two types to implement a Lisp interpreter:
@@ -43,14 +43,8 @@
 /* number of cells for the shared pool and atom heap, increase N as desired */
 #define N 8192
 
-/* section 12: adding readline with history */
-#include <readline/readline.h>
-#include <readline/history.h>
-FILE *in = NULL;
-char buf[40],see = ' ',*ptr = "",*line = NULL,ps[20];
-
 /* forward proto declarations */
-L eval(L,L),Read(),parse(),err(I,L),gc(L); void collect(L),print(L);
+L eval(L,L),Read(),parse(),err(I,L),gc(L); void collect(L),print(FILE*,L); I atomize(L,char*);
 
 /* section 4: constructing Lisp expressions (using a cell pool managed with reference count garbage collection) */
 /* hp: top of the atom heap pointer, A+hp with hp=0 points to the first atom string in cell[]
@@ -58,8 +52,9 @@ L eval(L,L),Read(),parse(),err(I,L),gc(L); void collect(L),print(L);
    lp: pointer to the lowest allocated and used cell pair in cell[]
    fn: number of free cell cons pairs in cell[] (not taking atoms stored in cell[] into account)
    tr: tracing off (0), on (1), wait on ENTER (2), dump and wait (3)
+   ld: number of open loads from input files (nested load up to 10 levels deep)
    safety invariant: hp < lp<<3 */
-I hp = 0,fp = N-2,lp = N-2,fn = N/2,tr = 0;
+I hp = 0,fp = N-2,lp = N-2,fn = N/2,tr = 0,ld = 0;
 /* ref[] array with ref count of a used cell pair or ref to next free cell pair in the free list */
 I ref[N/2];
 /* atom, primitive, cons, closure and nil tags for NaN boxing */
@@ -80,15 +75,27 @@ I equ(L x,L y) { return *(uint64_t*)&x == *(uint64_t*)&y; }
 /* interning of atom names (Lisp symbols), returns a unique NaN-boxed ATOM */
 L atom(const char *s) {
  I i = 0; while (i < hp && strcmp(A+i,s)) i += strlen(A+i)+1;
- return i == hp && (hp += strlen(strcpy(A+i,s))+1) > lp<<3 ? err(4,nil) : box(ATOM,i);
+ return i == hp && ((hp += strlen(s)+1) > lp<<3 || !strcpy(A+i,s)) ? err(4,nil) : box(ATOM,i);
 }
+
+/* section 12: adding readline with history ++ new: support nested load and file open err 5 */
+#include <readline/readline.h>
+#include <readline/history.h>
+FILE *in[10],*out;
+char buf[256],see = ' ',*ptr = "",*line = NULL,ps[80];
+
+/* prompt strings for readline (truncates to 80 chars max), use \001 to ignore codes up to \002 */
+/* NOTE: MacOS Darwin uses libedit as a libreadline "compatible", but that does not display prompt colors! */
+#define PS1 "\001\e[32;1m\002%u>\001\e[m\002"
+#define PS2 "\001\e[32;1m\002? \001\e[m\002"
 
 /* section 14: error handling and exceptions
    ERR 1: not a pair
    ERR 2: unbound symbol
    ERR 3: cannot apply
    ERR 4: out of memory
-   ERR 5: program stopped */
+   ERR 5: cannot open
+   ERR 6: program stopped */
 #include <setjmp.h>
 #include <signal.h>
 /* max number of nested eval() calls between f_catch and f_throw */
@@ -98,9 +105,9 @@ L *xstk[5*K],**xb = NULL,**xp = NULL;
 jmp_buf jb;
 /* throw an error, if f_catch handler is used (xb < xp are not NULL) then garbage collect "lost" variables */
 L err(I i,L x) {
- const char *msg[5] = {"not a pair","unbound","cannot apply","out of memory","stopped"};
- if (xp ? tr : i >= 1 && i <= 5) {
-  printf("\n\e[31;1mERR %u: ",i); print(x); printf(" %s\e[m\n",i >= 1 && i <= 5 ? msg[i-1] : "");
+ const char *msg[6] = {"not a pair","unbound","cannot apply","out of memory","cannot open","stopped"};
+ if (xp ? tr : i >= 1 && i <= 6) {
+  printf("\n\e[31;1mERR %u: ",i); print(stdout,x); printf(" %s\e[m\n",i >= 1 && i <= 6 ? msg[i-1] : "");
  }
  while (xp != xb) gc(**--xp);
  longjmp(jb,i);
@@ -379,12 +386,44 @@ L f_setcdr(L t,L *e) {
  return x;
 }
 L f_macro(L t,L *_) { return macro(dup(car(t)),dup(car(cdr(t)))); }
-L f_read(L t,L *_) { L x; char c = see; see = ' '; x = Read(); see = c; return x; }
-L f_print(L t,L *e) { I a = 0; L x; for (; isarg(&t,e,&a,&x); gc(x)) print(x); return nil; }
-L f_println(L t,L *e) { f_print(t,e); putchar('\n'); return nil; }
+L f_print(L t,L *e) { I a = 0; L x; for (; isarg(&t,e,&a,&x); gc(x)) print(out,x); return nil; }
+L f_println(L t,L *e) { f_print(t,e); fputc('\n',out); return nil; }
 
-/* section 12: adding readline with history */
-L f_load(L t,L *_) { L x = car(t); if (!in && T(x) == ATOM) in = fopen(A+ord(x),"r"); return x; }
+/* ++ new: atomize (stringify) x */
+L f_atomize(L t,L *e) {
+ I k; L s = nil,*p = &s;
+ for (; T(t) == CONS; t = CDR(t),p = &CDR(*p)) *p = cons(T(CAR(t)) == ATOM ? CAR(t) : eval(CAR(t),*e),nil);
+ if (T(t) != NIL) *p = t;
+ k = atomize(s,NULL);
+ if (hp+k+1 > lp<<3) err(4,nil);
+ atomize(s,A+hp);
+ gc(s);
+ return atom(A+hp);
+}
+
+/* ++ updated: read from file with optional pathname argument converted using atomize */
+L f_read(L t,L *e) {
+ L x; char c = see;
+ if (T(t) != NIL) {
+  x = f_atomize(t,e);
+  if (ld >= sizeof(in)/sizeof(*in) || !(in[ld++] = fopen(A+ord(x),"r"))) err(5,x);
+ }
+ see = ' '; x = Read(); see = c;
+ if (T(t) != NIL) fclose(in[--ld]);
+ return x;
+}
+
+/* section 12: adding readline with history ++ updated: support multiple loads and nested loads */
+L f_load(L t,L *e) {
+ I j,k = ld; L x,v;
+ for (; T(t) == CONS; t = CDR(t)) {
+  x = cons(dup(CAR(t)),nil),v = f_atomize(x,e);
+  gc(x);
+  if (ld >= sizeof(in)/sizeof(*in) || !(in[ld++] = fopen(A+ord(v),"r"))) err(5,v);
+ }
+ for (j = ld-1; j > k; --j,++k) { FILE *f = in[j]; in[j] = in[k]; in[k] = f; }
+ return v;
+}
 
 /* section 13: execution tracing */
 L f_trace(L t,L *_) { tr = not(t) ? !tr : (I)num(car(t)); return num(tr); }
@@ -414,6 +453,24 @@ L f_while(L t, L *e) {
   for (s = cdr(t); T(s) == CONS; s = CDR(s),gc(y),y = x) x = eval(CAR(s),*e);
  return x;
 }
+
+/* ++ new: write the output of print/ln of a sequence of expressions to a file, append if the filename starts with a '+' */
+L f_writeto(L t,L *e) {
+ L x = cons(dup(car(t)),nil),v = f_atomize(x,e); I i,k = *(A+ord(v)) == '+';
+ FILE *savedout = out;
+ jmp_buf savedjb;
+ memcpy(savedjb,jb,sizeof(jb));
+ gc(x);
+ if (!(out = fopen(A+ord(v)+k,k ? "a" : "w"))) err(5,v);
+ if ((i = setjmp(jb)) == 0) x = eval(f_progn(cdr(t),e),*e);
+ fclose(out);
+ out = savedout;
+ memcpy(jb,savedjb,sizeof(jb));
+ if (i) longjmp(jb,i);
+ return x;
+}
+
+L f_quit(L t,L *e) { I a = 0; L x; exit(isarg(&t,e,&a,&x) ? (int)num(x) : 0); }
 
 struct { const char *s; L (*f)(L,L*); short t; } prim[] = {
  {"eval",    f_eval,   0}, /* no longer tail recursive to implement gc */
@@ -455,12 +512,15 @@ struct { const char *s; L (*f)(L,L*); short t; } prim[] = {
  {"trace",   f_trace,  0},
  {"progn",   f_progn,  1},
  {"while",   f_while,  0},
+ {"atomize", f_atomize,0},
+ {"write-to",f_writeto,0},
+ {"quit",    f_quit,   0},
  {0}};
 
 /* section 13: tracing (trace 1) with colorful output, to wait on ENTER (trace 2), with memory dump (trace 3) */
 void trace(L y,L x,L e) {
- if (tr > 2 && !equ(e,env)) { printf("\n\e[35mENV: \e[33m"); print(e); printf("\e[m"); }
- printf("\n\e[32m%u \e[33m",lp); print(y); printf("\e[36m => \e[33m"); print(x); printf("\e[m\t");
+ if (tr > 2 && !equ(e,env)) { printf("\n\e[35mENV: \e[33m"); print(stdout,e); printf("\e[m"); }
+ printf("\n\e[32m%u \e[33m",lp); print(stdout,y); printf("\e[36m => \e[33m"); print(stdout,x); printf("\e[m\t");
  if (tr > 1) while (getchar() >= ' ') continue;
 }
 
@@ -522,18 +582,18 @@ L eval(L x,L e) {
 
 /* section 12: adding readline with history */
 void look() {
- if (in) {
-  int c = getc(in);
-  see = c;
+ while (ld) {
+  int c;
+  if (!in[--ld]) err(5,nil);
+  see = c = getc(in[ld++]);
   if (c != EOF) return;
-  fclose(in);
-  in = NULL;
+  fclose(in[--ld]);
  }
  if (see == '\n') {
   if (line) { ptr = line; line = NULL; free(ptr); }
   while (!(ptr = line = readline(ps))) freopen("/dev/tty","r",stdin);
   add_history(line);
-  strcpy(ps,"? ");
+  snprintf(ps,sizeof(ps),PS2);
  }
  if (!(see = *ptr++)) see = '\n';
 }
@@ -546,7 +606,7 @@ char scan() {
  while (seeing(' ') || seeing(';')) if (get() == ';') while (!seeing('\n')) get();
  if (seeing('(') || seeing(')') || seeing('\'') || seeing('`') || seeing(',')) buf[i++] = get();
  else if (seeing('"')) do buf[i++] = get(); while (i < sizeof(buf)-1 && (!seeing('"') || !get()));
- else do buf[i++] = get(); while (i < 39 && !seeing('(') && !seeing(')') && !seeing(' '));
+ else do buf[i++] = get(); while (i < sizeof(buf)-1 && !seeing('(') && !seeing(')') && !seeing(' '));
  return buf[i] = 0,*buf;
 }
 L Read() { return scan(),parse(); }
@@ -563,6 +623,7 @@ L tick() {
  L t,*p;
  if (*buf == ',') return Read();
  if (*buf == '\'') return scan(),cons(atom("list"),cons(cons(atom("quote"),cons(atom("quote"),nil)),cons(tick(),nil)));
+ if (*buf == '"') return parse();
  if (*buf != '(') return cons(atom("quote"),cons(parse(),nil));
  for (t = cons(atom("list"),nil),p = &t; ; p = &CDR(*p),*p = cons(tick(),nil)) {
   if (scan() == ')') return t;
@@ -579,28 +640,49 @@ L parse() {
 }
 
 /* section 8: printing Lisp expressions */
-void printlist(L t) {
- putchar('(');
+void printlist(FILE *f,L t) {
+ fputc('(',f);
  while (1) {
-  print(CAR(t));
+  print(f,CAR(t));
   if (not(t = CDR(t))) break;
-  if (T(t) != CONS) { printf(" . "); print(t); break; }
-  putchar(' ');
+  if (T(t) != CONS) { fprintf(f," . "); print(f,t); break; }
+  fputc(' ',f);
  }
- putchar(')');
+ fputc(')',f);
 }
-void print(L x) {
- if (T(x) == NIL) printf("()");
- else if (T(x) == ATOM) printf("%s",A+ord(x));
- else if (T(x) == PRIM) printf("<%s>",prim[ord(x)].s);
- else if (T(x) == CONS) printlist(x);
- else if (T(x) == CLOS) printf("{%u}",ord(x));
- else if (T(x) == MACR) printf("[%u]",ord(x));
- else printf("%.10lg",x);
+void print(FILE *f,L x) {
+ if (T(x) == NIL) fprintf(f,"()");
+ else if (T(x) == ATOM) fprintf(f,"%s",A+ord(x));
+ else if (T(x) == PRIM) fprintf(f,"<%s>",prim[ord(x)].s);
+ else if (T(x) == CONS) printlist(f,x);
+ else if (T(x) == CLOS) fprintf(f,"{%u}",ord(x));
+ else if (T(x) == MACR) fprintf(f,"[%u]",ord(x));
+ else fprintf(f,"%.10lg",x);
+}
+
+/* ++ new: atomize (stringify) x to buffer a when not NULL, must be large enough to hold the string, return string length */
+I atomize(L x,char *a) {
+ if (T(x) == CONS) {
+  I i,k = 0;
+  for (; T(x) == CONS; x = CDR(x)) {
+   k += i = atomize(CAR(x),a);
+   if (a) a += i;
+  }
+  if (T(x) != NIL) {
+   k += i = atomize(x,a);
+   if (a) a += i;
+  }
+  return k;
+ }
+ if (T(x) == NIL) strcpy(buf," ");
+ else if (T(x) == ATOM) strcpy(buf,A+ord(x));
+ else snprintf(buf,sizeof(buf),"%.10lg",x);
+ if (a) strcpy(a,buf);
+ return strlen(buf);
 }
 
 /* section 14: error handling and exceptions */
-void stop(int i) { if (line) err(5,nil); else abort(); }
+void stop(int i) { if (line) err(6,nil); else abort(); }
 
 /* section 10: read-eval-print loop (REPL) with additions */
 int main(int argc,char **argv) {
@@ -608,9 +690,19 @@ int main(int argc,char **argv) {
  sweep(); /* sweep all cells to the free list (since all ref[] are zero and xb = xp = NULL) */
  nil = box(NIL,0); atom("ERR"); tru = atom("#t"); env = pair(tru,tru,nil);
  for (i = 0; prim[i].s; ++i) env = pair(atom(prim[i].s),box(PRIM,i),env);
- in = fopen((argc > 1 ? argv[1] : "common.lisp"),"r");
+ in[ld++] = fopen((argc > 1 ? argv[1] : "common.lisp"),"r");
  using_history();
- if ((i = setjmp(jb)) > 0) printf("ERR %u",i);
  signal(SIGINT,stop);
- while (1) { L x; rebuild(); putchar('\n'); snprintf(ps,20,"%u>",2*fn-hp/8); print(gc(eval(x = Read(),env))); gc(x); }
+ if ((i = setjmp(jb)) > 0) {
+  while (ld) if (in[--ld]) fclose(in[ld]);
+  printf("ERR %u",i);
+ }
+ out = stdout;
+ while (1) {
+  L x;
+  rebuild();
+  putchar('\n'); snprintf(ps,sizeof(ps),PS1,2*fn-hp/8);
+  print(out,gc(eval(x = Read(),env)));
+  gc(x);
+ }
 }

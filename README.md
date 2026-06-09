@@ -27,7 +27,7 @@ Lisp in 99 lines is written in a Lisp-like functional style of structured C, lin
 - [list.lisp](src/list.lisp) list functions library, requires common.lisp definitions
 - [math.lisp](src/math.lisp) some Lisp math functions
 
-See also [tinylisp with reference counting garbage collector](GC/README.md) (tested, beta version subject to change)
+See also a more complete [tinylisp with reference counting garbage collector](GC/README.md) (tested, beta version subject to change)
 
 TL;DR: the article's additions and optimizations fully implemented with comments, including section references:
 

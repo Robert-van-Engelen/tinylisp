@@ -19,12 +19,17 @@
   - compile with `cc -O2 -o tinylisp tinylisp-opt-gc.c`
 
 - [tinylisp-extras-gc.c](tinylisp-extras-gc.c)
+  - the most complete tinylisp version
   - based on tinylisp-extras.c that includes all of the article's extras (+182 lines of C)
   - adds reference count garbage collection to continuously release unused memory cells
   - collects unused cyclic lists created by `letrec` and `letrec*` recursive local functions
   - cleans up `catch`-`throw` exceptions in Lisp using a temporary stack when `catch` is used
   - performs a mark-sweep cleanup when returning to the REPL
   - includes a memory debugger, compile with `-DDEBUG` or `-DDEBUG=2` (verbose) to enable
+  - new primitive [`atomize`](atomize.lisp) (convert expressions to atom) (+35 lines of C)
+  - new primitive `write-to` (redirect print/ln to a file) (+16 lines of C)
+  - upgrades `read` to take an optional pathname to read a Lisp expression from a file (+12 lines of C)
+  - upgrades `load` to load multiple files and permit nesting up to 10 levels deep (+11 lines of C)
   - the source code is commented to explain the code
   - passes `tests/dotcall-extras.lisp` tests and runs 8-queens `nqueens.lisp`
   - optimized internal logic with unchecked CAR and CDR when safe to use
