@@ -89,7 +89,7 @@
     (let*
         (a 0)
         (b 1)
-        (s '(1))
+        (s (list 1))
         (t s)
         (progn
             (while
@@ -101,3 +101,21 @@
 ; the first 100 Fibonacci numbers
 (fibo 100)
 
+; Macros such as (when ...) and (unless ...) defined below are expanded at
+; runtime when used in a function body, so they incur overhead.  But defun and
+; defmacro are macros that expand to a definition that is added to the
+; environment, which incurs no overhead.
+
+; (when <test> <expr1> <expr2> ... <exprn>) -- if <test> is true (i.e. not ()) then evaluate all <expr>
+(defmacro when (x . args) `(if ,x (progn . ,args) ()))
+
+; (unless <test> <expr1> <expr2> ... <exprn>) -- if <test> is false (i.e. ()) then evaluate all <expr>
+(defmacro unless (x . args) `(if ,x () (progn . ,args)))
+
+; we can reveal the source of a function definition by retrieving its Lisp expression
+
+; display the definition of a function as a lambda expression (must be a closure)
+(defun de-fun (f) (cons 'lambda (cons (car (car f)) (cons (cdr (car f)) ()))))
+
+; display the fibo function as a lambda expression
+(de-fun fibo)
