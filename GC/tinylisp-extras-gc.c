@@ -322,18 +322,25 @@ L f_and(L t,L *e) { I a = 0; L x = tru,y = nil; while (isarg(&t,e,&a,&x)) { gc(y
 L f_not(L t,L *e) { I a = 0; return not(gc(evarg(&t,e,&a))) ? tru : nil; }
 L f_cond(L t,L *e) { while (not(gc(eval(car(car(t)),*e)))) t = cdr(t); return car(cdr(car(t))); }
 L f_if(L t,L *e) { return car(cdr(not(gc(eval(car(t),*e))) ? cdr(t) : t)); }
-L f_leta(L t,L *e) { for (; let(t); t = CDR(t)) *e = pair(car(CAR(t)),eval(car(cdr(CAR(t))),*e),*e); return car(t); }
+L f_leta(L t,L *e) {
+ for (; let(t); t = CDR(t))
+  if (T(CAR(t)) == CONS && T(CAR(CAR(t))) == ATOM) *e = pair(CAR(CAR(t)),eval(car(CDR(CAR(t))),*e),*e);
+  else err(2,CAR(t));                           /* bound variable must be an atom, to prevent GC issues when they're not */
+ return car(t);
+}
 L f_lambda(L t,L *e) { return closure(dup(car(t)),dup(car(cdr(t))),equ(*e,env) ? nil : dup(*e)); }
 
 /* redefine f_define to garbage collect unreachable definitions when redefined */
 L f_define(L t,L *e) {
- L d = *e,v = car(t),x = eval(car(cdr(t)),d);
+ L d = *e,v = car(t),x;
+ if (T(v) != ATOM) return err(2,v);             /* bound variable must be an atom, to prevent GC issues when they're not */
+ x = eval(car(cdr(t)),d);
  while (T(d) == CONS && !equ(v,car(CAR(d)))) d = CDR(d);
  if (T(d) != CONS) env = pair(v,x,env);
  else {
   gc(CDR(CAR(d)));
   CDR(CAR(d)) = x;
-  printf("redefined symbol ");
+  printf("redefined ");
  }
  return v;
 }
@@ -343,24 +350,29 @@ L f_assoc(L t,L *e) { I a = 0; L d,x,v = gc(evarg(&t,e,&a)); rc(&d,evarg(&t,e,&a
 L f_env(L _,L *e) { return dup(*e); }
 L f_let(L t,L *e) {
  L d = *e;
- for (; let(t); t = CDR(t)) *e = pair(car(CAR(t)),eval(car(cdr(CAR(t))),d),*e);
+ for (; let(t); t = CDR(t))
+  if (T(CAR(t)) == CONS && T(CAR(CAR(t))) == ATOM) *e = pair(CAR(CAR(t)),eval(car(CDR(CAR(t))),d),*e);
+  else err(2,CAR(t));                           /* bound variable must be an atom, to prevent GC issues when they're not */
  return car(t);
 }
 L f_letreca(L t,L *e) {
  I i,k;
  for (; let(t); t = CDR(t)) {
-  *e = pair(car(CAR(t)),nil,*e);
+  if (T(CAR(t)) == CONS && T(CAR(CAR(t))) == ATOM) *e = pair(CAR(CAR(t)),nil,*e);
+  else err(2,CAR(t));                           /* bound variable must be an atom, to prevent GC issues when they're not */
   k = ref[(i = ord(*e))/2];
-  CDR(CAR(*e)) = eval(car(cdr(CAR(t))),*e);
+  CDR(CAR(*e)) = eval(car(CDR(CAR(t))),*e);
   if (ref[i/2] > k) scc(*e,i);                  /* use of *e detected in a CLOS: mark strongly connected component */
  }
  return car(t);
 }
 L f_letrec(L t,L *e) {
  I i,k;L s,d,*p;
- for (s = t,d = *e,p = &d; let(s); s = CDR(s),p = &CDR(*p)) *p = pair(car(CAR(s)),nil,*e);
+ for (s = t,d = *e,p = &d; let(s); s = CDR(s),p = &CDR(*p))
+  if (T(CAR(s)) == CONS && T(CAR(CAR(s))) == ATOM) *p = pair(CAR(CAR(s)),nil,*e);
+  else err(2,CAR(s));                           /* bound variable must be an atom, to prevent GC issues when they're not */
  k = ref[ord(d)/2];
- for (*e = d; let(t); t = CDR(t),i = ord(d),d = CDR(d)) CDR(CAR(d)) = eval(car(cdr(CAR(t))),*e);
+ for (*e = d; let(t); t = CDR(t),i = ord(d),d = CDR(d)) CDR(CAR(d)) = eval(car(CDR(CAR(t))),*e);
  if (ref[ord(*e)/2] > k) scc(*e,i);             /* use of *e detected in a CLOS: mark strongly connected component */
  return car(t);
 }
@@ -553,7 +565,7 @@ L eval(L x,L e) {
    if (T(v) == ATOM) d = pair(v,dup(x),d);
    /* expand macro f, then continue evaluating the expanded x */
    x = eval(CDR(f),d);
-   /* garbage collect bindings d, gabage collect g = old f and old macro body h, save macro body h = x to gc later */
+   /* garbage collect bindings d, garbage collect g = old f and old macro body h, save macro body h = x to gc later */
    gc(d); d = nil; gc(g); g = nil; gc(h); h = x;
    continue;
   }
