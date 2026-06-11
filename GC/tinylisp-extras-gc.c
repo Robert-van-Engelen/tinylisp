@@ -313,8 +313,14 @@ L f_add(L t,L *e) { I a = 0; L x,n = gc(evarg(&t,e,&a)); while (isarg(&t,e,&a,&x
 L f_sub(L t,L *e) { I a = 0; L x,n = gc(evarg(&t,e,&a)); while (isarg(&t,e,&a,&x)) n -= gc(x); return num(n); }
 L f_mul(L t,L *e) { I a = 0; L x,n = gc(evarg(&t,e,&a)); while (isarg(&t,e,&a,&x)) n *= gc(x); return num(n); }
 L f_div(L t,L *e) { I a = 0; L x,n = gc(evarg(&t,e,&a)); while (isarg(&t,e,&a,&x)) n /= gc(x); return num(n); }
-L f_int(L t,L *e) { I a = 0; L n = gc(evarg(&t,e,&a)); return n < 1e16 && n > -1e16 ? (long long)n : n; }
-L f_lt(L t,L *e) { I a = 0; L n = gc(evarg(&t,e,&a)); return n - gc(evarg(&t,e,&a)) < 0 ? tru : nil; }
+L f_int(L t,L *e) { I a = 0; L n = gc(evarg(&t,e,&a)); return n < 1e16 && n > -1e16 ? (long long)n : num(n); }
+/* compare two values of any type, not only compare numbers (make it a total ordering) */
+L f_lt(L t,L *e) {
+ I a = 0; L x = gc(evarg(&t,e,&a)),y = gc(evarg(&t,e,&a));
+ return (T(x) == ATOM && T(y) == ATOM ? strcmp(A+ord(x),A+ord(y)) < 0 :
+  x == x && y == y ? x < y :                    /* x == x is false when x is NaN i.e. a tagged Lisp expression */
+  *(int64_t*)&x < *(int64_t*)&y) ? tru : nil;
+}
 L f_eq(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return equ(x,gc(evarg(&t,e,&a))) ? tru : nil; }
 L f_pair(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return T(x) == CONS ? tru : nil; }
 L f_or(L t,L *e) { I a = 0; L x = nil; while (isarg(&t,e,&a,&x) && not(x)) continue; return x; }
@@ -329,11 +335,10 @@ L f_leta(L t,L *e) {
  return car(t);
 }
 L f_lambda(L t,L *e) { return closure(dup(car(t)),dup(car(cdr(t))),equ(*e,env) ? nil : dup(*e)); }
-
-/* redefine f_define to garbage collect unreachable definitions when redefined */
+/* defining a global symbol garbage-collects unreachable definitions when redefined */
 L f_define(L t,L *e) {
  L d = *e,v = car(t),x;
- if (T(v) != ATOM) return err(2,v);             /* bound variable must be an atom, to prevent GC issues when they're not */
+ if (T(v) != ATOM) return err(2,v);             /* bound variable must be an atom, to prevent GC issues when not an atom */
  x = eval(car(cdr(t)),d);
  while (T(d) == CONS && !equ(v,car(CAR(d)))) d = CDR(d);
  if (T(d) != CONS) env = pair(v,x,env);
