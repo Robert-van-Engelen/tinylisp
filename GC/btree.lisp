@@ -125,5 +125,10 @@
 ; delete all nodes of the tree by extracting the keys then map bt-del on each key
 (map (lambda (key) (bt-del btree key)) (map car (bt->env btree)))
 
+(env->bt btree (list '(d . 4) '(b . 2) '(a . 1) '(c . 3) '(f . 6) '(e . 5) '(g . 7)))
+
+; get a list of all (key . val) pairs
+(bt->env btree)
+
 ; use setq to empty a binary tree
 (setq btree (bt-new))
