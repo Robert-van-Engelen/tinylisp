@@ -119,3 +119,19 @@
 
 ; display the fibo function as a lambda expression
 (de-fun fibo)
+
+; define a macro that expands into n copies of print statements
+(defmacro multi-print (n . args)
+    `(if ,(< 0 n)
+         (progn
+             (print . ,args)
+             (multi-print ,(- n 1) . ,args))
+         ()))
+
+; expand 10 print statements each with a distinct number from 1 to 10 to print with a space
+(defun countup ()
+    (let* (k 0)
+        (multi-print 10 (setq k (+ k 1)) " ")))
+
+; try it out
+(countup)
