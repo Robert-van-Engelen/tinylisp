@@ -78,7 +78,7 @@ L atom(const char *s) {
  return i == hp && ((hp += strlen(s)+1) > lp<<3 || !strcpy(A+i,s)) ? err(4,nil) : box(ATOM,i);
 }
 
-/* section 12: adding readline with history ++ new: support nested load and file open err 5 */
+/* section 12: adding readline with history ++ new: support nested load, new err 5 can't open file */
 #include <readline/readline.h>
 #include <readline/history.h>
 FILE *in[10],*out;
@@ -331,7 +331,7 @@ L f_if(L t,L *e) { return car(cdr(not(gc(eval(car(t),*e))) ? cdr(t) : t)); }
 L f_leta(L t,L *e) {
  for (; let(t); t = CDR(t))
   if (T(CAR(t)) == CONS && T(CAR(CAR(t))) == ATOM) *e = pair(CAR(CAR(t)),eval(car(CDR(CAR(t))),*e),*e);
-  else err(2,CAR(t));                           /* bound variable must be an atom, to prevent GC issues when they're not */
+  else err(2,CAR(t));                           /* bound variable must be an atom, to prevent GC issues when not an atom */
  return car(t);
 }
 L f_lambda(L t,L *e) { return closure(dup(car(t)),dup(car(cdr(t))),equ(*e,env) ? nil : dup(*e)); }
@@ -357,14 +357,14 @@ L f_let(L t,L *e) {
  L d = *e;
  for (; let(t); t = CDR(t))
   if (T(CAR(t)) == CONS && T(CAR(CAR(t))) == ATOM) *e = pair(CAR(CAR(t)),eval(car(CDR(CAR(t))),d),*e);
-  else err(2,CAR(t));                           /* bound variable must be an atom, to prevent GC issues when they're not */
+  else err(2,CAR(t));                           /* bound variable must be an atom, to prevent GC issues when not an atom */
  return car(t);
 }
 L f_letreca(L t,L *e) {
  I i,k;
  for (; let(t); t = CDR(t)) {
   if (T(CAR(t)) == CONS && T(CAR(CAR(t))) == ATOM) *e = pair(CAR(CAR(t)),nil,*e);
-  else err(2,CAR(t));                           /* bound variable must be an atom, to prevent GC issues when they're not */
+  else err(2,CAR(t));                           /* bound variable must be an atom, to prevent GC issues when not an atom */
   k = ref[(i = ord(*e))/2];
   CDR(CAR(*e)) = eval(car(CDR(CAR(t))),*e);
   if (ref[i/2] > k) scc(*e,i);                  /* use of *e detected in a CLOS: mark strongly connected component */
@@ -375,7 +375,7 @@ L f_letrec(L t,L *e) {
  I i,k;L s,d,*p;
  for (s = t,d = *e,p = &d; let(s); s = CDR(s),p = &CDR(*p))
   if (T(CAR(s)) == CONS && T(CAR(CAR(s))) == ATOM) *p = pair(CAR(CAR(s)),nil,*e);
-  else err(2,CAR(s));                           /* bound variable must be an atom, to prevent GC issues when they're not */
+  else err(2,CAR(s));                           /* bound variable must be an atom, to prevent GC issues when not an atom */
  k = ref[ord(d)/2];
  for (*e = d; let(t); t = CDR(t),i = ord(d),d = CDR(d)) CDR(CAR(d)) = eval(car(CDR(CAR(t))),*e);
  if (ref[ord(*e)/2] > k) scc(*e,i);             /* use of *e detected in a CLOS: mark strongly connected component */
@@ -408,14 +408,15 @@ L f_println(L t,L *e) { f_print(t,e); fputc('\n',out); return nil; }
 
 /* ++ new: atomize (stringify) x */
 L f_atomize(L t,L *e) {
- I k; L s = nil,*p = &s;
+ I k; L s,*p = &s;
+ rc(&s,nil);                                    /* register s to garbage collect when an error is caught by f_catch */
  for (; T(t) == CONS; t = CDR(t),p = &CDR(*p)) *p = cons(T(CAR(t)) == ATOM ? CAR(t) : eval(CAR(t),*e),nil);
  if (T(t) != NIL) *p = t;
- k = atomize(s,NULL);
- if (hp+k+1 > lp<<3) err(4,nil);
- atomize(s,A+hp);
- gc(s);
- return atom(A+hp);
+ k = atomize(s,NULL);                           /* the atom string length k, to hold atomized list of arguments */
+ if (hp+k+1 > lp<<3) err(4,nil);                /* ERR 4 if the heap space is not large enough */
+ atomize(s,A+hp);                               /* store the atomized arguments temporarily on the heap to copy */
+ rg(s);                                         /* deregister s and garbage collect it */
+ return atom(A+hp);                             /* store the atomized arguments permanently on the heap as an atom */
 }
 
 /* ++ updated: read from file with optional pathname argument converted using atomize */
@@ -433,11 +434,13 @@ L f_read(L t,L *e) {
 /* section 12: adding readline with history ++ updated: support multiple loads and nested loads */
 L f_load(L t,L *e) {
  I j,k = ld; L x,v;
+ rc(&x,nil);                                    /* register x to garbage collect when an error is caught by f_catch */
  for (; T(t) == CONS; t = CDR(t)) {
   x = cons(dup(CAR(t)),nil),v = f_atomize(x,e);
-  gc(x);
+  gc(x);                                        /* garbage collect list x we atomized as v */
   if (ld >= sizeof(in)/sizeof(*in) || !(in[ld++] = fopen(A+ord(v),"r"))) err(5,v);
  }
+ rr(1);                                         /* deregister x */
  for (j = ld-1; j > k; --j,++k) { FILE *f = in[j]; in[j] = in[k]; in[k] = f; }
  return v;
 }
@@ -447,14 +450,14 @@ L f_trace(L t,L *_) { tr = not(t) ? !tr : (I)num(car(t)); return num(tr); }
 
 /* section 14: error handling and exceptions */
 L f_catch(L t,L *e) {
- I i; L x,**saved[2] = {xb,xp};                         /* save old xb and xp exception stack pointers */
+ I i; L x,**saved[2] = {xb,xp};                 /* save old xb and xp exception stack pointers */
  jmp_buf savedjb;
  memcpy(savedjb,jb,sizeof(jb));
- if (!xp) xp = xstk;                                    /* set exception stack pointer xp if not set */
- xb = xp;                                               /* set base stack pointer xb for evals after f_catch */
+ if (!xp) xp = xstk;                            /* set exception stack pointer xp if not set */
+ xb = xp;                                       /* set base stack pointer xb for evals after f_catch */
  if ((i = setjmp(jb)) == 0) x = eval(car(t),*e);
  memcpy(jb,savedjb,sizeof(jb));
- xb = saved[0]; xp = saved[1];                          /* restore xb and xp exception stack pointers */
+ xb = saved[0]; xp = saved[1];                  /* restore xb and xp exception stack pointers */
  return i == 0 ? x : i == 4 ? err(4,nil) : cons(atom("ERR"),i);
 }
 L f_throw(L t,L *_) { return err(num(car(t)),nil); }
@@ -465,27 +468,32 @@ L f_progn(L t,L *e) {
  return car(t);
 }
 L f_while(L t, L *e) {
- L s,x = nil,y = nil;
+ L s,x,y;
+ rc(&y,nil);                                    /* register x to garbage collect when an error is caught by f_catch */
  while (!not(gc(eval(car(t),*e))))
   for (s = cdr(t); T(s) == CONS; s = CDR(s),gc(y),y = x) x = eval(CAR(s),*e);
+ rr(1);                                         /* deregister x */
  return x;
 }
 
 /* ++ new: write the output of print/ln of a sequence of expressions to a file, append if the filename starts with a '+' */
 L f_writeto(L t,L *e) {
  L x = cons(dup(car(t)),nil),v = f_atomize(x,e); I i,k = *(A+ord(v)) == '+';
- FILE *savedout = out;
- jmp_buf savedjb;
+ FILE *savedout = out;                          /* save old out */
+ jmp_buf savedjb;                               /* save old jmp buf */
  memcpy(savedjb,jb,sizeof(jb));
- gc(x);
- if (!(out = fopen(A+ord(v)+k,k ? "a" : "w"))) err(5,v);
- if ((i = setjmp(jb)) == 0) x = eval(f_progn(cdr(t),e),*e);
- fclose(out);
- out = savedout;
- memcpy(jb,savedjb,sizeof(jb));
- if (i) longjmp(jb,i);
+ gc(x);                                         /* garbage collect list x we atomized as v */
+ if (!(out = fopen(A+ord(v)+k,k ? "a" : "w"))) err(5,v);        /* open file for writing or apending as new out */
+ if ((i = setjmp(jb)) == 0) x = eval(f_progn(cdr(t),e),*e);     /* catch error in eval of progn of the rest of args */
+ fclose(out);                                   /* close out */
+ out = savedout;                                /* restore old out */
+ memcpy(jb,savedjb,sizeof(jb));                 /* restore old jmp buf */
+ if (i) { gc(x); longjmp(jb,i); }               /* re-throw error after garbage collecting x */
  return x;
 }
+
+/* ++ new: the type of an expression, 0 = number, 1 = atom, 2 = primitive, 3 = pair, 4 = closure, 5 = macro, 6 = nil */
+L f_type(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return (T(x) & ATOM) >= ATOM ? (T(x)) - ATOM + 1 : 0; }
 
 L f_quit(L t,L *e) { I a = 0; L x; exit(isarg(&t,e,&a,&x) ? (int)num(x) : 0); }
 
@@ -531,6 +539,7 @@ struct { const char *s; L (*f)(L,L*); short t; } prim[] = {
  {"while",   f_while,  0},
  {"atomize", f_atomize,0},
  {"write-to",f_writeto,0},
+ {"type",    f_type,   0},
  {"quit",    f_quit,   0},
  {0}};
 
