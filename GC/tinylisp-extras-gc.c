@@ -567,8 +567,8 @@ L eval(L x,L e) {
   if (T(f) == PRIM) {
    /* apply Lisp primitive to argument list x, return value in x */
    x = prim[ord(f)].f(x,&e);
-   /* garbage collect g = old f, garbage collect old macro body h */
-   gc(g); g = nil; gc(h); h = nil;
+   /* garbage collect g = old f */
+   gc(g); g = nil;
    /* if tail-call then continue evaluating x, otherwise return x */
    if (prim[ord(f)].t) continue;
    break;
