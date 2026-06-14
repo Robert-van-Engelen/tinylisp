@@ -432,14 +432,13 @@ L f_read(L t,L *e) {
 
 /* section 12: adding readline with history ++ updated: support multiple loads and nested loads */
 L f_load(L t,L *e) {
- I j,k = ld; L x,v = nil;
- rc(&x,nil);                                    /* register x to garbage collect when an error is caught by f_catch */
- for (; T(t) == CONS; t = CDR(t)) {
-  v = f_atomize(x = cons(dup(CAR(t)),nil),e);
+ I j,k = ld; L s,v = nil;
+ while (T(t) == CONS) {
+  s = CDR(t); CDR(t) = nil;                     /* temporarily set cdr(t) to nil */
+  v = f_atomize(t,e);                           /* atomize one argument */
+  t = CDR(t) = s;                               /* restore cdr(t) and visit next argument */
   if (ld >= sizeof(in)/sizeof(*in) || !(in[ld++] = fopen(A+ord(v),"r"))) err(5,v);
-  gc(x);                                        /* garbage collect list x we atomized as v */
  }
- rr(1);                                         /* deregister x */
  for (j = ld-1; j > k; --j,++k) { FILE *f = in[j]; in[j] = in[k]; in[k] = f; }  /* reverse the in[] additions */
  return v;
 }
@@ -466,7 +465,7 @@ L f_progn(L t,L *e) {
  for (; let(t); t = CDR(t)) gc(eval(CAR(t),*e));
  return car(t);
 }
-L f_while(L t, L *e) {
+L f_while(L t,L *e) {
  L s,x = nil,y;
  rc(&y,nil);                                    /* register y to garbage collect when an error is caught by f_catch */
  while (!not(gc(eval(car(t),*e))))

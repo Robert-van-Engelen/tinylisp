@@ -210,7 +210,7 @@ L f_progn(L t,L *e) {
  for (; let(t); t = cdr(t)) eval(car(t),*e);
  return car(t);
 }
-L f_while(L t, L *e) {
+L f_while(L t,L *e) {
  L s,x = nil;
  while (!not(eval(car(t),*e)))
   for (s = cdr(t); T(s) == CONS; s = cdr(s)) x = eval(car(s),*e);
