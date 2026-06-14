@@ -22,9 +22,6 @@
 #define I unsigned
 #define L double
 
-/* T(x) returns the tag bits of a NaN-boxed Lisp expression x */
-#define T(x) *(unsigned long long*)&x >> 48
-
 /* address of the atom heap is at the bottom of the cell stack */
 #define A (char*)cell
 
@@ -46,26 +43,40 @@ L cell[N];
 L nil, tru, err, env;
 
 /* NaN-boxing specific functions:
+   T(x):     returns the tag bits of a NaN-boxed double x
    box(t,i): returns a new NaN-boxed double with tag t and ordinal i
    ord(x):   returns the ordinal of the NaN-boxed double x
    num(n):   convert or check number n (does nothing, e.g. could check for NaN)
    equ(x,y): returns nonzero if x equals y */
-L box(I t, I i) {
-  L x;
-  *(unsigned long long*)&x = (unsigned long long)t << 48 | i;
-  return x;
+
+/* using old-style pointer casting (does not obey strict aliasing rules in modern C):
+   #define T(x) *(unsigned long long*)&x>>48
+   L box(I t,I i) { L x; *(unsigned long long*)&x = (unsigned long long)t<<48|i; return x; }
+   I ord(L x) { return *(unsigned long long*)&x; }
+   I equ(L x,L y) { return *(unsigned long long*)&x == *(unsigned long long*)&y; } */
+
+I T(L x) {
+  union { L x; unsigned long long i; } u = {x};
+  return u.i >> 48;
+}
+
+L box(I t,I i) {
+  union { unsigned long long i; L x; } u = {(unsigned long long)t << 48 | i};
+  return u.x;
 }
 
 I ord(L x) {
-  return *(unsigned long long*)&x;      /* the return value is narrowed to 32 bit unsigned integer to remove the tag */
+  union { L x; unsigned long long i; } u = {x};
+  return u.i;                           /* the return value is narrowed to 32 bit unsigned integer to remove the tag */
 }
 
 L num(L n) {
   return n;
 }
 
-I equ(L x, L y) {
-  return *(unsigned long long*)&x == *(unsigned long long*)&y;
+I equ(L x,L y) {
+  union { L x; unsigned long long i; } u = {x}, v = {y};
+  return u.i == v.i;
 }
 
 /* interning of atom names (Lisp symbols), returns a unique NaN-boxed ATOM */

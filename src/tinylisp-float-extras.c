@@ -23,9 +23,6 @@
 #define I uint32_t
 #define L float
 
-/* T(x) returns the tag bits of a NaN-boxed Lisp expression x */
-#define T(x) *(uint32_t*)&x>>20
-
 /* address of the atom heap is at the bottom of the cell stack */
 #define A (char*)cell
 
@@ -59,14 +56,16 @@ L cell[N];
 /* Lisp constant expressions () (nil), #t, and the global environment env */
 L nil,tru,env;
 /* NaN-boxing specific functions:
-   box(t,i): returns a new NaN-boxed double with tag t and ordinal i
-   ord(x):   returns the ordinal of the NaN-boxed double x
+   T(x):     returns the tag bits of a NaN-boxed float x
+   box(t,i): returns a new NaN-boxed float with tag t and ordinal i
+   ord(x):   returns the ordinal of the NaN-boxed float x
    num(n):   convert or check number n (does nothing, e.g. could check for NaN)
    equ(x,y): returns nonzero if x equals y */
-L box(I t,I i) { L x; *(uint32_t*)&x = (uint32_t)t<<20|i; return x; }
-I ord(L x) { return *(uint32_t*)&x & 0xfffff; }
+I T(L x) { union { L x; I i; } u = {x}; return u.i>>20; }
+L box(I t,I i) { union { I i; L x; } u = {(I)t<<20|i}; return u.x; }
+I ord(L x) { union { L x; I i; } u = {x}; return u.i&0xfffff; }
 L num(L n) { return n; }
-I equ(L x,L y) { return *(uint32_t*)&x == *(uint32_t*)&y; }
+I equ(L x,L y) { union { L x; I i; } u = {x},v = {y}; return u.i == v.i; }
 /* interning of atom names (Lisp symbols), returns a unique NaN-boxed ATOM */
 L atom(const char *s) {
  I i = 0; while (i < hp && strcmp(A+i,s)) i += strlen(A+i)+1;

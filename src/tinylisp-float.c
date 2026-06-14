@@ -4,15 +4,15 @@
 #include <string.h>
 #define I unsigned
 #define L float
-#define T(x) *(uint32_t*)&x>>20
 #define A (char*)cell
 #define N 1024 /* N should not exceed 262144 = 2^20/4 cells = 1048576 bytes */
 I hp=0,sp=N,ATOM=0x7fc,PRIM=0x7fd,CONS=0x7fe,CLOS=0x7ff,NIL=0xfff;
 L cell[N],nil,tru,err,env;
-L box(I t,I i) { L x; *(uint32_t*)&x = (uint32_t)t<<20|i; return x; }
-I ord(L x) { return *(uint32_t*)&x & 0xfffff; }
+I T(L x) { union { L x; I i; } u = {x}; return u.i>>20; }
+L box(I t,I i) { union { I i; L x; } u = {(I)t<<20|i}; return u.x; }
+I ord(L x) { union { L x; I i; } u = {x}; return u.i&0xfffff; }
 L num(L n) { return n; }
-I equ(L x,L y) { return *(uint32_t*)&x == *(uint32_t*)&y; }
+I equ(L x,L y) { union { L x; I i; } u = {x},v = {y}; return u.i == v.i; }
 L atom(const char *s) {
  I i = 0; while (i < hp && strcmp(A+i,s)) i += strlen(A+i)+1;
  if (i == hp && (hp += strlen(strcpy(A+i,s))+1) > sp<<2) abort();

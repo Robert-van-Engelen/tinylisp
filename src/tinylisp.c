@@ -4,15 +4,15 @@
 #include <string.h>
 #define I unsigned
 #define L double
-#define T(x) *(unsigned long long*)&x>>48
 #define A (char*)cell
 #define N 1024
 I hp=0,sp=N,ATOM=0x7ff8,PRIM=0x7ff9,CONS=0x7ffa,CLOS=0x7ffb,NIL=0x7ffc;
 L cell[N],nil,tru,err,env;
-L box(I t,I i) { L x; *(unsigned long long*)&x = (unsigned long long)t<<48|i; return x; }
-I ord(L x) { return *(unsigned long long*)&x; }
+I T(L x) { union { L x; unsigned long long i; } u = {x}; return u.i>>48; }
+L box(I t,I i) { union { unsigned long long i; L x; } u = {(unsigned long long)t<<48|i}; return u.x; }
+I ord(L x) { union { L x; unsigned long long i; } u = {x}; return u.i; }
 L num(L n) { return n; }
-I equ(L x,L y) { return *(unsigned long long*)&x == *(unsigned long long*)&y; }
+I equ(L x,L y) { union { L x; unsigned long long i; } u = {x},v = {y}; return u.i == v.i; }
 L atom(const char *s) {
  I i = 0; while (i < hp && strcmp(A+i,s)) i += strlen(A+i)+1;
  if (i == hp && (hp += strlen(strcpy(A+i,s))+1) > sp<<3) abort();
