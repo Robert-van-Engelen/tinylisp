@@ -190,7 +190,7 @@ L f_print(L t,L *e) { I a = 0; L x; while (isarg(&t,e,&a,&x)) print(x); return n
 L f_println(L t,L *e) { f_print(t,e); putchar('\n'); return nil; }
 
 /* section 12: adding readline with history */
-L f_load(L t,L *_) { L x = car(t); if (!in && T(x) == ATOM) in = fopen(A+ord(x),"r"); return x; }
+L f_load(L t,L *_) { L x = car(t); return !in && T(x) == ATOM && (in = fopen(A+ord(x),"r")) ? x : err(5,x); }
 
 /* section 13: execution tracing */
 L f_trace(L t,L *_) { tr = not(t) ? !tr : (I)num(car(t)); return num(tr); }
