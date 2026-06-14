@@ -8,7 +8,7 @@
 
 /* DEBUG: enable memory management activity logging (=1 enable, =2 include Lisp expression dumps) */
 #if DEBUG == 0
-# define LOG(x,...) 0
+# define LOG(x,...) (void)0
 #elif DEBUG == 1
 # define LOG(x,...) printf(__VA_ARGS__)
 #else
@@ -318,7 +318,7 @@ L f_lt(L t,L *e) {
  I a = 0; L x = gc(evarg(&t,e,&a)),y = gc(evarg(&t,e,&a));
  return (T(x) == ATOM && T(y) == ATOM ? strcmp(A+ord(x),A+ord(y)) < 0 :
   x == x && y == y ? x < y :                    /* x == x is false when x is NaN i.e. a tagged Lisp expression */
-  *(int64_t*)&x < *(int64_t*)&y) ? tru : nil;
+  T(x) < T(y) || (T(x) == T(y) && ord(x) < ord(y))) ? tru : nil;
 }
 L f_eq(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return equ(x,gc(evarg(&t,e,&a))) ? tru : nil; }
 L f_pair(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return T(x) == CONS ? tru : nil; }
@@ -375,7 +375,7 @@ L f_letrec(L t,L *e) {
  for (s = t,d = *e,p = &d; let(s); s = CDR(s),p = &CDR(*p))
   if (T(CAR(s)) == CONS && T(CAR(CAR(s))) == ATOM) *p = pair(CAR(CAR(s)),nil,*e);
   else err(2,CAR(s));                           /* bound variable must be an atom, to prevent GC issues when not an atom */
- k = ref[ord(d)/2];
+ k = ref[(i = ord(d))/2];
  for (*e = d; let(t); t = CDR(t),i = ord(d),d = CDR(d)) CDR(CAR(d)) = eval(car(CDR(CAR(t))),*e);
  if (ref[ord(*e)/2] > k) scc(*e,i);             /* use of *e detected in a CLOS: mark strongly connected component */
  return car(t);
@@ -432,7 +432,7 @@ L f_read(L t,L *e) {
 
 /* section 12: adding readline with history ++ updated: support multiple loads and nested loads */
 L f_load(L t,L *e) {
- I j,k = ld; L x,v;
+ I j,k = ld; L x,v = nil;
  rc(&x,nil);                                    /* register x to garbage collect when an error is caught by f_catch */
  for (; T(t) == CONS; t = CDR(t)) {
   x = cons(dup(CAR(t)),nil),v = f_atomize(x,e);
@@ -467,11 +467,11 @@ L f_progn(L t,L *e) {
  return car(t);
 }
 L f_while(L t, L *e) {
- L s,x,y;
- rc(&y,nil);                                    /* register x to garbage collect when an error is caught by f_catch */
+ L s,x = nil,y;
+ rc(&y,nil);                                    /* register y to garbage collect when an error is caught by f_catch */
  while (!not(gc(eval(car(t),*e))))
   for (s = cdr(t); T(s) == CONS; s = CDR(s),gc(y),y = x) x = eval(CAR(s),*e);
- rr(1);                                         /* deregister x */
+ rr(1);                                         /* deregister y */
  return x;
 }
 

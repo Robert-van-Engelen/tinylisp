@@ -293,7 +293,7 @@ void assign(L v,L x,L e) { while (!equ(v,car(car(e)))) e = cdr(e); cell[ord(car(
 
 /* section 16.2-5: tail-call optimization */
 L eval(L x,L e) {
- I a,s = sp; L f,v,d,y,g = nil,h;
+ I a,s = sp; L f,v,d,y,g = nil,h = nil;
  while (1) {
   /* copy x to y to output y => x when tracing is enabled */
   y = x;

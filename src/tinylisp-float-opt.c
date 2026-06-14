@@ -74,7 +74,7 @@ struct { const char *s; L (*f)(L,L*); short t; } prim[] = {
 {"lambda",f_lambda,0},{"define",f_define,0},{"pair?",f_pair,0},{0}};
 void assign(L v,L x,L e) { while (!equ(v,car(car(e)))) e = cdr(e); cell[ord(car(e))] = x; }
 L eval(L x,L e) {
- I a; L f,v,d,g = nil,h;
+ I a; L f,v,d,g = nil,h = nil;
  while (1) {
   if (T(x) == ATOM) return assoc(x,e);
   if (T(x) != CONS) return x;
