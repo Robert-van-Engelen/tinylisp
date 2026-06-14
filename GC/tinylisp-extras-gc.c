@@ -407,15 +407,15 @@ L f_println(L t,L *e) { f_print(t,e); fputc('\n',out); return nil; }
 
 /* ++ new: atomize (stringify) x */
 L f_atomize(L t,L *e) {
- I k; L s,*p = &s;
+ I i = hp,k; L s,*p = &s;
  rc(&s,nil);                                    /* register s to garbage collect when an error is caught by f_catch */
  for (; T(t) == CONS; t = CDR(t),p = &CDR(*p)) *p = cons(T(CAR(t)) == ATOM ? CAR(t) : eval(CAR(t),*e),nil);
  if (T(t) != NIL) *p = t;
  k = atomize(s,NULL);                           /* the atom string length k, to hold atomized list of arguments */
- if (hp+k+1 > lp<<3) err(4,nil);                /* ERR 4 if the heap space is not large enough */
- atomize(s,A+hp);                               /* store the atomized arguments temporarily on the heap to copy */
+ if ((hp += k+1) > lp<<3) err(4,nil);           /* ERR 4 if the heap space is not large enough */
+ atomize(s,A+i);                                /* store the atomized arguments on the heap */
  rg(s);                                         /* deregister s and garbage collect it */
- return atom(A+hp);                             /* store the atomized arguments permanently on the heap as an atom */
+ return box(ATOM,i);
 }
 
 /* ++ updated: read from file with optional pathname argument converted using atomize */
@@ -435,12 +435,12 @@ L f_load(L t,L *e) {
  I j,k = ld; L x,v = nil;
  rc(&x,nil);                                    /* register x to garbage collect when an error is caught by f_catch */
  for (; T(t) == CONS; t = CDR(t)) {
-  x = cons(dup(CAR(t)),nil),v = f_atomize(x,e);
-  gc(x);                                        /* garbage collect list x we atomized as v */
+  v = f_atomize(x = cons(dup(CAR(t)),nil),e);
   if (ld >= sizeof(in)/sizeof(*in) || !(in[ld++] = fopen(A+ord(v),"r"))) err(5,v);
+  gc(x);                                        /* garbage collect list x we atomized as v */
  }
  rr(1);                                         /* deregister x */
- for (j = ld-1; j > k; --j,++k) { FILE *f = in[j]; in[j] = in[k]; in[k] = f; }
+ for (j = ld-1; j > k; --j,++k) { FILE *f = in[j]; in[j] = in[k]; in[k] = f; }  /* reverse the in[] additions */
  return v;
 }
 

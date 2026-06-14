@@ -2,6 +2,7 @@
 
 ; atomization rules:
 ;   atomize atom        => atom
+;   atomize number      => atom with number in decimal text
 ;   atomize 'atom       => atom
 ;   atomize `atom       => atom
 ;   atomize "text"      => atom with given text that may contain spacing
