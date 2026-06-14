@@ -476,18 +476,18 @@ L f_while(L t,L *e) {
 
 /* ++ new: write the output of print/ln of a sequence of expressions to a file, append if the filename starts with a '+' */
 L f_writeto(L t,L *e) {
- L x = cons(dup(car(t)),nil),v = f_atomize(x,e); I i,k = *(A+ord(v)) == '+';
+ L x = cons(dup(car(t)),nil),y = nil,v = f_atomize(x,e); I i,k = *(A+ord(v)) == '+';
  FILE *savedout = out;                          /* save old out */
  jmp_buf savedjb;                               /* save old jmp buf */
  memcpy(savedjb,jb,sizeof(jb));
  gc(x);                                         /* garbage collect list x we atomized as v */
  if (!(out = fopen(A+ord(v)+k,k ? "a" : "w"))) err(5,v);        /* open file for writing or apending as new out */
- if ((i = setjmp(jb)) == 0) x = eval(f_progn(cdr(t),e),*e);     /* catch error in eval of progn of the rest of args */
+ if ((i = setjmp(jb)) == 0) y = eval(f_progn(cdr(t),e),*e);     /* catch error in eval of progn of the rest of args */
  fclose(out);                                   /* close out */
  out = savedout;                                /* restore old out */
  memcpy(jb,savedjb,sizeof(jb));                 /* restore old jmp buf */
- if (i) { gc(x); longjmp(jb,i); }               /* re-throw error after garbage collecting x */
- return x;
+ if (i) { gc(y); longjmp(jb,i); }               /* re-throw error after garbage collecting y */
+ return y;
 }
 
 /* ++ new: the type of an expression, 0 = number, 1 = atom, 2 = primitive, 3 = pair, 4 = closure, 5 = macro, 6 = nil */
