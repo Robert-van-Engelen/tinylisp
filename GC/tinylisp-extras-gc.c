@@ -112,7 +112,7 @@ L err(I i,L x) {
  longjmp(jb,i);
 }
 /* register x with initial value y to collect with rg(x) or in a f_catch exception handler when an error occurred */
-L rc(L *x,L y) { return !xp ? (*x = y) : xp >= xstk+5*K ? err(4,nil) : (*(*xp++ = x) = y); }
+void rc(L *x,L y) { *x = y; if (xp) *xp = x,++xp; }     /* GCC incorrectly warns about *xp++ = x dangling pointer */
 /* remove x from catch-throw registry and garbage collect x */
 L rg(L x) { if (xp) --xp; return gc(x); }
 /* remove n registrations without garbage collecting them */
@@ -281,9 +281,11 @@ void scc(L x,I k) {
 
 /* section 16.1: replacing recursion with loops */
 L evlis(L t,L e) {
- L s,*p;
- for (s = nil,p = &s; T(t) == CONS; p = &CDR(*p),t = CDR(t)) *p = cons(eval(CAR(t),e),nil);
+ L s,*p = &s;
+ rc(&s,nil);
+ for (; T(t) == CONS; p = &CDR(*p),t = CDR(t)) *p = cons(eval(CAR(t),e),nil);
  if (T(t) == ATOM) *p = dup(assoc(t,e));
+ rr(1);
  return s;
 }
 

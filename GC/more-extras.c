@@ -21,6 +21,8 @@
    {"ceiling", f_ceiling,0},
    {"char",    f_char,   0},
    {"code",    f_code,   0},
+   {"list",    f_list,   0},
+   {"append",  f_append, 0},
    {"time",    f_time,   0},
    {0}};
 */
@@ -88,6 +90,22 @@ L f_code(L t,L *e) {
  i = isarg(&t,e,&a,&x) ? (I)num(x) : 0; 
  gc(x);
  return i < k ? *(A+ord(v)+i)&0xff : -1;
+}
+
+/* (list ...)
+   returns a list of its arguments - a built-in primitive version of (define list (lambda args args)) */
+L f_list(L t,L *e) { return evlis(t,*e); }
+
+/* (append ...)
+   returns the concatenation of its list arguments as a new list */
+L f_append(L t,L *e) {
+ I a = 0; L x = nil,y,s,*p = &s;
+ rc(&y,nil); rc(&s,nil);
+ while (isarg(&t,e,&a,&x) && !not(t))
+  for (gc(y),y = x; !not(x); x = cdr(x),p = &CDR(*p)) *p = cons(car(x),nil);
+ *p = x;
+ gc(y); rr(2);
+ return s;
 }
 
 /* (time <expr> [n]) 
