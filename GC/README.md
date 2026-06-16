@@ -31,6 +31,7 @@
   - new primitive `type` to type check, 0=number, 1=atom, 2=primitive, 3=pair, 4=closure, 5=macro, 6=nil (+4 lines of C)
   - upgrades `read` to take an optional pathname to read a Lisp expression from a file (+12 lines of C)
   - upgrades `load` to load multiple files and permit nesting up to 10 levels deep (+14 lines of C)
+  - new `ERR 7` syntax error
   - the source code is commented to explain the code
   - passes `tests/dotcall-extras.lisp` tests and runs 8-queens `nqueens.lisp`
   - optimized internal logic with unchecked CAR and CDR when safe to use

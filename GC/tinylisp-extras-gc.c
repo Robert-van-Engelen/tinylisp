@@ -93,8 +93,9 @@ char buf[256],see = ' ',*ptr = "",*line = NULL,ps[80];
    ERR 2: unbound symbol
    ERR 3: cannot apply
    ERR 4: out of memory
-   ERR 5: cannot open
-   ERR 6: program stopped */
+   ERR 5: cannot open file
+   ERR 6: program stopped
+   ERR 7: syntax error */
 #include <setjmp.h>
 #include <signal.h>
 /* max number of nested eval() calls between f_catch and f_throw */
@@ -104,9 +105,9 @@ L *xstk[5*K],**xb = NULL,**xp = NULL;
 jmp_buf jb;
 /* throw an error, if f_catch handler is used (xb < xp are not NULL) then garbage collect "lost" variables */
 L err(I i,L x) {
- const char *msg[6] = {"not a pair","unbound","cannot apply","out of memory","cannot open","stopped"};
- if (xp ? tr : i >= 1 && i <= 6) {
-  printf("\n\e[31;1mERR %u: ",i); print(stdout,x); printf(" %s\e[m\n",i >= 1 && i <= 6 ? msg[i-1] : "");
+ const char *msg[7] = {"not a pair","unbound","cannot apply","out of memory","cannot open","stopped","syntax"};
+ if (xp ? tr : i >= 1 && i <= 7) {
+  printf("\n\e[31;1mERR %u: ",i); print(stdout,x); printf(" %s\e[m\n",i >= 1 && i <= 7 ? msg[i-1] : "");
  }
  while (xp != xb) gc(**--xp);
  longjmp(jb,i);
@@ -282,10 +283,10 @@ void scc(L x,I k) {
 /* section 16.1: replacing recursion with loops */
 L evlis(L t,L e) {
  L s,*p = &s;
- rc(&s,nil);
+ rc(&s,nil);                                            /* register s to garbage collect when an error is caught by f_catch */
  for (; T(t) == CONS; p = &CDR(*p),t = CDR(t)) *p = cons(eval(CAR(t),e),nil);
  if (T(t) == ATOM) *p = dup(assoc(t,e));
- rr(1);
+ rr(1);                                                 /* deregister s */
  return s;
 }
 
@@ -639,11 +640,12 @@ char scan() {
 L Read() { return scan(),parse(); }
 
 /* section 16.1: replacing recursion with loops (in list parsing) */
+L endl(L t) { return scan() == ')' ? t : err(7,t); }                    /* ++ new: syntax error check ) */
 L list() {
  L t,*p;
  for (t = nil,p = &t; ; *p = cons(parse(),nil),p = &CDR(*p)) {
   if (scan() == ')') return t;
-  if (*buf == '.' && !buf[1]) return *p = Read(),scan(),t;
+  if (*buf == '.' && !buf[1]) return *p = Read(),endl(t);
  }
 }
 L tick() {
@@ -651,10 +653,11 @@ L tick() {
  if (*buf == ',') return Read();
  if (*buf == '\'') return scan(),cons(atom("list"),cons(cons(atom("quote"),cons(atom("quote"),nil)),cons(tick(),nil)));
  if (*buf == '"') return parse();
+ if (*buf == ')') return err(7,atom(buf));                              /* ++ new: syntax error check ) */
  if (*buf != '(') return cons(atom("quote"),cons(parse(),nil));
  for (t = cons(atom("list"),nil),p = &t; ; p = &CDR(*p),*p = cons(tick(),nil)) {
   if (scan() == ')') return t;
-  if (*buf == '.' && !buf[1]) return scan(),t = cons(atom("append"),cons(t,cons(tick(),nil))),scan(),t;
+  if (*buf == '.' && !buf[1]) return scan(),endl(cons(atom("append"),cons(t,cons(tick(),nil))));
  }
 }
 L parse() {
@@ -663,6 +666,8 @@ L parse() {
  if (*buf == '\'') return cons(atom("quote"),cons(Read(),nil));
  if (*buf == '`') return scan(),tick();
  if (*buf == '"') return cons(atom("quote"),cons(atom(buf+1),nil));
+ if (*buf == ',') return err(7,atom(buf));                              /* ++ new: syntax error check , */
+ if (*buf == ')') return err(7,atom(buf));                              /* ++ new: syntax error check ) */
  return sscanf(buf,"%lg%n",&n,&i) > 0 && !buf[i] ? n : atom(buf);
 }
 
@@ -723,6 +728,7 @@ int main(int argc,char **argv) {
  if ((i = setjmp(jb)) > 0) {
   while (ld) if (in[--ld]) fclose(in[ld]);
   printf("ERR %u",i);
+  if (i == 7) see = '\n';       /* ++ new: on syntax error, prompt to fetch the the next line */
  }
  out = stdout;
  while (1) {
