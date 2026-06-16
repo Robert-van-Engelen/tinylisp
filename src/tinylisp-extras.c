@@ -358,7 +358,7 @@ void look() {
  }
  see = *ptr++;
 }
-I seeing(char c) { return c == ' ' ? see >= 0 && see <= c : see == c; }
+I seeing(char c) { return c == ' ' ? see >= 0 && see <= c : (c == '\n' && !see) || see == c; }
 char get() { char c = see; look(); return c; }
 
 /* section 7: parsing Lisp expressions */
