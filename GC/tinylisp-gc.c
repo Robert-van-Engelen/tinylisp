@@ -64,9 +64,9 @@ L bind(L v,L t,L e) { return not(v) ? e : T(v) == CONS ? bind(cdr(v),cdr(t),pair
 L reduce(L f,L t,L e) { L x = eval(cdr(car(f)),e = bind(car(car(f)),t = evlis(t,e),dup(not(cdr(f)) ? env : cdr(f)))); gc(e); gc(t); return x; }
 L apply(L f,L t,L e) { return T(f) == PRIM ? prim[ord(f)].f(t,e) : T(f) == CLOS ? reduce(f,t,e) : err(3); }
 L eval(L x,L e) { L f = nil; x = T(x) == ATOM ? dup(assoc(x,e)) : T(x) == CONS ? apply(f = eval(car(x),e),cdr(x),e) : dup(x); gc(f); return x; }
-char buf[40],see = ' ';
+char buf[40],see = 0;
 void look() { int c = getchar(); see = c; if (c == EOF) exit(0); }
-I seeing(char c) { return c == ' ' ? see > 0 && see <= c : see == c; }
+I seeing(char c) { return c == ' ' ? see >= 0 && see <= c : see == c; }
 char get() { char c = see; look(); return c; }
 char scan() {
  int i = 0;

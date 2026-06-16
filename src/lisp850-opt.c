@@ -75,9 +75,9 @@ L eval(L x,L e) {
   x = cdr(car(f)); e = d;
  }
 }
-char buf[40],see = ' ';
+char buf[40],see = 0;
 void look() { int c = getchar(); see = c; if (c == -1) exit(0); }
-I seeing(char c) { return c == ' ' ? see > 0 && see <= c : see == c; }
+I seeing(char c) { return c == ' ' ? see >= 0 && see <= c : see == c; }
 char get() { char c = see; look(); return c; }
 char scan() {
  int i = 0;

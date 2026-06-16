@@ -33,7 +33,7 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 FILE *in = NULL;
-char buf[256],see = ' ',*ptr = "",*line = NULL,ps[80];
+char buf[256],see = 0,*ptr = "",*line = NULL,ps[80];
 
 /* prompt strings for readline (truncates to 80 chars max), use \001 to ignore codes up to \002 */
 /* NOTE: MacOS Darwin uses libedit as a libreadline "compatible", but that does not display prompt colors! */
@@ -184,7 +184,7 @@ L f_setcdr(L t,L *e) {
  return (T(p) == CONS) ? cell[ord(p)] = evarg(&t,e,&a) : err(1,p);
 }
 L f_macro(L t,L *_) { return macro(car(t),car(cdr(t))); }
-L f_read(L t,L *_) { L x; char c = see; see = ' '; x = Read(); see = c; return x; }
+L f_read(L t,L *_) { L x; char c = see; see = 0; x = Read(); see = c; return x; }
 L f_print(L t,L *e) { I a = 0; L x; while (isarg(&t,e,&a,&x)) print(x); return nil; }
 L f_println(L t,L *e) { f_print(t,e); putchar('\n'); return nil; }
 
@@ -348,16 +348,17 @@ void look() {
   if (c != EOF) return;
   fclose(in);
   in = NULL;
+  see = 0;
  }
- if (see == '\n') {
+ if (!see) {
   if (line) { ptr = line; line = NULL; free(ptr); }
   while (!(ptr = line = readline(ps))) freopen("/dev/tty","r",stdin);
   add_history(line);
   snprintf(ps,sizeof(ps),PS2);
  }
- if (!(see = *ptr++)) see = '\n';
+ see = *ptr++;
 }
-I seeing(char c) { return c == ' ' ? see > 0 && see <= c : see == c; }
+I seeing(char c) { return c == ' ' ? see >= 0 && see <= c : see == c; }
 char get() { char c = see; look(); return c; }
 
 /* section 7: parsing Lisp expressions */

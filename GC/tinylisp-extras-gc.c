@@ -81,7 +81,7 @@ L atom(const char *s) {
 #include <readline/readline.h>
 #include <readline/history.h>
 FILE *in[10],*out;
-char buf[256],see = ' ',*ptr = "",*line = NULL,ps[80];
+char buf[256],see = 0,*ptr = "",*line = NULL,ps[80];
 
 /* prompt strings for readline (truncates to 80 chars max), use \001 to ignore codes up to \002 */
 /* NOTE: MacOS Darwin uses libedit as a libreadline "compatible", but that does not display prompt colors! */
@@ -428,7 +428,7 @@ L f_read(L t,L *e) {
   x = f_atomize(t,e);
   if (ld >= sizeof(in)/sizeof(*in) || !(in[ld++] = fopen(A+ord(x),"r"))) err(5,x);
  }
- see = ' '; x = Read(); see = c;
+ see = 0; x = Read(); see = c;
  if (T(t) != NIL) fclose(in[--ld]);
  return x;
 }
@@ -615,17 +615,17 @@ void look() {
   see = c = getc(in[ld++]);
   if (c != EOF) return;
   fclose(in[--ld]);
-  see = '\n';
+  see = 0;
  }
- if (see == '\n') {
+ if (!see) {
   if (line) { ptr = line; line = NULL; free(ptr); }
   while (!(ptr = line = readline(ps))) freopen("/dev/tty","r",stdin);
   add_history(line);
   snprintf(ps,sizeof(ps),PS2);
  }
- if (!(see = *ptr++)) see = '\n';
+ see = *ptr++;
 }
-I seeing(char c) { return c == ' ' ? see > 0 && see <= c : see == c; }
+I seeing(char c) { return c == ' ' ? see >= 0 && see <= c : see == c; }
 char get() { char c = see; look(); return c; }
 
 /* section 7: parsing Lisp expressions */
@@ -728,7 +728,7 @@ int main(int argc,char **argv) {
  if ((i = setjmp(jb)) > 0) {
   while (ld) if (in[--ld]) fclose(in[ld]);
   printf("ERR %u",i);
-  if (i == 7) see = '\n';       /* ++ new: on syntax error, prompt to fetch the the next line */
+  if (i == 7) see = 0;          /* ++ new: on syntax error, prompt to fetch the the next line */
  }
  out = stdout;
  while (1) {

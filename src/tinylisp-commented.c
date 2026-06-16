@@ -345,7 +345,7 @@ L eval(L x, L e) {
 }
 
 /* tokenization buffer and the next character that we are looking at */
-char buf[40], see = ' ';
+char buf[40], see = 0;
 
 /* advance to the next character */
 void look() {
@@ -357,7 +357,7 @@ void look() {
 
 /* return nonzero if we are looking at character c, ' ' means any white space */
 I seeing(char c) {
-  return c == ' ' ? see > 0 && see <= c : see == c;
+  return c == ' ' ? see >= 0 && see <= c : see == c;
 }
 
 /* return the look ahead character from standard input, advance to the next */
