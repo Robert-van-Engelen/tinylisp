@@ -10,6 +10,7 @@
    {"|",       f_bitor,  0},
    {"~",       f_bitxor, 0},
    {"abs",     f_abs,    0},
+   {"sqrt",    f_sqrt,   0},
    {"sin",     f_sin,    0},
    {"cos",     f_cos,    0},
    {"tan",     f_tan,    0},
@@ -51,6 +52,9 @@ L f_bitxor(L t,L *e) { I a = 0; L x; int64_t n = (int64_t)num(gc(evarg(&t,e,&a))
 /* (abs x) */
 L f_abs(L t,L *e) { I a = 0; return num(fabs(gc(evarg(&t,e,&a)))); }
 
+/* (sqrt x) */
+L f_sqrt(L t,L *e) { I a = 0; return num(sqrt(gc(evarg(&t,e,&a)))); }
+
 /* (sin x) */
 L f_sin(L t,L *e) { I a = 0; return num(sin(gc(evarg(&t,e,&a)))); }
 
@@ -83,20 +87,20 @@ L f_ceiling(L t,L *e) { I a = 0; return num(ceil(gc(evarg(&t,e,&a)))); }
 L f_char(L t,L *e) { I a = 0; *buf = (int)num(gc(evarg(&t,e,&a))); buf[1] = '\0'; return atom(buf); }
 
 /* (code <atom> [n])
-   return the code 0 to 255 of a single character in an atom at the front or at an optional given index n, returns -1 when beyond the end of the atom */
+   return the code 0 to 255 of a single character in an atom at the front or at an optional given index n, returns 0 when beyond the end of the atom */
 L f_code(L t,L *e) {
  I i,k,a = 0; L x,v = gc(evarg(&t,e,&a));
  k = T(v) == ATOM ? strlen(A+ord(v)) : 0;
  i = isarg(&t,e,&a,&x) ? (I)num(x) : 0; 
  gc(x);
- return i < k ? *(A+ord(v)+i)&0xff : -1;
+ return i < k ? *(A+ord(v)+i)&0xff : 0;
 }
 
-/* (list ...)
-   returns a list of its arguments - a built-in primitive version of (define list (lambda args args)) */
+/* (list ...) - built-in for speed to replace the list definition in common.lisp (remove it)
+   returns a list of its arguments - a built-in Lisp primitive of (define list (lambda args args)) */
 L f_list(L t,L *e) { return evlis(t,*e); }
 
-/* (append ...)
+/* (append ...) - built-in for speed to replace the append definition in list.lisp (remove it)
    returns the concatenation of its list arguments as a new list */
 L f_append(L t,L *e) {
  I a = 0; L x = nil,y,s,*p = &s;
@@ -109,7 +113,7 @@ L f_append(L t,L *e) {
 }
 
 /* (time <expr> [n]) 
-   elapsed running time to evaluate an expression, optionally executed n times to improve measurement */
+   elapsed running time to evaluate an expression, optionally executed n times to improve measurement accuracy */
 #include <sys/time.h>
 L f_time(L t,L *e) {
  L x = nil; I i,k = let(t) ? (I)num(car(CDR(t))) : 1;
