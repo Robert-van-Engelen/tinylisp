@@ -78,7 +78,7 @@ void printlist(L t) {
  for (putchar('('); ; putchar(' ')) {
   print(car(t));
   if (not(t = cdr(t))) break;
-  if (T t) != CONS) { printf(" . "); print(t); break; }
+  if (T t != CONS) { printf(" . "); print(t); break; }
  }
  putchar(')');
 }
