@@ -83,7 +83,8 @@ L atom(const char *s) {
 #include <signal.h>
 jmp_buf jb;
 L err(I i,L x) {
- if (tr) { printf("\n\e[31;1mERR %u: ",i); print(x); printf("\e[m\n"); }
+ const char *msg[7] = {"not a pair","unbound","cannot apply","out of memory","cannot open","stopped","syntax"};
+ if (tr) { printf("\n\e[31;1mERR %u: ",i); print(x); printf(" %s\e[m\n",i >= 1 && i <= 7 ? msg[i-1] : ""); }
  longjmp(jb,i);
 }
 
@@ -373,11 +374,12 @@ char scan() {
 L Read() { return scan(),parse(); }
 
 /* section 16.1: replacing recursion with loops (in list parsing) */
+L endl(L t) { return scan() == ')' ? t : err(7,t); }
 L list() {
  L t,*p;
  for (t = nil,p = &t; ; *p = cons(parse(),nil),p = cell+sp) {
   if (scan() == ')') return t;
-  if (*buf == '.' && !buf[1]) return *p = Read(),scan(),t;
+  if (*buf == '.' && !buf[1]) return *p = Read(),endl(t);
  }
 }
 L tick() {
@@ -385,10 +387,11 @@ L tick() {
  if (*buf == ',') return Read();
  if (*buf == '\'') return scan(),cons(atom("list"),cons(cons(atom("quote"),cons(atom("quote"),nil)),cons(tick(),nil)));
  if (*buf == '"') return parse();
+ if (*buf == ')') return err(7,atom(buf));
  if (*buf != '(') return cons(atom("quote"),cons(parse(),nil));
  for (t = cons(atom("list"),nil),p = cell+sp; ; *p = cons(tick(),nil),p = cell+sp) {
   if (scan() == ')') return t;
-  if (*buf == '.' && !buf[1]) return scan(),t = cons(atom("append"),cons(t,cons(tick(),nil))),scan(),t;
+  if (*buf == '.' && !buf[1]) return scan(),endl(cons(atom("append"),cons(t,cons(tick(),nil))));
  }
 }
 L parse() {
@@ -397,6 +400,8 @@ L parse() {
  if (*buf == '\'') return cons(atom("quote"),cons(Read(),nil));
  if (*buf == '`') return scan(),tick();
  if (*buf == '"') return cons(atom("quote"),cons(atom(buf+1),nil));
+ if (*buf == ',') return err(7,atom(buf));
+ if (*buf == ')') return err(7,atom(buf));
  return sscanf(buf,"%g%n",&n,&i) > 0 && !buf[i] ? n : atom(buf);
 }
 
@@ -438,7 +443,7 @@ int main(int argc,char **argv) {
  for (i = 0; prim[i].s; ++i) env = pair(atom(prim[i].s),box(PRIM,i),env);
  if (!(in = fopen((argc > 1 ? argv[1] : "common.lisp"),"r"))) printf("\nERR 5");
  using_history();
- if ((i = setjmp(jb)) > 0) printf("ERR %u",i);
  signal(SIGINT,stop);
+ if ((i = setjmp(jb)) > 0) { printf("ERR %u",i); if (i == 7) see = 0; }
  while (1) { gc(); putchar('\n'); snprintf(ps,sizeof(ps),PS1,sp-hp/4); print(eval(Read(),env)); }
 }
