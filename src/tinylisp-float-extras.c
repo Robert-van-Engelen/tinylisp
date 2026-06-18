@@ -47,8 +47,9 @@ L eval(L,L),Read(),parse(),err(I,L); void print(L);
 /* hp: top of the atom heap pointer, A+hp with hp=0 points to the first atom string in cell[]
    sp: cell stack pointer, the stack starts at the top of cell[] with sp=N
    tr: tracing off (0), on (1), wait on ENTER (2), dump and wait (3)
+   xh: exception handler nesting depth
    safety invariant: hp <= sp<<2 */
-I hp = 0,sp = N,tr = 0;
+I hp = 0,sp = N,tr = 0,xh = 0;
 /* atom, primitive, cons, closure and nil tags for NaN boxing */
 enum { ATOM = 0x7fc,PRIM = 0x7fd,CONS = 0xffc,CLOS = 0xffd,MACR = 0xffe,NIL = 0xfff };
 /* cell[N] array of Lisp expressions, shared by the stack and atom heap */
@@ -84,7 +85,7 @@ L atom(const char *s) {
 jmp_buf jb;
 L err(I i,L x) {
  const char *msg[7] = {"not a pair","unbound","cannot apply","out of memory","cannot open","stopped","syntax"};
- if (tr) { printf("\n\e[31;1mERR %u: ",i); print(x); printf(" %s\e[m\n",i >= 1 && i <= 7 ? msg[i-1] : ""); }
+ if (!xh || tr) { printf("\n\e[31;1mERR %u: ",i); print(x); printf(" %s\e[m\n",i >= 1 && i <= 7 ? msg[i-1] : ""); }
  longjmp(jb,i);
 }
 
@@ -200,9 +201,11 @@ L f_catch(L t,L *e) {
  L x; I i;
  jmp_buf savedjb;
  memcpy(savedjb,jb,sizeof(jb));
+ ++xh;
  if ((i = setjmp(jb)) == 0) x = eval(car(t),*e);
+ --xh;
  memcpy(jb,savedjb,sizeof(jb));
- return i == 0 ? x : i == 4 ? err(4,nil) : cons(atom("ERR"),i);
+ return i == 0 ? x : i == 4 || i == 6 ? err(i,nil) : cons(atom("ERR"),i);
 }
 L f_throw(L t,L *_) { longjmp(jb,(I)num(car(t))); }
 

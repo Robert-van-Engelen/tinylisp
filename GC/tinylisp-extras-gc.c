@@ -459,7 +459,7 @@ L f_catch(L t,L *e) {
  if ((i = setjmp(jb)) == 0) x = eval(car(t),*e);
  memcpy(jb,savedjb,sizeof(jb));
  xb = saved[0]; xp = saved[1];                  /* restore xb and xp exception stack pointers */
- return i == 0 ? x : i == 4 ? err(4,nil) : cons(atom("ERR"),i);
+ return i == 0 ? x : i == 4 || i == 6 ? err(i,nil) : cons(atom("ERR"),i);
 }
 L f_throw(L t,L *_) { return err(num(car(t)),nil); }
 
@@ -640,7 +640,7 @@ char scan() {
 L Read() { return scan(),parse(); }
 
 /* section 16.1: replacing recursion with loops (in list parsing) */
-L endl(L t) { return scan() == ')' ? t : err(7,t); }                    /* ++ new: syntax error check ) */
+L endl(L t) { return scan() == ')' ? t : err(7,t); }
 L list() {
  L t,*p;
  for (t = nil,p = &t; ; *p = cons(parse(),nil),p = &CDR(*p)) {
@@ -653,7 +653,7 @@ L tick() {
  if (*buf == ',') return Read();
  if (*buf == '\'') return scan(),cons(atom("list"),cons(cons(atom("quote"),cons(atom("quote"),nil)),cons(tick(),nil)));
  if (*buf == '"') return parse();
- if (*buf == ')') return err(7,atom(buf));                              /* ++ new: syntax error check ) */
+ if (*buf == ')') return err(7,atom(buf));
  if (*buf != '(') return cons(atom("quote"),cons(parse(),nil));
  for (t = cons(atom("list"),nil),p = &t; ; p = &CDR(*p),*p = cons(tick(),nil)) {
   if (scan() == ')') return t;
@@ -666,8 +666,8 @@ L parse() {
  if (*buf == '\'') return cons(atom("quote"),cons(Read(),nil));
  if (*buf == '`') return scan(),tick();
  if (*buf == '"') return cons(atom("quote"),cons(atom(buf+1),nil));
- if (*buf == ',') return err(7,atom(buf));                              /* ++ new: syntax error check , */
- if (*buf == ')') return err(7,atom(buf));                              /* ++ new: syntax error check ) */
+ if (*buf == ',') return err(7,atom(buf));
+ if (*buf == ')') return err(7,atom(buf));
  return sscanf(buf,"%lg%n",&n,&i) > 0 && !buf[i] ? n : atom(buf);
 }
 
@@ -728,7 +728,7 @@ int main(int argc,char **argv) {
  if ((i = setjmp(jb)) > 0) {
   while (ld) if (in[--ld]) fclose(in[ld]);
   printf("ERR %u",i);
-  if (i == 7) see = 0;          /* ++ new: on syntax error, prompt to fetch the the next line */
+  if (i == 7) see = 0;
  }
  out = stdout;
  while (1) {
