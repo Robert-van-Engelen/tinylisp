@@ -292,7 +292,11 @@ evaluates all `x` and returns the value of `xk`, same as `(begin x1 x2 ... xk)` 
 
     (while x y1 ... yk)
 
-while `x` is not `()` (meaning true), evaluates expressions `y`.  Returns the last value of `yk` or `()` when the loop never ran.  For example, `(let* (k 0) (while (< (setq k (+ k 1)) 11) (println k)))` prints 1 to 10 using a loop counter `k`.
+while `x` is not `()` (meaning true), evaluates expressions `y` repeatedly.  Returns the last value of `yk` or `()` when the loop never ran.  For example, `(let* (k 0) (while (< (setq k (+ k 1)) 11) (println k)))` prints 1 to 10 using a loop counter `k`.
+
+    (until x1 ... xk y)
+
+evaluates expressions `x` repeatedly until `y` is not `()` (meaning true).  Expressions `x` are evaluated at least once.  Returns the last value of `y`.  For example, `(let* (k 0) (until (setq k (+ k 1)) (println k) (< 9 k)))` prints 1 to 10 using a loop counter `k`.
 
     (quit)
     (quit n)

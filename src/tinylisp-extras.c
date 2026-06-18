@@ -220,6 +220,13 @@ L f_while(L t,L *e) {
   for (s = cdr(t); T(s) == CONS; s = cdr(s)) x = eval(car(s),*e);
  return x;
 }
+L f_until(L t,L *e) {
+ L s,x = nil;
+ do
+  for (s = t; T(s) == CONS; s = cdr(s)) x = eval(car(s),*e);
+ while (not(x));
+ return x;
+}
 
 L f_quit(L t,L *e) { I a = 0; L x; exit(isarg(&t,e,&a,&x) ? (int)num(x) : 0); }
 
@@ -263,6 +270,7 @@ struct { const char *s; L (*f)(L,L*); short t; } prim[] = {
  {"throw",   f_throw,  0},
  {"progn",   f_progn,  1},
  {"while",   f_while,  0},
+ {"until",   f_until,  0},
  {"quit",    f_quit,   0},
  {0}};
 

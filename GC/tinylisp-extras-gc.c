@@ -469,9 +469,18 @@ L f_progn(L t,L *e) {
  return car(t);
 }
 L f_while(L t,L *e) {
- L s,x = nil;
+ L s,x = nil,y;
+ rc(&y,nil);                                    /* register y to garbage collect when an error is caught by f_catch */
  while (!not(gc(eval(car(t),*e))))
-  for (s = cdr(t); T(s) == CONS && (gc(x),1); s = CDR(s)) x = eval(CAR(s),*e);
+  for (s = cdr(t); T(s) == CONS; s = CDR(s),gc(y),y = x) x = eval(CAR(s),*e);
+ rr(1);                                         /* deregister y */
+ return x;
+}
+L f_until(L t,L *e) {
+ L s,x = nil;
+ do
+  for (s = t; T(s) == CONS; s = CDR(s)) gc(x),x = eval(CAR(s),*e);
+ while (not(x));
  return x;
 }
 
@@ -536,6 +545,7 @@ struct { const char *s; L (*f)(L,L*); short t; } prim[] = {
  {"trace",   f_trace,  0},
  {"progn",   f_progn,  1},
  {"while",   f_while,  0},
+ {"until",   f_until,  0},
  {"atomize", f_atomize,0},
  {"write-to",f_writeto,0},
  {"type",    f_type,   0},
