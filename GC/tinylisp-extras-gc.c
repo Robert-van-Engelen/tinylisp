@@ -315,7 +315,7 @@ L f_add(L t,L *e) { I a = 0; L x,n = gc(evarg(&t,e,&a)); while (isarg(&t,e,&a,&x
 L f_sub(L t,L *e) { I a = 0; L x,n = gc(evarg(&t,e,&a)); while (isarg(&t,e,&a,&x)) n -= gc(x); return num(n); }
 L f_mul(L t,L *e) { I a = 0; L x,n = gc(evarg(&t,e,&a)); while (isarg(&t,e,&a,&x)) n *= gc(x); return num(n); }
 L f_div(L t,L *e) { I a = 0; L x,n = gc(evarg(&t,e,&a)); while (isarg(&t,e,&a,&x)) n /= gc(x); return num(n); }
-L f_int(L t,L *e) { I a = 0; L n = gc(evarg(&t,e,&a)); return n < 1e16 && n > -1e16 ? (long long)n : num(n); }
+L f_int(L t,L *e) { I a = 0; L n = gc(evarg(&t,e,&a)); return n < 1e16 && n > -1e16 ? (int64_t)n : num(n); }
 /* compare two values of any type, not only compare numbers (make it a total ordering) */
 L f_lt(L t,L *e) {
  I a = 0; L x = gc(evarg(&t,e,&a)),y = gc(evarg(&t,e,&a));
@@ -353,7 +353,7 @@ L f_define(L t,L *e) {
 }
 
 /* section 11: additional Lisp primitives (optimized with evarg per section 16.4) */
-L f_assoc(L t,L *e) { I a = 0; L d,x,v = gc(evarg(&t,e,&a)); rc(&d,evarg(&t,e,&a)); x = dup(assoc(v,d)); rg(d); return x; }
+L f_assoc(L t,L *e) { I a = 0; L v = gc(evarg(&t,e,&a)),d = evarg(&t,e,&a),x = dup(assoc(v,d)); gc(d); return x; }
 L f_env(L _,L *e) { return dup(*e); }
 L f_let(L t,L *e) {
  L d = *e;
@@ -469,11 +469,9 @@ L f_progn(L t,L *e) {
  return car(t);
 }
 L f_while(L t,L *e) {
- L s,x = nil,y;
- rc(&y,nil);                                    /* register y to garbage collect when an error is caught by f_catch */
+ L s,x = nil;
  while (!not(gc(eval(car(t),*e))))
-  for (s = cdr(t); T(s) == CONS; s = CDR(s),gc(y),y = x) x = eval(CAR(s),*e);
- rr(1);                                         /* deregister y */
+  for (s = cdr(t); T(s) == CONS; s = CDR(s),T(s) == CONS && gc(x)) x = eval(CAR(s),*e);
  return x;
 }
 
