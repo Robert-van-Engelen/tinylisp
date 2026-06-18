@@ -116,7 +116,7 @@ L err(I i,L x) {
 void rc(L *x,L y) { *x = y; if (xp) *xp = x,++xp; }     /* GCC incorrectly warns about *xp++ = x dangling pointer */
 /* remove x from catch-throw registry and garbage collect x */
 L rg(L x) { if (xp) --xp; return gc(x); }
-/* remove n registrations without garbage collecting them */
+/* remove k registrations without garbage collecting them */
 void rr(I k) { if (xp) xp -= k; }
 
 /* memory management with ref[] array using free and SCC marker bits */
@@ -185,7 +185,7 @@ void delscc(I k,L x) {
 void collect(L x) {
  I i; L y;
  while (1) {
-  if (ref[(i = ord(x))/2] & FREE) {                     /* detect double free (which will or should never happen) */
+  if (ref[(i = ord(x))/2] & FREE) {                     /* detect double free, which should never happen */
    printf("\n\e[31;1mdouble free %u\e[m\t",i);
    err(4,nil);
   }
@@ -471,7 +471,7 @@ L f_progn(L t,L *e) {
 L f_while(L t,L *e) {
  L s,x = nil;
  while (!not(gc(eval(car(t),*e))))
-  for (s = cdr(t); T(s) == CONS; s = CDR(s),T(s) == CONS && gc(x)) x = eval(CAR(s),*e);
+  for (s = cdr(t); T(s) == CONS && (gc(x),1); s = CDR(s)) x = eval(CAR(s),*e);
  return x;
 }
 
