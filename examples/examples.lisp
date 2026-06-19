@@ -135,3 +135,23 @@
 
 ; try it out
 (countup)
+
+
+; (dolist (<var> <list>) <expr1> ... <exprn>) loop <var> over <list> elements to execute <expr>
+(defmacro dolist (x . args)
+    `(let*                              ; (let*
+        (,(car x) ())                   ;     (<var> ())
+        (_ ,(car (cdr x)))              ;     (_ <list>)
+        (while _                        ;     (while _
+            (setq ,(car x) (car _))     ;         (setq <var> (car _))
+            (setq _ (cdr _))            ;         (setq _ (cdr _))
+            . ,args)))                  ;         <expr1> ... <exprn>)))
+
+; try it out, we use (list ...) with "-atoms that are quoted, since '("foo" "bar") gives (quote ((quote foo) (quote bar)))
+(dolist (v (list "Hello" "Lisp" "World")) (print v " "))
+
+; backquote is a handy construct, not only for macros, but anytime when we need a (list ...) of things
+(defun greet (name)
+    (dolist (v `("Hello" ,name "--" ,name "is" "alive!")) (print v " ")))
+
+(greet "Johnny 5")
