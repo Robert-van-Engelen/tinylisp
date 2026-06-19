@@ -136,7 +136,6 @@
 ; try it out
 (countup)
 
-
 ; (dolist (<var> <list>) <expr1> ... <exprn>) loop <var> over <list> elements to execute <expr>
 (defmacro dolist (x . args)
     `(let*                              ; (let*
@@ -155,3 +154,20 @@
     (dolist (v `("Hello" ,name "--" ,name "is" "alive!")) (print v " ")))
 
 (greet "Johnny 5")
+
+; (case <expr> (<key1> <expr1>) (<key2> <expr2>) ... (<keyn> <exprn>)) match <key> to return value of corresponding <expr>
+(defmacro case (x . args)
+    (letrec*
+        (c (lambda (t)
+            (if t
+                `(((eq? _ ,(car (car t))) ,(car (cdr (car t)))) . ,(c (cdr t)))
+                `((#t ())))))
+        `(let* (_ ,x) (cond . ,(c args)))))
+; (case ...) is converted by a local recursive function (c args) that iterates over args to construct the
+; (let* (_ <expr>) (cond ((eq? _ <key1>) <expr1>) ... (#t ())) conditions ((eq? _ <key>) <expr>) for each <key> <expr>
+
+; try it out
+(case 2
+    (1 "first")
+    (2 "second")
+    (3 "third"))
