@@ -249,7 +249,7 @@ a macro is like a function, except that it does not evaluate its arguments.  Mac
 
 backquotes `<expr>`, which quotes `<expr>`, but evaluates all `,<expr>` subexpressions therein before quoting, i.e. the comma unquotes.  For example, ``(let* (b 1) (c 3) (d '(4 5)) `(a ,b ',c . ,d))`` returns the list `(a 1 (quote 3) 4 5)`.  The macro above can also be written as ``(define defun (macro (f v x) `(define ,f (lambda ,v ,x))))``.  Nested backquoting is not supported.  The `,@` splice operator is not supported, but tail-splicing a list using the dot operator is possible as shown in the example.
 
-**Important:** backquoting requires the `list` function and also (for cases with the dot operator) the `append` function, which are defined in common.lisp and list.lisp, respectively.  Otherwise `ERR 2` is returned for undefined symbols!
+**Important:** backquoting requires the `list` function and also (for cases with the dot operator) the `append` function, which are defined in common.lisp and list.lisp, respectively.  Otherwise `ERR 2` is returned for undefined `list` and `append` symbols!
 
     (read)
 
