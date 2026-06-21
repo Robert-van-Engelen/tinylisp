@@ -413,7 +413,7 @@ L f_atomize(L t,L *e) {
  I i = hp,k; L s,*p = &s;
  rc(&s,nil);                                    /* register s to garbage collect when an error is caught by f_catch */
  for (; T(t) == CONS; t = CDR(t),p = &CDR(*p)) *p = cons(T(CAR(t)) == ATOM ? CAR(t) : eval(CAR(t),*e),nil);
- if (T(t) != NIL) *p = t;
+ *p = dup(t);                                   /* tail of s is t */
  k = atomize(s,NULL);                           /* the atom string length k, to hold atomized list of arguments */
  if ((hp += k+1) > lp<<3) err(4,nil);           /* ERR 4 if the heap space is not large enough */
  atomize(s,A+i);                                /* store the atomized arguments on the heap */
@@ -714,8 +714,8 @@ I atomize(L x,char *a) {
   }
   return k;
  }
- if (T(x) == NIL) strcpy(buf," ");
- else if (T(x) == ATOM) strcpy(buf,A+ord(x));
+ if (T(x) == ATOM) strcpy(buf,A+ord(x));
+ else if (x != x) strcpy(buf," ");
  else snprintf(buf,sizeof(buf),"%.10lg",x);
  if (a) strcpy(a,buf);
  return strlen(buf);
