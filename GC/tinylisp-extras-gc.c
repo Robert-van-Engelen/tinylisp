@@ -491,7 +491,7 @@ L f_writeto(L t,L *e) {
  jmp_buf savedjb;                               /* save old jmp buf */
  memcpy(savedjb,jb,sizeof(jb));
  gc(x);                                         /* garbage collect list x we atomized as v */
- if (!(out = fopen(A+ord(v)+k,k ? "a" : "w"))) err(5,v);        /* open file for writing or apending as new out */
+ if (!(out = fopen(A+ord(v)+k,k ? "a" : "w"))) err(5,v);        /* open file for writing or appending as new out */
  if ((i = setjmp(jb)) == 0) y = eval(f_progn(cdr(t),e),*e);     /* catch error in eval of progn of the rest of args */
  fclose(out);                                   /* close out */
  out = savedout;                                /* restore old out */
