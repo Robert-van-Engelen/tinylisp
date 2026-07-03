@@ -106,7 +106,7 @@ L f_append(L t,L *e) {
  I a = 0; L x = nil,y,s,*p = &s;
  rc(&y,nil); rc(&s,nil);
  while (isarg(&t,e,&a,&x) && !not(t))
-  for (gc(y),y = x; !not(x); x = cdr(x),p = &CDR(*p)) *p = cons(car(x),nil);
+  for (gc(y),y = x; !not(x); x = cdr(x),p = &CDR(*p)) *p = cons(dup(car(x)),nil);
  *p = x;
  gc(y); rr(2);
  return s;
