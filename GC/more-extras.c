@@ -24,6 +24,11 @@
    {"code",    f_code,   0},
    {"list",    f_list,   0},
    {"append",  f_append, 0},
+   {"length",  f_length, 0},
+   {"nthcdr",  f_nthcdr, 0},
+   {"nth",     f_nth,    0},
+   {"seq",     f_seq,    0},
+   {"range",   f_range,  0},
    {"time",    f_time,   0},
    {0}};
 */
@@ -109,6 +114,49 @@ L f_append(L t,L *e) {
   for (gc(y),y = x; !not(x); x = cdr(x),p = &CDR(*p)) *p = cons(dup(car(x)),nil);
  *p = x;
  gc(y); rr(2);
+ return s;
+}
+
+/* (length t) - built-in for speed to replace the length definition in list.lisp (remove it)
+   return the length of list t */
+L f_length(L t,L *e) {
+ I a = 0,k = 0; L s = evarg(&t,e,&a);
+ for (t = s; T(s) == CONS; s = CDR(s)) ++k;
+ gc(t);
+ return k;
+}
+
+/* (nthcdr n t) - built-in for speed to replace the nthcdr definition in list.lisp (remove it)
+   return n'th rest of the list t */
+L f_nthcdr(L t,L *e) {
+ I a = 0,i = (I)num(gc(evarg(&t,e,&a))); L s = evarg(&t,e,&a);
+ for (t = s; i > 0; --i) t = cdr(t);
+ gc(s);
+ return dup(t);
+}
+
+/* (nth n t) - built-in for speed to replace the nth definition in list.lisp (remove it)
+   return n'th item in list t */
+L f_nth(L t,L *e) {
+ L s = f_nthcdr(t,e),x = dup(car(s));
+ gc(s);
+ return x;
+}
+
+/* (seq n) - built-in for speed to replace the seq definition in list.lisp (remove it)
+   return sequence (1 2 3 ... n-1) */
+L f_seq(L t,L *e) {
+ I a = 0,i = (I)num(gc(evarg(&t,e,&a))),k = (I)num(gc(evarg(&t,e,&a))); L s = nil,*p = &s;
+ for (; i < k; ++i,p = &CDR(*p)) *p = cons(i,nil);
+ return s;
+}
+
+/* (range n m k) - built-in for speed to replace the range definition in list.lisp (remove it)
+   return sequence (n n+k n+2k ... m-1) where optional k=1 by default */
+L f_range(L t,L *e) {
+ I a = 0; int n = (int)num(gc(evarg(&t,e,&a))),m = (int)num(gc(evarg(&t,e,&a))),k = 1; L x,s = nil,*p = &s;
+ if (isarg(&t,e,&a,&x)) k = (int)num(gc(x));
+ for (; k*m > k*n; n += k,p = &CDR(*p)) *p = cons(n,nil);
  return s;
 }
 
