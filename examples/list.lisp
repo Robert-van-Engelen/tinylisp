@@ -26,6 +26,13 @@
             (reverse-tr (cons (car t) r) (cdr t))
             r)))
 (define reverse (lambda (t) (reverse-tr () t)))
+(define last
+    (lambda (t)
+        (if t
+            (if (cdr t)
+                (last (cdr t))
+                t)
+            ())))
 (define member
     (lambda (x t)
         (if t
