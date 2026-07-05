@@ -29,6 +29,8 @@
    {"nth",     f_nth,    0},
    {"seq",     f_seq,    0},
    {"range",   f_range,  0},
+   {"reverse", f_reverse,0},
+   {"last",    f_last,   0},
    {"time",    f_time,   0},
    {0}};
 */
@@ -131,8 +133,9 @@ L f_length(L t,L *e) {
 L f_nthcdr(L t,L *e) {
  I a = 0,i = (I)num(gc(evarg(&t,e,&a))); L s = evarg(&t,e,&a);
  for (t = s; i > 0; --i) t = cdr(t);
+ t = dup(t);
  gc(s);
- return dup(t);
+ return t;
 }
 
 /* (nth n t) - built-in for speed to replace the nth definition in list.lisp (remove it)
@@ -157,6 +160,26 @@ L f_range(L t,L *e) {
  I a = 0; int n = (int)num(gc(evarg(&t,e,&a))),m = (int)num(gc(evarg(&t,e,&a))),k = 1; L x,s = nil,*p = &s;
  if (isarg(&t,e,&a,&x)) k = (int)num(gc(x));
  for (; k*m > k*n; n += k,p = &CDR(*p)) *p = cons(n,nil);
+ return s;
+}
+
+/* (reverse t) - built-in for speed to replace the reverse definition in list.lisp (remove it)
+   return reversed copy of list t */
+L f_reverse(L t,L *e) {
+ I a = 0; L x,s = nil;
+ for (t = x = evarg(&t,e,&a); T(t) == CONS; t = CDR(t)) s = cons(dup(CAR(t)),s);
+ gc(x);
+ return s;
+}
+
+/* (last t)
+   return last list element of list t */
+L f_last(L t,L *e) {
+ I a = 0; L x,s = x = evarg(&t,e,&a);
+ if (T(s) == NIL) return s;
+ while (T(t = cdr(s)) == CONS) s = t;
+ s = dup(s);
+ gc(x);
  return s;
 }
 
