@@ -121,12 +121,22 @@
 (de-fun fibo)
 
 ; define a macro that expands into n copies of print statements
+; (defmacro multi-print (n . args)
+;     `(if ,(< 0 n)
+;          (progn
+;              (print . ,args)
+;              (multi-print ,(- n 1) . ,args))
+;          ()))
+; the same can be achieved with letrec recursion (recommended) instead of a slow recursive macro:
 (defmacro multi-print (n . args)
-    `(if ,(< 0 n)
-         (progn
-             (print . ,args)
-             (multi-print ,(- n 1) . ,args))
-         ()))
+    (letrec*
+        (c (lambda (k)
+            (if (< 0 k)
+                 `(progn
+                     (print . ,args)
+                     ,(c (- k 1) . args))
+                 ())))
+        (c n)))
 
 ; expand 10 print statements each with a distinct number from 1 to 10 to print with a space
 (defun countup ()
