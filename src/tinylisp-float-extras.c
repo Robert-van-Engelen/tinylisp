@@ -385,7 +385,8 @@ char scan() {
 L Read() { return scan(),parse(); }
 
 /* section 16.1: replacing recursion with loops (in list parsing) */
-L endl(L t) { return scan() == ')' ? t : err(7,t); }
+L quote(L x) { return cons(atom("quote"),cons(x,nil)); }        /* returns (quote x) */
+L endl(L t) { return scan() == ')' ? t : err(7,t); }            /* err 7 when closing ) is missing */
 L list() {
  L t,*p;
  for (t = nil,p = &t; ; *p = cons(parse(),nil),p = cell+sp) {
@@ -396,10 +397,10 @@ L list() {
 L tick() {
  L t,*p;
  if (*buf == ',') return Read();
- if (*buf == '\'') return scan(),cons(atom("list"),cons(cons(atom("quote"),cons(atom("quote"),nil)),cons(tick(),nil)));
+ if (*buf == '\'') return scan(),cons(atom("list"),cons(quote(atom("quote")),cons(tick(),nil)));
  if (*buf == '"') return parse();
  if (*buf == ')') return err(7,atom(buf));
- if (*buf != '(') return cons(atom("quote"),cons(parse(),nil));
+ if (*buf != '(') return quote(parse());
  for (t = cons(atom("list"),nil),p = cell+sp; ; *p = cons(tick(),nil),p = cell+sp) {
   if (scan() == ')') return t;
   if (*buf == '.' && !buf[1]) return scan(),endl(cons(atom("append"),cons(t,cons(tick(),nil))));
@@ -408,9 +409,9 @@ L tick() {
 L parse() {
  L n; int i;
  if (*buf == '(') return list();
- if (*buf == '\'') return cons(atom("quote"),cons(Read(),nil));
+ if (*buf == '\'') return quote(Read());
  if (*buf == '`') return scan(),tick();
- if (*buf == '"') return cons(atom("quote"),cons(atom(buf+1),nil));
+ if (*buf == '"') return quote(atom(buf+1));
  if (*buf == ',') return err(7,atom(buf));
  if (*buf == ')') return err(7,atom(buf));
  return sscanf(buf,"%g%n",&n,&i) > 0 && !buf[i] ? n : atom(buf);
