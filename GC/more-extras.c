@@ -11,6 +11,7 @@
    {"|",        f_bitor,   0},
    {"~",        f_bitxor,  0},
    {"abs",      f_abs,     0},
+   {"neg",      f_neg,     0},
    {"sqrt",     f_sqrt,    0},
    {"sin",      f_sin,     0},
    {"cos",      f_cos,     0},
@@ -39,7 +40,7 @@
    {0}};
 */
 
-/* (= x y) number x equals number y */
+/* (= x y) returns #t if number x equals number y, otherwise returns () */
 L f_is(L t,L *e) { I a = 0; L x = num(gc(evarg(&t,e,&a))); return x == num(gc(evarg(&t,e,&a))); }
 
 /* (% x y ...) modulo of dividing x by y, then by ... */
@@ -65,6 +66,9 @@ L f_bitxor(L t,L *e) { I a = 0; L x; int64_t n = (int64_t)num(gc(evarg(&t,e,&a))
 
 /* (abs x) */
 L f_abs(L t,L *e) { I a = 0; return num(fabs(gc(evarg(&t,e,&a)))); }
+
+/* (neg x) */
+L f_neg(L t,L *e) { I a = 0; return num(-gc(evarg(&t,e,&a))); }
 
 /* (sqrt x) */
 L f_sqrt(L t,L *e) { I a = 0; return num(sqrt(gc(evarg(&t,e,&a)))); }

@@ -316,7 +316,7 @@ L f_sub(L t,L *e) { I a = 0; L x,n = gc(evarg(&t,e,&a)); while (isarg(&t,e,&a,&x
 L f_mul(L t,L *e) { I a = 0; L x,n = gc(evarg(&t,e,&a)); while (isarg(&t,e,&a,&x)) n *= gc(x); return num(n); }
 L f_div(L t,L *e) { I a = 0; L x,n = gc(evarg(&t,e,&a)); while (isarg(&t,e,&a,&x)) n /= gc(x); return num(n); }
 L f_int(L t,L *e) { I a = 0; L n = gc(evarg(&t,e,&a)); return n < 1e16 && n > -1e16 ? (int64_t)n : num(n); }
-/* compare two values of any type, not only compare numbers (make it a total ordering) */
+/* ++ updated: compare two values of any type, not only compare numbers (make it a total ordering) */
 L f_lt(L t,L *e) {
  I a = 0; L x = gc(evarg(&t,e,&a)),y = gc(evarg(&t,e,&a));
  return (T(x) == ATOM && T(y) == ATOM ? strcmp(A+ord(x),A+ord(y)) < 0 :
