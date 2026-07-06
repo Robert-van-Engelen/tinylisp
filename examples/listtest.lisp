@@ -12,6 +12,8 @@
 
 (or (equal? (reverse xs) '(4 3 2 1)) 'reverse)
 
+(or (equal? (last xs) '(4)) 'last)
+
 (or (equal? (member 3 xs) '(3 4)) 'member)
 
 (or (equal? (foldr * 1 xs) 24) 'foldr)
@@ -37,3 +39,5 @@
 (or (equal? (seqby 1 5 2) '(1 3)) 'seqby)
 
 (or (equal? (seqby -1 -5 -2) '(-1 -3)) 'seqby)
+
+(or (equal? (make-list 2 xs) '((1 2 3 4) (1 2 3 4))) 'make-list)

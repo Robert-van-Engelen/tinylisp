@@ -2,38 +2,45 @@
 
 /* ... prim[] = {
    ...
-   {"%",       f_mod,    0},
-   {"^",       f_exp,    0},
-   {"<<",      f_lshift, 0},
-   {">>",      f_rshift, 0},
-   {"&",       f_bitand, 0},
-   {"|",       f_bitor,  0},
-   {"~",       f_bitxor, 0},
-   {"abs",     f_abs,    0},
-   {"sqrt",    f_sqrt,   0},
-   {"sin",     f_sin,    0},
-   {"cos",     f_cos,    0},
-   {"tan",     f_tan,    0},
-   {"asin",    f_asin,   0},
-   {"acos",    f_acos,   0},
-   {"atan",    f_atan,   0},
-   {"atan2",   f_atan2,  0},
-   {"floor",   f_floor,  0},
-   {"ceiling", f_ceiling,0},
-   {"char",    f_char,   0},
-   {"code",    f_code,   0},
-   {"list",    f_list,   0},
-   {"append",  f_append, 0},
-   {"length",  f_length, 0},
-   {"nthcdr",  f_nthcdr, 0},
-   {"nth",     f_nth,    0},
-   {"seq",     f_seq,    0},
-   {"range",   f_range,  0},
-   {"reverse", f_reverse,0},
-   {"last",    f_last,   0},
-   {"time",    f_time,   0},
+   {"=",        f_is,      0},
+   {"%",        f_mod,     0},
+   {"^",        f_exp,     0},
+   {"<<",       f_lshift,  0},
+   {">>",       f_rshift,  0},
+   {"&",        f_bitand,  0},
+   {"|",        f_bitor,   0},
+   {"~",        f_bitxor,  0},
+   {"abs",      f_abs,     0},
+   {"sqrt",     f_sqrt,    0},
+   {"sin",      f_sin,     0},
+   {"cos",      f_cos,     0},
+   {"tan",      f_tan,     0},
+   {"asin",     f_asin,    0},
+   {"acos",     f_acos,    0},
+   {"atan",     f_atan,    0},
+   {"atan2",    f_atan2,   0},
+   {"floor",    f_floor,   0},
+   {"ceiling",  f_ceiling, 0},
+   {"char",     f_char,    0},
+   {"code",     f_code,    0},
+   {"list",     f_list,    0},
+   {"append",   f_append,  0},
+   {"length",   f_length,  0},
+   {"nthcdr",   f_nthcdr,  0},
+   {"nth",      f_nth,     0},
+   {"last",     f_last,    0},
+   {"reverse",  f_reverse, 0},
+   {"seq",      f_seq,     0},
+   {"range",    f_range,   0},
+   {"equal?",   f_equal,   0},
+   {"member",   f_member,  0},
+   {"make-list",f_makelist,0},
+   {"time",     f_time,    0},
    {0}};
 */
+
+/* (= x y) number x equals number y */
+L f_is(L t,L *e) { I a = 0; L x = num(gc(evarg(&t,e,&a))); return x == num(gc(evarg(&t,e,&a))); }
 
 /* (% x y ...) modulo of dividing x by y, then by ... */
 L f_mod(L t,L *e) { I a = 0; L x; int64_t n = (int64_t)num(gc(evarg(&t,e,&a))); while (isarg(&t,e,&a,&x)) n %= (int64_t)num(gc(x)); return n; }
@@ -146,6 +153,25 @@ L f_nth(L t,L *e) {
  return x;
 }
 
+/* (last t [n])
+   return last singleton list element of list t, optionally return the n last list elements */
+L f_last(L t,L *e) {
+ I a = 0; L x,y,s = x = evarg(&t,e,&a); int n = isarg(&t,e,&a,&y) ? (int)num(gc(y)) : 1;
+ for (t = s; T(t) == CONS; t = CDR(t)) if (n < 1) s = CDR(s); else --n;
+ s = dup(s);
+ gc(x);
+ return s;
+}
+
+/* (reverse t) - built-in for speed to replace the reverse definition in list.lisp (remove it)
+   return reversed copy of list t */
+L f_reverse(L t,L *e) {
+ I a = 0; L x,s = nil;
+ for (t = x = evarg(&t,e,&a); T(t) == CONS; t = CDR(t)) s = cons(dup(CAR(t)),s);
+ gc(x);
+ return s;
+}
+
 /* (seq n) - built-in for speed to replace the seq definition in list.lisp (remove it)
    return sequence (1 2 3 ... n-1) */
 L f_seq(L t,L *e) {
@@ -163,21 +189,33 @@ L f_range(L t,L *e) {
  return s;
 }
 
-/* (reverse t) - built-in for speed to replace the reverse definition in list.lisp (remove it)
-   return reversed copy of list t */
-L f_reverse(L t,L *e) {
- I a = 0; L x,s = nil;
- for (t = x = evarg(&t,e,&a); T(t) == CONS; t = CDR(t)) s = cons(dup(CAR(t)),s);
- gc(x);
- return s;
+/* (equal? x y) - built-in for speed to replace the equal? definition in list.lisp (remove it)
+   deep check for equality */
+I equal(L x,L y) {
+ if (equ(x,y)) return 1;
+ if (T(x) != T(y) || (T(x) != CONS && T(x) != CLOS && T(x) != MACR)) return 0;
+ for (; T(x) == T(y) && (T(x) == CONS || T(x) == CLOS || T(x) == MACR); x = CDR(x),y = CDR(y))
+  if (!equal(CAR(x),CAR(y))) return 0;
+ return equal(x,y);
+}
+L f_equal(L t,L *e) { I a = 0; L x = evarg(&t,e,&a),y = evarg(&t,e,&a),z = equal(x,y) ? tru : nil; gc(x); gc(y); return z; }
+
+/* (member x t) - built-in for speed to replace the member definition in list.lisp (remove it)
+   returns rest of list t from the first list element that is equal to x */
+L f_member(L t,L *e) {
+ I a = 0; L x = evarg(&t,e,&a),s = t = evarg(&t,e,&a);
+ while (T(t) == CONS && !equal(x,CAR(t))) t = CDR(t);
+ t = dup(t);
+ gc(s);
+ return t;
 }
 
-/* (last t [n])
-   return last singleton list element of list t, optionally return the n last list elements */
-L f_last(L t,L *e) {
- I a = 0; L x,y,s = x = evarg(&t,e,&a); int n = isarg(&t,e,&a,&y) ? (int)num(gc(y)) : 1;
- for (t = s; T(t) == CONS; t = CDR(t)) if (n < 1) s = CDR(s); else --n;
- s = dup(s);
+/* (make-list n [x]) - built-in for speed to replace the make-list definition in list.lisp (remove it)
+   returns list of n copies of optional x, x is () by default */
+L f_makelist(L t,L *e) {
+ I a = 0; int n = (int)num(gc(evarg(&t,e,&a))); L s = nil,x = nil;
+ isarg(&t,e,&a,&x);
+ while (n-- > 0) s = cons(dup(x),s);
  gc(x);
  return s;
 }
