@@ -172,12 +172,11 @@ L f_reverse(L t,L *e) {
  return s;
 }
 
-/* (last t)
-   return last list element of list t */
+/* (last t [n])
+   return last singleton list element of list t, optionally return the n last list elements */
 L f_last(L t,L *e) {
- I a = 0; L x,s = x = evarg(&t,e,&a);
- if (T(s) == NIL) return s;
- while (T(t = cdr(s)) == CONS) s = t;
+ I a = 0; L x,y,s = x = evarg(&t,e,&a); int n = isarg(&t,e,&a,&y) ? (int)num(gc(y)) : 1;
+ for (t = s; T(t) == CONS; t = CDR(t)) if (n < 1) s = CDR(s); else --n;
  s = dup(s);
  gc(x);
  return s;
