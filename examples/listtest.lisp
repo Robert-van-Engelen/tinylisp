@@ -1,6 +1,6 @@
 ; test list.lisp
 
-(define xs (list 1 2 3 4))
+(define xs '(1 2 3 4))
 
 (or (equal? (length xs) 4) 'length)
 

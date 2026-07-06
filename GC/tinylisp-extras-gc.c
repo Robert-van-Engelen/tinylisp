@@ -757,10 +757,10 @@ int main(int argc,char **argv) {
  }
  out = stdout;
  while (1) {
-  L x;
+  L x,y;
   rebuild();
   putchar('\n'); snprintf(ps,sizeof(ps),PS1,2*fn-hp/8);
-  print(out,gc(eval(x = Read(),env)));
-  gc(x);
+  print(out,y = eval(x = Read(),env));
+  gc(y); gc(x);
  }
 }

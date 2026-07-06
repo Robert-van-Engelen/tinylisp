@@ -91,7 +91,7 @@
             ())))
 (define map
     (lambda (f . args)
-        (if (any? null? args)
+        (if (any? not args)
             ()
             (let*
                 (x (mapcar car args))
