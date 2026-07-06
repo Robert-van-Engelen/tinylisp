@@ -337,7 +337,7 @@ L f_leta(L t,L *e) {
  return car(t);
 }
 L f_lambda(L t,L *e) { return closure(dup(car(t)),dup(car(cdr(t))),equ(*e,env) ? nil : dup(*e)); }
-/* defining a global symbol garbage-collects unreachable definitions when redefined */
+/* define a global symbol, garbage-collects unreachable definitions when redefined */
 L f_define(L t,L *e) {
  L d = *e,v = car(t),x;
  if (T(v) != ATOM) return err(2,v);             /* bound variable must be an atom, to prevent GC issues when not an atom */
@@ -345,9 +345,9 @@ L f_define(L t,L *e) {
  while (T(d) == CONS && !equ(v,car(CAR(d)))) d = CDR(d);
  if (T(d) != CONS) env = pair(v,x,env);
  else {
-  gc(CDR(CAR(d)));
-  CDR(CAR(d)) = x;
-  printf("redefined ");
+  L *p = &CDR(CAR(d));
+  if (T(*p) != PRIM) { gc(*p); *p = x; printf("redefined "); }
+  else { gc(x); printf("not redefined built-in "); }
  }
  return v;
 }
@@ -503,6 +503,20 @@ L f_writeto(L t,L *e) {
 /* ++ new: the type of an expression, 0 = number, 1 = atom, 2 = primitive, 3 = pair, 4 = closure, 5 = macro, 6 = nil */
 L f_type(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return (T(x) & ATOM) >= ATOM ? (T(x)) - ATOM + 1 : 0; }
 
+/* ++ new: (list ...) returns a list of its arguments (e.g. used in backquoting) */
+L f_list(L t,L *e) { return evlis(t,*e); }
+
+/* ++ new: (append ...) returns the concatenation of its list arguments as a new list (e.g. used in backquoting) */
+L f_append(L t,L *e) {
+ I a = 0; L x = nil,y,s,*p = &s;
+ rc(&y,nil); rc(&s,nil);
+ while (isarg(&t,e,&a,&x) && !not(t))
+  for (gc(y),y = x; !not(x); x = cdr(x),p = &CDR(*p)) *p = cons(dup(car(x)),nil);
+ *p = x;
+ gc(y); rr(2);
+ return s;
+}
+
 L f_quit(L t,L *e) { I a = 0; L x; exit(isarg(&t,e,&a,&x) ? (int)num(x) : 0); }
 
 struct { const char *s; L (*f)(L,L*); short t; } prim[] = {
@@ -549,6 +563,8 @@ struct { const char *s; L (*f)(L,L*); short t; } prim[] = {
  {"atomize", f_atomize,0},
  {"write-to",f_writeto,0},
  {"type",    f_type,   0},
+ {"list",    f_list,   0},
+ {"append",  f_append, 0},
  {"quit",    f_quit,   0},
  {0}};
 
@@ -648,7 +664,8 @@ char scan() {
 L Read() { return scan(),parse(); }
 
 /* section 16.1: replacing recursion with loops (in list parsing) */
-L endl(L t) { return scan() == ')' ? t : err(7,t); }
+L quote(L x) { return cons(atom("quote"),cons(x,nil)); }        /* returns (quote x) */
+L endl(L t) { return scan() == ')' ? t : err(7,t); }            /* err 7 when closing ) is missing */
 L list() {
  L t,*p;
  for (t = nil,p = &t; ; *p = cons(parse(),nil),p = &CDR(*p)) {
@@ -659,10 +676,10 @@ L list() {
 L tick() {
  L t,*p;
  if (*buf == ',') return Read();
- if (*buf == '\'') return scan(),cons(atom("list"),cons(cons(atom("quote"),cons(atom("quote"),nil)),cons(tick(),nil)));
+ if (*buf == '\'') return scan(),cons(atom("list"),cons(quote(atom("quote")),cons(tick(),nil)));
  if (*buf == '"') return parse();
  if (*buf == ')') return err(7,atom(buf));
- if (*buf != '(') return cons(atom("quote"),cons(parse(),nil));
+ if (*buf != '(') return quote(parse());
  for (t = cons(atom("list"),nil),p = &t; ; p = &CDR(*p),*p = cons(tick(),nil)) {
   if (scan() == ')') return t;
   if (*buf == '.' && !buf[1]) return scan(),endl(cons(atom("append"),cons(t,cons(tick(),nil))));
@@ -671,9 +688,9 @@ L tick() {
 L parse() {
  L n; int i;
  if (*buf == '(') return list();
- if (*buf == '\'') return cons(atom("quote"),cons(Read(),nil));
+ if (*buf == '\'') return quote(Read());
  if (*buf == '`') return scan(),tick();
- if (*buf == '"') return cons(atom("quote"),cons(atom(buf+1),nil));
+ if (*buf == '"') return quote(atom(buf+1));
  if (*buf == ',') return err(7,atom(buf));
  if (*buf == ')') return err(7,atom(buf));
  return sscanf(buf,"%lg%n",&n,&i) > 0 && !buf[i] ? n : atom(buf);
