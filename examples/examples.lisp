@@ -182,17 +182,24 @@
     (2 "second")
     (3 "third"))
 
-; tinylisp names may contain punctuation and digits, start with a digit, but may not start with a . , ( ) ' ` "
-(defmacro 2ndcdr (t) `(cdr ,t))
-(defmacro 3rdcdr (t) `(cdr (cdr ,t)))
-(defmacro 4thcdr (t) `(cdr (cdr (cdr ,t))))
-(defmacro 5thcdr (t) `(cdr (cdr (cdr (cdr ,t)))))
-(defmacro 6thcdr (t) `(cdr (cdr (cdr (cdr (cdr ,t))))))
-(defmacro 7thcdr (t) `(cdr (cdr (cdr (cdr (cdr (cdr ,t)))))))
+; tinylisp names may contain punctuation and digits, start with a digit, but may not start with a , ( ) ' ` "
+(defmacro 2nd-cdr (t) `(cdr ,t))
+(defmacro 3rd-cdr (t) `(cdr (cdr ,t)))
+(defmacro 4th-cdr (t) `(cdr (cdr (cdr ,t))))
+(defmacro 5th-cdr (t) `(cdr (cdr (cdr (cdr ,t)))))
+(defmacro 6th-cdr (t) `(cdr (cdr (cdr (cdr (cdr ,t))))))
+(defmacro 7th-cdr (t) `(cdr (cdr (cdr (cdr (cdr (cdr ,t)))))))
 (defmacro 1st (t) `(car ,t))
-(defmacro 2nd (t) `(car (2ndcdr ,t)))
-(defmacro 3rd (t) `(car (3rdcdr ,t)))
-(defmacro 4th (t) `(car (4thcdr ,t)))
-(defmacro 5th (t) `(car (5thcdr ,t)))
-(defmacro 6th (t) `(car (6thcdr ,t)))
-(defmacro 7th (t) `(car (7thcdr ,t)))
+(defmacro 2nd (t) `(car (2nd-cdr ,t)))
+(defmacro 3rd (t) `(car (3rd-cdr ,t)))
+(defmacro 4th (t) `(car (4th-cdr ,t)))
+(defmacro 5th (t) `(car (5th-cdr ,t)))
+(defmacro 6th (t) `(car (6th-cdr ,t)))
+(defmacro 7th (t) `(car (7th-cdr ,t)))
+
+; try it out by generating a list of 1 to 9 then overwrite the 3rd element with 111
+(let*
+    (list (seq 1 10))
+    (over (set-car! (3rd-cdr list) 111))
+    list)
+; note above that a let-local name may be any name, including a built-in name, used in the local lexical scope
