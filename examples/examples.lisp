@@ -181,3 +181,18 @@
     (1 "first")
     (2 "second")
     (3 "third"))
+
+; tinylisp names may contain punctuation and digits, start with a digit, but may not start with a . , ( ) ' ` "
+(defmacro 2ndcdr (t) `(cdr ,t))
+(defmacro 3rdcdr (t) `(cdr (cdr ,t)))
+(defmacro 4thcdr (t) `(cdr (cdr (cdr ,t))))
+(defmacro 5thcdr (t) `(cdr (cdr (cdr (cdr ,t)))))
+(defmacro 6thcdr (t) `(cdr (cdr (cdr (cdr (cdr ,t))))))
+(defmacro 7thcdr (t) `(cdr (cdr (cdr (cdr (cdr (cdr ,t)))))))
+(defmacro 1st (t) `(car ,t))
+(defmacro 2nd (t) `(car (2ndcdr ,t)))
+(defmacro 3rd (t) `(car (3rdcdr ,t)))
+(defmacro 4th (t) `(car (4thcdr ,t)))
+(defmacro 5th (t) `(car (5thcdr ,t)))
+(defmacro 6th (t) `(car (6thcdr ,t)))
+(defmacro 7th (t) `(car (7thcdr ,t)))

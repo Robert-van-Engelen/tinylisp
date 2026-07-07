@@ -335,7 +335,7 @@ returns `#t` if `<list>` is a proper list, i.e. either empty `()` or a list of v
 
 returns `#t` if `x` and `y` are structurally equal.  Otherwise, returns `()`.
 
-    (negate n)
+    (neg n)
 
 returns the negative of `n`.
 
@@ -358,14 +358,6 @@ returns `#t` if numbers `n1` = `n2`.  Otherwise, returns `()`.
     (list x1 x2 ... xk)
 
 returns the list of `x1`, `x2`, ..., `xk`.  That is, `(x1 x2 ... xk)` with all `x` evaluated.
-
-    (cadr <list>)
-
-returns `(car (cdr <list>))`.  That is, the second value of `<list>`.
-
-    (caddr <list>)
-
-returns `(car (cdr (cdr <list>)))`.  That is, the third value of `<list>`.
 
     (begin x1 x2 ... xk)
 
