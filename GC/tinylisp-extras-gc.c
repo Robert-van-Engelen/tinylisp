@@ -570,7 +570,12 @@ struct { const char *s; L (*f)(L,L*); short t; } prim[] = {
 
 /* section 13: tracing (trace 1) with colorful output, to wait on ENTER (trace 2), with memory dump (trace 3) */
 void trace(L y,L x,L e) {
- if (tr > 2 && !equ(e,env)) { printf("\n\e[35mENV: \e[33m"); print(stdout,e); printf("\e[m"); }
+ if (tr > 2 && !equ(e,env)) {
+  printf("\n\e[35mENV: \e[33m");
+  for (; !equ(e,env); e = cdr(e)) {
+   print(stdout,car(car(e))); printf("\e[36m = \e[33m"); print(stdout,cdr(car(e))); printf("   ");
+  }
+ }
  printf("\n\e[32m%u \e[33m",lp); print(stdout,y); printf("\e[36m => \e[33m"); print(stdout,x); printf("\e[m\t");
  if (tr > 1) while (getchar() >= ' ') continue;
 }
