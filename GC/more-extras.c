@@ -158,12 +158,14 @@ L f_nth(L t,L *e) {
 }
 
 /* (last t [n])
-   return last singleton list element of list t, optionally return the n last list elements */
+   returns last singleton list element of list t, optionally return list of n last list elements */
 L f_last(L t,L *e) {
- I a = 0; L x,y,s = x = evarg(&t,e,&a); int n = isarg(&t,e,&a,&y) ? (int)num(gc(y)) : 1;
- for (t = s; T(t) == CONS; t = CDR(t)) if (n < 1) s = CDR(s); else --n;
+ I a = 0; L s,x,y; int n;
+ rc(&x,evarg(&t,e,&a));
+ n = isarg(&t,e,&a,&y) ? (int)num(gc(y)) : 1;
+ for (t = s = x; T(t) == CONS; t = CDR(t)) if (n < 1) s = CDR(s); else --n;
  s = dup(s);
- gc(x);
+ rg(x);
  return s;
 }
 
@@ -177,7 +179,7 @@ L f_reverse(L t,L *e) {
 }
 
 /* (seq n) - built-in for speed to replace the seq definition in list.lisp (remove it)
-   return sequence (1 2 3 ... n-1) */
+   returns list with the sequence (1 2 3 ... n-1) */
 L f_seq(L t,L *e) {
  I a = 0,i = (I)num(gc(evarg(&t,e,&a))),k = (I)num(gc(evarg(&t,e,&a))); L s = nil,*p = &s;
  for (; i < k; ++i,p = &CDR(*p)) *p = cons(i,nil);
@@ -185,7 +187,7 @@ L f_seq(L t,L *e) {
 }
 
 /* (range n m k) - built-in for speed to replace the range definition in list.lisp (remove it)
-   return sequence (n n+k n+2k ... m-1) where optional k=1 by default */
+   returns list with the sequence (n n+k n+2k ... m-1) where optional k=1 by default */
 L f_range(L t,L *e) {
  I a = 0; int n = (int)num(gc(evarg(&t,e,&a))),m = (int)num(gc(evarg(&t,e,&a))),k = 1; L x,s = nil,*p = &s;
  if (isarg(&t,e,&a,&x)) k = (int)num(gc(x));
@@ -194,7 +196,7 @@ L f_range(L t,L *e) {
 }
 
 /* (equal? x y) - built-in for speed to replace the equal? definition in list.lisp (remove it)
-   deep check for equality */
+   deep check for equality, does not permit cyclic data structures */
 I equal(L x,L y) {
  if (equ(x,y)) return 1;
  if (T(x) != T(y) || (T(x) != CONS && T(x) != CLOS && T(x) != MACR)) return 0;
@@ -202,15 +204,24 @@ I equal(L x,L y) {
   if (!equal(CAR(x),CAR(y))) return 0;
  return equal(x,y);
 }
-L f_equal(L t,L *e) { I a = 0; L x = evarg(&t,e,&a),y = evarg(&t,e,&a),z = equal(x,y) ? tru : nil; gc(x); gc(y); return z; }
+L f_equal(L t,L *e) {
+ I a = 0; L x,y,z;
+ rc(&x,evarg(&t,e,&a));
+ y = evarg(&t,e,&a);
+ z = equal(x,y) ? tru : nil;
+ gc(y); rg(x);
+ return z;
+}
 
 /* (member x t) - built-in for speed to replace the member definition in list.lisp (remove it)
    returns rest of list t from the first list element that is equal to x */
 L f_member(L t,L *e) {
- I a = 0; L x = evarg(&t,e,&a),s = t = evarg(&t,e,&a);
+ I a = 0; L s,x;
+ rc(&x,evarg(&t,e,&a));
+ s = t = evarg(&t,e,&a);
  while (T(t) == CONS && !equal(x,CAR(t))) t = CDR(t);
  t = dup(t);
- gc(s);
+ gc(s); rg(x);
  return t;
 }
 
