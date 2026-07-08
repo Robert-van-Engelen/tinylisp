@@ -182,7 +182,7 @@
     (2 "second")
     (3 "third"))
 
-; tinylisp names may contain punctuation and digits, start with a digit, but may not start with a , ( ) ' ` "
+; tinylisp names may contain punctuation and digits, may start with a digit, but may not start with a , ( ) ' ` " ;
 (defmacro 2nd-cdr (t) `(cdr ,t))
 (defmacro 3rd-cdr (t) `(cdr (cdr ,t)))
 (defmacro 4th-cdr (t) `(cdr (cdr (cdr ,t))))
@@ -203,3 +203,18 @@
     (over (set-car! (3rd-cdr list) 111))
     list)
 ; note above that a let-local name may be any name, including a built-in name, used in the local lexical scope
+
+; define a macro fn as a shorthand for a local (recursive) function f with arguments v and body x, used in expression y
+(defmacro fn (f v x y)
+    `(letrec* (,f (lambda ,v ,x)) ,y))
+
+(defun factorial (n)
+    (fn fact-tr (n k)
+            (if (< 1 n)
+                (fact-tr (- n 1) (* n k))
+                k)
+        (fact-tr n 1)))
+
+; display the factorial function and try it out to compute 7! = 5040
+(de-fun factorial)
+(factorial 7)
