@@ -337,7 +337,7 @@ L f_leta(L t,L *e) {
  return car(t);
 }
 L f_lambda(L t,L *e) { return closure(dup(car(t)),dup(car(cdr(t))),equ(*e,env) ? nil : dup(*e)); }
-/* define a global symbol, garbage-collects unreachable definitions when redefined */
+/* define a global symbol, garbage collect the old unreachable definitions when redefined */
 L f_define(L t,L *e) {
  L d = *e,v = car(t),x;
  if (T(v) != ATOM) return err(2,v);             /* bound variable must be an atom, to prevent GC issues when not an atom */
@@ -628,7 +628,7 @@ L eval(L x,L e) {
   gc(g); g = nil; gc(h); h = nil;
   if (tr) trace(y,x,e);
  }
- if (tr) trace(y,x,e);
+ if (tr && !equ(x,y)) trace(y,x,e);
  /* garbage collect environment e, closure f, macro body h */
  gc(e); gc(f); gc(h);
  /* deregister 5 variables, if registered, without gc'ing them */

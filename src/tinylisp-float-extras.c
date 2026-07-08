@@ -348,7 +348,7 @@ L eval(L x,L e) {
   x = cdr(car(f)); e = d; g = f; h = e;
   if (tr) trace(s,y,x,e);
  }
- if (tr) trace(s,y,x,e);
+ if (tr && !equ(x,y)) trace(s,y,x,e);
  return x;
 }
 
