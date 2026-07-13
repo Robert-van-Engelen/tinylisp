@@ -40,6 +40,17 @@
 /* number of cells for the shared pool and atom heap, increase N as desired */
 #define N 8192
 
+/* section 12: adding readline with history ++ new: support nested load, new err 5 can't open file */
+#include <readline/readline.h>
+#include <readline/history.h>
+FILE *in[10],*out;
+char buf[256],see = 0,*ptr = "",*line = NULL,ps[80];
+
+/* prompt strings for readline (truncates to 80 chars max), use \001 to ignore codes up to \002 */
+/* NOTE: MacOS Darwin uses libedit as a libreadline "compatible", but that does not display prompt colors! */
+#define PS1 "\001\e[32;1m\002%u>\001\e[m\002"
+#define PS2 "\001\e[32;1m\002? \001\e[m\002"
+
 /* forward proto declarations */
 L eval(L,L),Read(),parse(),err(I,L),gc(L); void collect(L),print(FILE*,L); I atomize(L,char*);
 
@@ -76,17 +87,6 @@ L atom(const char *s) {
  I i = 0; while (i < hp && strcmp(A+i,s)) i += strlen(A+i)+1;
  return i == hp && ((hp += strlen(s)+1) > lp<<3 || !strcpy(A+i,s)) ? err(4,nil) : box(ATOM,i);
 }
-
-/* section 12: adding readline with history ++ new: support nested load, new err 5 can't open file */
-#include <readline/readline.h>
-#include <readline/history.h>
-FILE *in[10],*out;
-char buf[256],see = 0,*ptr = "",*line = NULL,ps[80];
-
-/* prompt strings for readline (truncates to 80 chars max), use \001 to ignore codes up to \002 */
-/* NOTE: MacOS Darwin uses libedit as a libreadline "compatible", but that does not display prompt colors! */
-#define PS1 "\001\e[32;1m\002%u>\001\e[m\002"
-#define PS2 "\001\e[32;1m\002? \001\e[m\002"
 
 /* section 14: error handling and exceptions
    ERR 1: not a pair

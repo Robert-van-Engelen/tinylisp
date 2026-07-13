@@ -3,7 +3,7 @@
 ;                     https://sicp.sourceacademy.org/chapters/3.1.1.html
 ;       by Harold Abelson and Gerald Jay Sussman with Julie Sussman
 ;
-; requires tinylisp-extras for begin, setq
+; requires tinylisp-extras for progn, setq
 ;
 ; (load acct.lisp)
 ; (define acct1 (make-withdraw 50))
@@ -15,8 +15,8 @@
 (define make-withdraw
     (lambda (balance)
         (lambda (amount)
-            (if (>= balance amount)
-                (begin
+            (if (< balance amount)
+                "insufficient funds"
+                (progn
                     (setq balance (- balance amount))
-                    balance)
-                "insufficient funds"))))
+                    balance)))))
