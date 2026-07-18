@@ -251,12 +251,12 @@ void rebuild() {
 
 /* detect SCC from origin cell[i] while visiting x, ignore paths to cell[k] */
 I cyclic(I i,L x,I k) {
- if (T(x) == CONS || T(x) == CLOS || T(x) == MACR) {
+ if (T(x) == CONS || T(x) == CLOS) {
   I j = ord(x);
   if (i != j && !(ref[j/2] & SCC)) {
    L y = cell[j+1],z = j == k ? nil : cell[j];          /* y = car(x) and z = cdr(x) if not cell[k] */
    ref[i/2] |= MARK;
-   if (cyclic(i,y,k)) ref[j/2] = SCC|i;                 /* car(x) is in the SCC identified by representative i */
+   if (T(x) != CLOS && cyclic(i,y,k)) ref[j/2] = SCC|i; /* car(x) is in the SCC identified by representative i */
    if (cyclic(i,z,k)) ref[j/2] = SCC|i;                 /* cdr(x) is in the SCC identified by representative i */
    ref[i/2] &= ~MARK;
   }
