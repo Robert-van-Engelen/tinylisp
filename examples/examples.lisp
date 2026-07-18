@@ -130,13 +130,13 @@
 ; the same can be achieved with letrec recursion (recommended) instead of a slow recursive macro:
 (defmacro multi-print (n . args)
     (letrec*
-        (c (lambda (k)
+        (cc (lambda (k)
             (if (< 0 k)
                  `(progn
                      (print . ,args)
-                     ,(c (- k 1) . args))
+                     ,(cc (- k 1) . args))
                  ())))
-        (c n)))
+        (cc n)))
 
 ; expand 10 print statements each with a distinct number from 1 to 10 to print with a space
 (defun countup ()
@@ -168,12 +168,12 @@
 ; (case <expr> (<key1> <expr1>) (<key2> <expr2>) ... (<keyn> <exprn>)) match <key> to return value of corresponding <expr>
 (defmacro case (x . args)
     (letrec*
-        (c (lambda (t)
+        (cc (lambda (t)
             (if t
-                `(((eq? _ ,(car (car t))) ,(car (cdr (car t)))) . ,(c (cdr t)))
+                `(((eq? _ ,(car (car t))) ,(car (cdr (car t)))) . ,(cc (cdr t)))
                 `((#t ())))))
-        `(let* (_ ,x) (cond . ,(c args)))))
-; (case ...) is converted by a local recursive function (c args) that iterates over args to construct the
+        `(let* (_ ,x) (cond . ,(cc args)))))
+; (case ...) is converted by a local recursive case-compiling function (cc args) that iterates over args to construct the
 ; (let* (_ <expr>) (cond ((eq? _ <key1>) <expr1>) ... (#t ())) conditions ((eq? _ <key>) <expr>) for each <key> <expr>
 
 ; try it out
