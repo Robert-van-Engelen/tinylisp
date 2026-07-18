@@ -23,14 +23,13 @@ tinylisp
 810>(passed extra dot)
 810>(passed scant dot)
 810>(passed early dot)
-809>OK
 ```
 
 When the article's additional Lisp features are implemented, then test with [dotcall-extras.lisp](dotcall-extras.lisp):
 
 ```console
 $ ./tinylisp-extras
-tinylisp
+tinylisp-extras
 ...
 7427>(load dotcall-extras.lisp)
 dotcall-extras.lisp
@@ -59,6 +58,46 @@ dotcall-extras.lisp
 (passed setq)
 (passed set-car!)
 OK
-7427>
 ```
 
+When the article's additional Lisp features are implemented with Section 17 hygienic macros, then test with [dotcall-extras-expand.lisp](dotcall-extras-expand.lisp):
+
+```console
+$ ./tinylisp-extras-expand
+tinylisp-extras-expand
+...
+64260>(load dotcall-extras-expand.lisp)
+dotcall-extras-expand.lisp
+equal?
+not redefined built-in <list>
+(passed +)
+(passed -)
+(passed *)
+(passed /)
+(passed let*)
+(passed let)
+(passed letrec*)
+(passed letrec* consing left)
+(passed letrec* consing right)
+(passed letrec)
+(passed letrec consing left)
+(passed letrec consing right)
+(passed static scoping)
+(passed currying)
+(passed same args)
+(passed extra args)
+(passed caller dot)
+(passed callee dot)
+(passed both dot)
+(passed extra dot)
+(passed scant dot)
+(passed early-dot)
+delay
+(passed macro)
+(passed assoc)
+(passed catch throw)
+(passed setq)
+(passed set-car!)
+(passed set-cdr!)
+OK
+```

@@ -1,4 +1,4 @@
-; test cases for tinylisp-extras
+; test cases for tinylisp-extras-expand
 
 (define equal?
     (lambda (x y)
@@ -229,10 +229,11 @@
     '(early-dot))
 
 ; check macro expansion into Lisp code that delays code execution then force eval
+; early binding and hygienic macros require global macro definitions
+(define delay (macro (x) (list 'lambda () x)))
 (cons
     (if (equal?
             (let*
-                (delay (macro (x) (list 'lambda () x)))
                 (f (delay (cons 1 (cons 2 (cons 3 ())))))
                 (f))
             '(1 2 3))

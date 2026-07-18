@@ -19,7 +19,6 @@
   - compile with `cc -O2 -o tinylisp tinylisp-opt-gc.c`
 
 - [tinylisp-extras-gc.c](tinylisp-extras-gc.c)
-  - the most complete tinylisp version
   - based on tinylisp-extras.c that includes all of the article's extras (+184 lines of C)
   - adds reference count garbage collection to continuously release unused memory cells
   - collects unused cyclic lists created by `letrec` and `letrec*` recursive local functions
@@ -36,6 +35,9 @@
   - passes `tests/dotcall-extras.lisp` tests and runs 8-queens `nqueens.lisp`
   - optimized internal logic with unchecked CAR and CDR when safe to use
   - compile with `cc -O2 -o tinylisp tinylisp-extras-gc.c -lreadline`
+
+- [tinylisp-extras-expand-gc.c](tinylisp-extras-expand-gc.c)
+  - the ultimate version of the above with more built-in extras and hygienic macros
 
 See also [#20](https://github.com/Robert-van-Engelen/tinylisp/issues/20)
 
@@ -64,6 +66,7 @@ Mac M1 compiled with clang 14.0.0 option -O2 to solve the
 | implementation | GC | mem size (cells) | time (ms) |
 | -------------- | -- | ---------------: | --------: |
 | tinylisp-extras-gc                                        | ref count  |  8192 |  396 ms |
+| tinylisp-extras-expand-gc                                 | ref count  |  8192 |   49 ms |
 | [lisp](https://github.com/Robert-van-Engelen/lisp)        | mark-sweep |  8192 |  920 ms |
 | [lisp](https://github.com/Robert-van-Engelen/lisp)        | mark-sweep | 16384 |  895 ms |
 | [lisp-cheney](https://github.com/Robert-van-Engelen/lisp) | cheney     |  8192 | 1880 ms |
@@ -74,14 +77,15 @@ the running time of tinylisp (since there is no effect, different memory sizes
 are not shown in the table for tinylisp).  But memory size does impact
 mark-sweep and cheney, since more memory means fewer GC stages.
 
-The performance of tinylisp versus the Common Lisp interpreter GNU
-[CLISP](https://www.gnu.org/software/clisp) is reasonably comparable (tinylisp
-396 ms versus CLISP 296 ms) to solve 8-queens.  [SBCL](https://www.sbcl.org)
-is a high-performance Common Lisp implementation.  It runs 8-queens in 6 ms.
-However, Common Lisp (compiled or not) is not as flexible as tinylisp in which
-code and data are truly the same.  The dot operator is supported by tinylisp as
-should be and there is no need for ugly `funcall` and other unnecessary
-additions.
+The performance of tinylisp-extras-gc versus the Common Lisp interpreter GNU
+[CLISP](https://www.gnu.org/software/clisp) is reasonably comparable (396 ms
+versus CLISP 296 ms) to solve 8-queens.  The performance of
+tinylisp-extras-expand-gc is boosted with early binding global names and more
+built-ins.  [SBCL](https://www.sbcl.org) is a high-performance Common Lisp
+implementation.  It runs 8-queens in 6 ms.  However, Common Lisp (compiled or
+not) is not as flexible as tinylisp in which code and data are truly the same.
+The dot operator is supported by tinylisp as should be and there is no need for
+ugly `funcall` and other unnecessary additions.
 
 Perhaps I will build a compiler for tinylisp.  The fastest way to run tinylisp
 programs is to generate C code that is highly optimizable by a C compiler.
