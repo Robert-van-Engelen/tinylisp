@@ -100,17 +100,22 @@ L f_floor(L t,L *e) { I a = 0; return num(floor(gc(evarg(&t,e,&a)))); }
 /* (ceiling x) */
 L f_ceiling(L t,L *e) { I a = 0; return num(ceil(gc(evarg(&t,e,&a)))); }
 
-/* (char n)
-   return a single character atom for the given character code -128 <= n <= 255 */
-L f_char(L t,L *e) { I a = 0; *buf = (int)num(gc(evarg(&t,e,&a))); buf[1] = '\0'; return atom(buf); }
+/* (char k [n])
+   return a string of n (default n=1) characters with code -128 <= k <= 255 */
+L f_char(L t,L *e) {
+ I a = 0,k = (int)num(gc(evarg(&t,e,&a))),n = 1; L y;
+ if (isarg(&t,e,&a,&y)) { n = num(gc(y)); if (n >= sizeof(buf)) n = sizeof(buf)-1; }
+ buf[n] = '\0';
+ while (n--) buf[n] = k;
+ return atom(buf);
+}
 
 /* (code <atom> [n])
    return the code 0 to 255 of a single character in an atom at the front or at an optional given index n, returns 0 when beyond the end of the atom */
 L f_code(L t,L *e) {
  I i,k,a = 0; L x,v = gc(evarg(&t,e,&a));
  k = T(v) == ATOM ? strlen(A+ord(v)) : 0;
- i = isarg(&t,e,&a,&x) ? (I)num(x) : 0; 
- gc(x);
+ i = isarg(&t,e,&a,&x) ? (I)num(gc(x)) : 0; 
  return i < k ? *(A+ord(v)+i)&0xff : 0;
 }
 

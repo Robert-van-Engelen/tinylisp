@@ -138,7 +138,7 @@ NaN-boxed `box(CONS,i)` with a new `alloc()` function.  It also checks if
 `lomem(i)` does not overflow into the atom heap:
 
 ```c
-L alloc() { I i = fp; fp = ref[i/2]; ref[i/2] = 1; --fn; return hp > lomem(i)<<3 ? err(4) : box(CONS,i); }
+I alloc() { I i = fp; fp = ref[i/2]; ref[i/2] = 1; --fn; return hp > lomem(i)<<3 ? (I)err(4,nil) : i; }
 ```
 
 Because `ref[i/2]` becomes unused when the corresponding cell pair is
@@ -149,7 +149,7 @@ The following updated tinylisp `cons()` function calls `alloc()` and stores the
 car `x` and cdr `y` of the new pair `p`:
 
 ```c
-L cons(L x,L y) { L p = alloc(); cell[ord(p)+1] = x; cell[ord(p)] = y; return p; }
+L cons(L x,L y) { I i = alloc(); cell[i+1] = x; cell[i] = y; return box(CONS,i); }
 ```
 
 With reference count garbage collection we need to "duplicate" a Lisp
@@ -161,7 +161,7 @@ duplicate is a `CONS` or `CLOS` value that uses `cell[ord(x)+1]` for its car
 and `cell[ord(x)]` for its cdr:
 
 ```c
-L dup(L x) { if ((T(x)&~(CONS^CLOS)) == CONS) ++ref[ord(x)/2]; return x; }
+L dup(L x) { if (T(x) == CONS || T(x) == CLOS || T(x) == MACR) ++ref[ord(x)/2]; return x; }
 ```
 
 Every `dup(x)` must be followed sooner or later by a `gc(x)` to collect it when
@@ -169,7 +169,12 @@ Every `dup(x)` must be followed sooner or later by a `gc(x)` to collect it when
 
 ```c
 void del(I i) { ref[i/2] = fp; fp = i; ++fn; }
-void gc(L x) { I i; if ((T(x)&~(CONS^CLOS)) == CONS && !--ref[(i = ord(x))/2]) { del(i); gc(cell[i+1]); gc(cell[i]); } }
+void gc(L x) {
+  I i;
+  if ((T(x) == CONS || T(x) == CLOS || T(x) == MACR) && !--ref[(i = ord(x))/2]) {
+    del(i); gc(cell[i+1]); gc(cell[i]);
+  }
+}
 ```
 
 This decrements the reference count `ref[i/2]` of a `CONS` or `CLOS` value `x`
@@ -192,8 +197,15 @@ Cyclic data structures can be collected with mark-sweep garbage collection.  We
 do this when we return to the REPL:
 
 ```c
-void mark(L x) { if ((T(x)&~(CONS^CLOS)) == CONS && !ref[ord(x)/2]++) { mark(cell[ord(x)+1]); mark(cell[ord(x)]); } }
-void sweep() { for (fp = 0,lp = N-2,fn = 1,i = 2; i < N; i += 2) if (!ref[i/2]) del(i); else lomem(i); }
+void mark(L x) {
+  if ((T(x) == CONS || T(x) == CLOS || T(x) == MACR) && !ref[ord(x)/2]++) {
+    mark(cell[ord(x)+1]); mark(cell[ord(x)]);
+  }
+}
+void sweep() {
+  for (fp = 0,lp = N-2,fn = 1,i = 2; i < N; i += 2)
+    if (!ref[i/2]) del(i); else lomem(i);
+}
 void rebuild() { memset(ref,0,sizeof(ref)); mark(env); sweep(); }
 ```
 
@@ -221,9 +233,12 @@ article's recommendation:
 
 ```c
 void sweep() {
- I i; for (hp = 0,i = 0; i < N; ++i) if (ref[i/2] && T(cell[i]) == ATOM && ord(cell[i]) > hp) hp = ord(cell[i]);
+ I i;
+ for (hp = 0,i = 0; i < N; ++i)
+   if (ref[i/2] && T(cell[i]) == ATOM && ord(cell[i]) > hp) hp = ord(cell[i]);
  hp += strlen(A+hp)+1;
- for (fp = 0,lp = N-2,fn = 1,i = 2; i < N; i += 2) if (ref[i/2]) lomem(i); else del(i);
+ for (fp = 0,lp = N-2,fn = 1,i = 2; i < N; i += 2)
+   if (ref[i/2]) lomem(i); else del(i);
 }
 ```
 

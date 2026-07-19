@@ -236,7 +236,7 @@ void rebuild() {
  mark(env);
  sweep();
 #if DEBUG                                               /* report on memory management when debugging is enabled */
- for (i = 0; i < N/3; ++i) {
+ for (i = 0; i < N/2; ++i) {
   if (!(ref[i] & FREE) && (r[i] & FREE))
    LOG(cell[i+1],"\n\e[31;1muse after free ref[%u] = %u\e[m\t",i,ref[i]),LOG(cell[2*i],"\t");
   else if ((ref[i] & FREE) && !(r[i] & FREE))

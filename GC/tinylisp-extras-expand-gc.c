@@ -239,7 +239,7 @@ void rebuild() {
  mark(env);
  sweep();
 #if DEBUG                                               /* report on memory management when debugging is enabled */
- for (i = 0; i < N/3; ++i) {
+ for (i = 0; i < N/2; ++i) {
   if (!(ref[i] & FREE) && (r[i] & FREE))
    LOG(cell[i+1],"\n\e[31;1muse after free ref[%u] = %u\e[m\t",i,ref[i]),LOG(cell[2*i],"\t");
   else if ((ref[i] & FREE) && !(r[i] & FREE))
@@ -719,15 +719,20 @@ L f_floor(L t,L *e) { I a = 0; return num(floor(gc(evarg(&t,e,&a)))); }
 /* ++ new: (ceiling x) */
 L f_ceiling(L t,L *e) { I a = 0; return num(ceil(gc(evarg(&t,e,&a)))); }
 
-/* ++ new: (char n) return a single character atom for the given character code -128 <= n <= 255 */
-L f_char(L t,L *e) { I a = 0; *buf = (int)num(gc(evarg(&t,e,&a))); buf[1] = '\0'; return atom(buf); }
+/* ++ new: (char k [n]) return a string of n (default n=1) characters with code -128 <= k <= 255 */
+L f_char(L t,L *e) {
+ I a = 0,k = (int)num(gc(evarg(&t,e,&a))),n = 1; L y;
+ if (isarg(&t,e,&a,&y)) { n = num(gc(y)); if (n >= sizeof(buf)) n = sizeof(buf)-1; }
+ buf[n] = '\0';
+ while (n--) buf[n] = k;
+ return atom(buf);
+}
 
 /* ++ new: (code <atom> [n]) return the code 0 to 255 of a single character in an atom at the front or at an optional given index n, returns 0 when beyond the end of the atom */
 L f_code(L t,L *e) {
  I i,k,a = 0; L x,v = gc(evarg(&t,e,&a));
  k = T(v) == ATOM ? strlen(A+ord(v)) : 0;
- i = isarg(&t,e,&a,&x) ? (I)num(x) : 0; 
- gc(x);
+ i = isarg(&t,e,&a,&x) ? (I)num(gc(x)) : 0; 
  return i < k ? *(A+ord(v)+i)&0xff : 0;
 }
 
@@ -1203,7 +1208,7 @@ void stop(int i) { if (line) err(6,nil); else abort(); }
 
 /* section 10: read-eval-print loop (REPL) with additions */
 int main(int argc,char **argv) {
- I i; printf("tinylisp-extras-fast-gc");
+ I i; printf("tinylisp-extras-expand-gc");
  sweep(); /* sweep all cells to the free list (since all ref[] are zero and xb = xp = NULL) */
  nil = box(NIL,0); atom("ERR"); tru = atom("#t"); env = pair(tru,tru,nil);
  for (i = 0; prim[i].s; ++i) env = pair(atom(prim[i].s),box(PRIM,i),env);
