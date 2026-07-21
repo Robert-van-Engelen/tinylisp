@@ -283,9 +283,9 @@ void scc(L x,I k) {
 /* section 16.1: replacing recursion with loops */
 L evlis(L t,L e) {
  L s,*p = &s;
- for (rc(p,nil); T(t) == CONS; p = &CDR(*p),t = CDR(t)) *p = cons(eval(CAR(t),e),nil);
+ for (rc(p,nil); T(t) == CONS; t = CDR(t)) p = &CDR(*p = cons(eval(CAR(t),e),nil));
  if (T(t) == ATOM) *p = dup(assoc(t,e));
- rr(1);                                                 /* deregister s */
+ rr(1);
  return s;
 }
 
@@ -373,9 +373,9 @@ L f_letreca(L t,L *e) {
  return car(t);
 }
 L f_letrec(L t,L *e) {
- I i,k; L s,d,*p;
- for (rc(&d,*e),p = &d,s = t; let(s); s = CDR(s),p = &CDR(*p))
-  if (T(CAR(s)) == CONS && T(CAR(CAR(s))) == ATOM) *p = pair(CAR(CAR(s)),nil,*e);
+ I i,k; L s,d,*p = &d;
+ for (rc(p,*e),s = t; let(s); s = CDR(s))
+  if (T(CAR(s)) == CONS && T(CAR(CAR(s))) == ATOM) p = &CDR(*p = pair(CAR(CAR(s)),nil,*e));
   else err(2,CAR(s));                           /* bound variable must be an atom, to prevent GC issues when not an atom */
  k = ref[(i = ord(d))/2];
  for (*e = d,rr(1); let(t); t = CDR(t),i = ord(d),d = CDR(d)) CDR(CAR(d)) = eval(car(CDR(CAR(t))),*e);
@@ -410,7 +410,7 @@ L f_println(L t,L *e) { f_print(t,e); fputc('\n',out); return nil; }
 /* ++ new: atomize (stringify) x */
 L f_atomize(L t,L *e) {
  I i = hp,k; L s,*p = &s;
- for (rc(p,nil); T(t) == CONS; t = CDR(t),p = &CDR(*p)) *p = cons(T(CAR(t)) == ATOM ? CAR(t) : eval(CAR(t),*e),nil);
+ for (rc(p,nil); T(t) == CONS; t = CDR(t)) p = &CDR(*p = cons(T(CAR(t)) == ATOM ? CAR(t) : eval(CAR(t),*e),nil));
  *p = dup(t);                                   /* tail of s is t */
  k = atomize(s,NULL);                           /* the atom string length k, to hold atomized list of arguments */
  if ((hp += k+1) > lp<<3) err(4,nil);           /* ERR 4 if the heap space is not large enough */
@@ -512,9 +512,9 @@ L f_list(L t,L *e) { return evlis(t,*e); }
 
 /* ++ new: (append ...) returns the concatenation of its list arguments as a new list (e.g. used in backquoting) */
 L f_append(L t,L *e) {
- I a = 0; L x = nil,y,s,*p;
- for (rc(&y,nil),rc(&s,nil),p = &s; isarg(&t,e,&a,&x) && !not(t); )
-  for (gc(y),y = x; !not(x); x = cdr(x),p = &CDR(*p)) *p = cons(dup(car(x)),nil);
+ I a = 0; L x = nil,y,s,*p = &s;
+ for (rc(&y,nil),rc(p,nil); isarg(&t,e,&a,&x) && !not(t); )
+  for (gc(y),y = x; !not(x); x = cdr(x)) p = &CDR(*p = cons(dup(car(x)),nil));
  *p = x;
  rr(1); rg(y);
  return s;
@@ -676,7 +676,7 @@ L quote(L x) { return cons(atom("quote"),cons(x,nil)); }        /* returns (quot
 L endl(L t) { return scan() == ')' ? t : err(7,t); }            /* err 7 when closing ) is missing */
 L list() {
  L t,*p = &t;
- for (rc(p,nil); ; *p = cons(parse(),nil),p = &CDR(*p)) {
+ for (rc(p,nil); ; p = &CDR(*p = cons(parse(),nil))) {
   if (scan() == ')') { rr(1); return t; }
   if (*buf == '.' && !buf[1]) { *p = Read(); rr(1); return endl(t); }
  }
@@ -688,7 +688,7 @@ L tick() {
  if (*buf == '"') return parse();
  if (*buf == ')') return err(7,atom(buf));
  if (*buf != '(') return quote(parse());
- for (rc(&t,cons(atom("list"),nil)),p = &t; ; p = &CDR(*p),*p = cons(tick(),nil)) {
+ for (p = &CDR(rc(&t,cons(atom("list"),nil))); ; p = &CDR(*p = cons(tick(),nil))) {
   if (scan() == ')') { rr(1); return t; }
   if (*buf == '.' && !buf[1]) { scan(); rr(1); return endl(cons(atom("append"),cons(t,cons(tick(),nil)))); }
  }

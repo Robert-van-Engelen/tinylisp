@@ -385,9 +385,9 @@ L f_letreca(L t,L *e) {
  return car(t);
 }
 L f_letrec(L t,L *e) {
- I i,k; L s,d,*p;
- for (rc(&d,*e),p = &d,s = t; let(s); s = CDR(s),p = &CDR(*p))
-  if (T(CAR(s)) == CONS && T(CAR(CAR(s))) == ATOM) *p = pair(CAR(CAR(s)),nil,*e);
+ I i,k; L s,d,*p = &d;
+ for (rc(p,*e),s = t; let(s); s = CDR(s))
+  if (T(CAR(s)) == CONS && T(CAR(CAR(s))) == ATOM) p = &CDR(*p = pair(CAR(CAR(s)),nil,*e));
   else err(2,CAR(s));                           /* bound variable must be an atom, to prevent GC issues when not an atom */
  k = ref[(i = ord(d))/2];
  for (*e = d,rr(1); let(t); t = CDR(t),i = ord(d),d = CDR(d)) CDR(CAR(d)) = eval(car(CDR(CAR(t))),*e);
@@ -422,7 +422,7 @@ L f_println(L t,L *e) { f_print(t,e); fputc('\n',out); return nil; }
 /* ++ new: atomize (stringify) x */
 L f_atomize(L t,L *e) {
  I i = hp,k; L s,*p = &s;
- for (rc(p,nil); T(t) == CONS; t = CDR(t),p = &CDR(*p)) *p = cons(T(CAR(t)) == ATOM ? CAR(t) : eval(CAR(t),*e),nil);
+ for (rc(p,nil); T(t) == CONS; t = CDR(t)) p = &CDR(*p = cons(T(CAR(t)) == ATOM ? CAR(t) : eval(CAR(t),*e),nil));
  *p = dup(t);                                   /* tail of s is t */
  k = atomize(s,NULL);                           /* the atom string length k, to hold atomized list of arguments */
  if ((hp += k+1) > lp<<3) err(4,nil);           /* ERR 4 if the heap space is not large enough */
@@ -545,9 +545,9 @@ L f_list(L t,L *e) { return evlis(t,*e); }
 
 /* ++ new: (append ...) returns the concatenation of its list arguments as a new list (e.g. used in backquoting) */
 L f_append(L t,L *e) {
- I a = 0; L x = nil,y,s,*p;
- for (rc(&y,nil),rc(&s,nil),p = &s; isarg(&t,e,&a,&x) && !not(t); )
-  for (gc(y),y = x; !not(x); x = cdr(x),p = &CDR(*p)) *p = cons(dup(car(x)),nil);
+ I a = 0; L x = nil,y,s,*p = &s;
+ for (rc(&y,nil),rc(p,nil); isarg(&t,e,&a,&x) && !not(t); )
+  for (gc(y),y = x; !not(x); x = cdr(x)) p = &CDR(*p = cons(dup(car(x)),nil));
  *p = x;
  rr(1); rg(y);
  return s;
@@ -598,17 +598,17 @@ L f_reverse(L t,L *e) {
 
 /* ++ new: (seq n m) returns list with the sequence (n n+1 n+2 ... m-1) */
 L f_seq(L t,L *e) {
- I a = 0; int n = (int)num(gc(evarg(&t,e,&a))),m = (int)num(gc(evarg(&t,e,&a))); L s,*p;
- for (rc(&s,nil),p = &s; n < m; ++n,p = &CDR(*p)) *p = cons(n,nil);
+ I a = 0; int n = (int)num(gc(evarg(&t,e,&a))),m = (int)num(gc(evarg(&t,e,&a))); L s,*p = &s;
+ for (rc(p,nil); n < m; ++n) p = &CDR(*p = cons(n,nil));
  rr(1);
  return s;
 }
 
 /* ++ new: (range n m k) returns list with the sequence (n n+k n+2k ... m-1) where optional k=1 by default */
 L f_range(L t,L *e) {
- I a = 0; int n = (int)num(gc(evarg(&t,e,&a))),m = (int)num(gc(evarg(&t,e,&a))),k = 1; L x,s,*p;
+ I a = 0; int n = (int)num(gc(evarg(&t,e,&a))),m = (int)num(gc(evarg(&t,e,&a))),k = 1; L x,s,*p = &s;
  if (isarg(&t,e,&a,&x)) k = (int)num(gc(x));
- for (rc(&s,nil),p = &s; k*m > k*n; n += k,p = &CDR(*p)) *p = cons(n,nil);
+ for (rc(p,nil); k*m > k*n; n += k) p = &CDR(*p = cons(n,nil));
  rr(1);
  return s;
 }
@@ -955,7 +955,7 @@ L quote(L x) { return cons(atom("quote"),cons(x,nil)); }        /* returns (quot
 L endl(L t) { return scan() == ')' ? t : err(7,t); }            /* err 7 when closing ) is missing */
 L list() {
  L t,*p = &t;
- for (rc(p,nil); ; *p = cons(parse(),nil),p = &CDR(*p)) {
+ for (rc(p,nil); ; p = &CDR(*p = cons(parse(),nil))) {
   if (scan() == ')') { rr(1); return t; }
   if (*buf == '.' && !buf[1]) { *p = Read(); rr(1); return endl(t); }
  }
@@ -967,7 +967,7 @@ L tick() {
  if (*buf == '"') return parse();
  if (*buf == ')') return err(7,atom(buf));
  if (*buf != '(') return quote(parse());
- for (rc(&t,cons(atom("list"),nil)),p = &t; ; p = &CDR(*p),*p = cons(tick(),nil)) {
+ for (p = &CDR(rc(&t,cons(atom("list"),nil))); ; p = &CDR(*p = cons(tick(),nil))) {
   if (scan() == ')') { rr(1); return t; }
   if (*buf == '.' && !buf[1]) { scan(); rr(1); return endl(cons(atom("append"),cons(t,cons(tick(),nil)))); }
  }
@@ -996,9 +996,10 @@ I lookup(L v,L e,L *x) {
 L hold(L x) {
  if (T(x) == ATOM) return box(HOLD,ord(x));
  if (T(x) == CONS) {
-  L t = nil,*p = &t;
-  for (; T(x) == CONS; x = CDR(x),p = &CDR(*p)) *p = cons(hold(CAR(x)),nil);
+  L t,*p = &t;
+  for (rc(p,nil); T(x) == CONS; x = CDR(x)) p = &CDR(*p = cons(hold(CAR(x)),nil));
   *p = hold(x);
+  rr(1);
   return t;
  }
  return dup(x);
@@ -1014,9 +1015,10 @@ L gensym(L v) { char sym[sizeof(buf)]; snprintf(sym,sizeof(sym),"_%s",A+ord(v));
 /* if necessary rename variable(s) v to prevent "variable shadowing" in macro-expanded expression x */
 L hygienic(L v,L x) {
  if (T(v) == CONS) {
-  L w = nil,*p = &w;
-  for (; T(v) == CONS; v = CDR(v),p = &CDR(*p)) *p = cons(hygienic(CAR(v),x),nil);
+  L w,*p = &w;
+  for (rc(p,nil); T(v) == CONS; v = CDR(v)) p = &CDR(*p = cons(hygienic(CAR(v),x),nil));
   if (T(v) == ATOM || T(v) == HOLD) *p = hygienic(v,x);
+  rr(1);
   return w;
  }
  if (T(v) == HOLD) return box(ATOM,ord(v));
@@ -1114,16 +1116,16 @@ L expand(L x,L e,L b) {
    }
    if (equ(f,p_cond)) {
     /* <cond> arguments are pairs of expressions (each cons pair is not a function application) */
-    for (; T(x) == CONS; x = CDR(x),p = &CDR(*p))
-     *p = cons(cons(expand(car(CAR(x)),e,b),cons(expand(car(cdr(CAR(x))),e,b),nil)),nil);
+    for (; T(x) == CONS; x = CDR(x))
+     p = &CDR(*p = cons(cons(expand(car(CAR(x)),e,b),cons(expand(car(cdr(CAR(x))),e,b),nil)),nil));
     rr(1); rg(d); rg(c);
     return t;
    }
    if (equ(f,p_leta)) {
     /* <let*> local variables hide macro variables in b and hide global primitives and macros in e */
-    for (d = dup(e),c = dup(b); let(x); x = CDR(x),p = &CDR(*p)) {
+    for (d = dup(e),c = dup(b); let(x); x = CDR(x)) {
      v = car(CAR(x)); w = hygienic(v,CDR(x));
-     *p = cons(cons(w,cons(expand(car(cdr(CAR(x))),d,c),nil)),nil);
+     p = &CDR(*p = cons(cons(w,cons(expand(car(cdr(CAR(x))),d,c),nil)),nil));
      if (T(v) == ATOM) d = pair(v,nil,d),c = pair(v,w,c);
     }
     *p = cons(expand(car(x),d,c),nil);                  /* expand <let*> body */
@@ -1132,9 +1134,9 @@ L expand(L x,L e,L b) {
    }
    if (equ(f,p_let)) {
     /* <let> local variables hide macro variables in b and hide global primitives and macros in e */
-    for (d = dup(e),c = dup(b); let(x); x = CDR(x),p = &CDR(*p)) {
+    for (d = dup(e),c = dup(b); let(x); x = CDR(x)) {
      v = car(CAR(x)); w = hygienic(v,CDR(x));
-     *p = cons(cons(w,cons(expand(car(cdr(CAR(x))),e,c),nil)),nil);
+     p = &CDR(*p = cons(cons(w,cons(expand(car(cdr(CAR(x))),e,c),nil)),nil));
      if (T(v) == ATOM) d = pair(v,nil,d),c = pair(v,w,c);
     }
     *p = cons(expand(car(x),d,c),nil);                  /* expand <let> body */
@@ -1143,10 +1145,10 @@ L expand(L x,L e,L b) {
    }
    if (equ(f,p_letreca)) {
     /* <letrec*> local variables hide macro variables in b and hide global primitives and macros in e */
-    for (d = dup(e),c = dup(b); let(x); x = CDR(x),p = &CDR(*p)) {
+    for (d = dup(e),c = dup(b); let(x); x = CDR(x)) {
      v = car(CAR(x)); w = hygienic(v,x);
      if (T(v) == ATOM) d = pair(v,nil,d),c = pair(v,w,c);
-     *p = cons(cons(w,cons(expand(car(cdr(CAR(x))),d,c),nil)),nil);
+     p = &CDR(*p = cons(cons(w,cons(expand(car(cdr(CAR(x))),d,c),nil)),nil));
     }
     *p = cons(expand(car(x),d,c),nil);                  /* expand <letrec*> body */
     rr(1); rg(d); rg(c);
@@ -1158,9 +1160,9 @@ L expand(L x,L e,L b) {
      v = car(CAR(y)); w = hygienic(v,x);
      if (T(v) == ATOM) d = pair(v,nil,d),c = pair(v,w,c);
     }
-    for (y = x; let(y); y = CDR(y),p = &CDR(*p)) {
+    for (y = x; let(y); y = CDR(y)) {
      v = car(CAR(y)); w = hygienic(v,x);
-     *p = cons(cons(w,cons(expand(car(cdr(CAR(y))),d,c),nil)),nil);
+     p = &CDR(*p = cons(cons(w,cons(expand(car(cdr(CAR(y))),d,c),nil)),nil));
     }
     *p = cons(expand(car(y),d,c),nil);                  /* expand <letrec> body */
     rr(1); rg(d); rg(c);
@@ -1168,7 +1170,7 @@ L expand(L x,L e,L b) {
    }
   }
   /* expand argument expressions x in (f . x) and return a new application t = (f ...) by populating *p */
-  for (; T(x) == CONS; x = CDR(x),p = &CDR(*p)) *p = cons(expand(CAR(x),e,b),nil);
+  for (; T(x) == CONS; x = CDR(x)) p = &CDR(*p = cons(expand(CAR(x),e,b),nil));
   *p = expand(x,e,b);
   rr(3);
   return t;
