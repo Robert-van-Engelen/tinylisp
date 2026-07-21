@@ -126,12 +126,11 @@ L f_list(L t,L *e) { return evlis(t,*e); }
 /* (append ...) - built-in for speed to replace the append definition in list.lisp (remove it)
    returns the concatenation of its list arguments as a new list */
 L f_append(L t,L *e) {
- I a = 0; L x = nil,y,s,*p = &s;
- rc(&y,nil); rc(&s,nil);
- while (isarg(&t,e,&a,&x) && !not(t))
+ I a = 0; L x = nil,y,s,*p;
+ for (rc(&y,nil),rc(&s,nil),p = &s; isarg(&t,e,&a,&x) && !not(t); )
   for (gc(y),y = x; !not(x); x = cdr(x),p = &CDR(*p)) *p = cons(dup(car(x)),nil);
  *p = x;
- gc(y); rr(2);
+ rr(1); rg(y);
  return s;
 }
 
@@ -178,25 +177,27 @@ L f_last(L t,L *e) {
    return reversed copy of list t */
 L f_reverse(L t,L *e) {
  I a = 0; L x,s = nil;
- for (t = x = evarg(&t,e,&a); T(t) == CONS; t = CDR(t)) s = cons(dup(CAR(t)),s);
- gc(x);
+ for (rc(&x,evarg(&t,e,&a)),t = x; T(t) == CONS; t = CDR(t)) s = cons(dup(CAR(t)),s);
+ rg(x);
  return s;
 }
 
 /* (seq n) - built-in for speed to replace the seq definition in list.lisp (remove it)
    returns list with the sequence (1 2 3 ... n-1) */
 L f_seq(L t,L *e) {
- I a = 0,i = (I)num(gc(evarg(&t,e,&a))),k = (I)num(gc(evarg(&t,e,&a))); L s = nil,*p = &s;
- for (; i < k; ++i,p = &CDR(*p)) *p = cons(i,nil);
+ I a = 0; int n = (int)num(gc(evarg(&t,e,&a))),m = (int)num(gc(evarg(&t,e,&a))); L s,*p;
+ for (rc(&s,nil),p = &s; n < m; ++n,p = &CDR(*p)) *p = cons(n,nil);
+ rr(1);
  return s;
 }
 
 /* (range n m k) - built-in for speed to replace the range definition in list.lisp (remove it)
    returns list with the sequence (n n+k n+2k ... m-1) where optional k=1 by default */
 L f_range(L t,L *e) {
- I a = 0; int n = (int)num(gc(evarg(&t,e,&a))),m = (int)num(gc(evarg(&t,e,&a))),k = 1; L x,s = nil,*p = &s;
+ I a = 0; int n = (int)num(gc(evarg(&t,e,&a))),m = (int)num(gc(evarg(&t,e,&a))),k = 1; L x,s,*p;
  if (isarg(&t,e,&a,&x)) k = (int)num(gc(x));
- for (; k*m > k*n; n += k,p = &CDR(*p)) *p = cons(n,nil);
+ for (rc(&s,nil),p = &s; k*m > k*n; n += k,p = &CDR(*p)) *p = cons(n,nil);
+ rr(1);
  return s;
 }
 

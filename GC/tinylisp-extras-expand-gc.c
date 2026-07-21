@@ -116,7 +116,7 @@ L err(I i,L x) {
  longjmp(jb,i);
 }
 /* register x with initial value y to collect with rg(x) or in a f_catch exception handler when an error occurred */
-void rc(L *x,L y) { *x = y; if (xp) *xp = x,++xp; }     /* GCC incorrectly warns about *xp++ = x dangling pointer */
+L rc(L *x,L y) { *x = y; if (xp) *xp = x,++xp; return y; }      /* GCC incorrectly warns about *xp++ = x dangling pointer */
 /* remove x from catch-throw registry and garbage collect x */
 L rg(L x) { if (xp) --xp; return gc(x); }
 /* remove k registrations without garbage collecting them */
@@ -127,7 +127,7 @@ const I FREE = ~((I)~0UL>>1),MARK = FREE,SCC = MARK>>1;
 /* lowest pointer to allocated cells in memory */
 I lomem(I i) { return lp = i < lp ? i : lp; }
 /* allocate a new pair */
-L alloc() { I i = fp; fp = ref[i/2] & ~FREE; ref[i/2] = 1; --fn; return hp > lomem(i)<<3 ? err(4,nil) : box(CONS,i); }
+L alloc() { I i = fp; fp = ref[i/2]&~FREE; ref[i/2] = 1; --fn; return hp > lomem(i)<<3 ? err(4,nil) : box(CONS,i); }
 
 /* unsafe fast car and cdr, must be guarded to use: if (T(x) == CONS) { ... CAR(x) ... CDR(x) ... } */
 #define CAR(p) cell[ord(p)+1]
@@ -156,7 +156,7 @@ I let(L x) { return T(x) == CONS && T(CDR(x)) == CONS; }
 L dup(L x) {
  if (T(x) == CONS || T(x) == CLOS || T(x) == MACR) {
   I i = ord(x);
-  if (ref[i/2] & SCC) i = ref[i/2] & ~SCC;              /* if x is in an SCC then update SCC representative ref count */
+  if (ref[i/2]&SCC) i = ref[i/2]&~SCC;                  /* if x is in an SCC then update SCC representative ref count */
   ++ref[i/2];                                           /* increment ref count */
   LOG(x,"\n\e[32m++#%u=%u\e[m\t",i,ref[i/2]);
  }
@@ -170,7 +170,7 @@ void del(I i) { ref[i/2] = FREE|fp; fp = i; ++fn; }
 /* from cell pair x onwards, delete entire SCC identified by representative k with SCC bit set, gc non-SCC branches */
 void delscc(I k,L x) {
  I i; L y;
- while (!(ref[(i = ord(x))/2] & FREE)) {                /* repeat until all SCC cell pairs x are deleted */
+ while (!(ref[(i = ord(x))/2]&FREE)) {                  /* repeat until all SCC cell pairs x are deleted */
   LOG(x,"\n\e[36mfree %u\e[m\t",i);
   del(i);                                               /* delete the SCC cell pair x to reuse */
   x = cell[i]; y = cell[i+1];                           /* recurse on y = car(x) and x = cdr(x) */
@@ -188,13 +188,13 @@ void delscc(I k,L x) {
 void collect(L x) {
  I i; L y;
  while (1) {
-  if (ref[(i = ord(x))/2] & FREE) {                     /* detect double free, which should never happen */
+  if (ref[(i = ord(x))/2]&FREE) {                       /* detect double free, which should never happen */
    printf("\n\e[31;1mdouble free %u\e[m\t",i);
    err(4,nil);
   }
-  if (ref[i/2] & SCC) {                                 /* if this is an SCC cell pair to collect */
-   i = ref[i/2] & ~SCC;                                 /* then get the SCC representative identified by i */
-   if (!(ref[i/2] & FREE) && --ref[i/2]) break;         /* if the representative was deleted or its ref drops to zero */
+  if (ref[i/2]&SCC) {                                   /* if this is an SCC cell pair to collect */
+   i = ref[i/2]&~SCC;                                   /* then get the SCC representative identified by i */
+   if (!(ref[i/2]&FREE) && --ref[i/2]) break;           /* if the representative was deleted or its ref drops to zero */
    return delscc(SCC|i,x);                              /* then delete the entire SCC and gc its branches */
   }
   if (--ref[i/2]) break;                                /* if ref count drops to zero (of a non-SCC cell pair x) */
@@ -210,19 +210,19 @@ void collect(L x) {
  LOG(x,"\n\e[35m--#%u=%u\e[m\t",i,ref[i/2]);
 }
 
-/* rebuild ref count by incrementing the ref counts of all cells reachable from cell pair x */
-void mark(L x) {
- L y; I i;
+/* rebuild ref count by incrementing the ref count of all cells reachable from cell pair x */
+void count(L x) {
+ I i; L y;
  while (!ref[(i = ord(x))/2]++) {                       /* increment ref count, but recurse at most once on x */
   x = cell[i]; y = cell[i+1];                           /* recurse on y = car(x) and x = cdr(x) */
-  if (T(y) == CONS || T(y) == CLOS || T(y) == MACR) {
-   if (T(x) == CONS || T(x) == CLOS || T(x) == MACR) mark(y);
-   else x = y;
+  if (T(y) != CONS && T(y) != CLOS && T(y) != MACR) {
+   if (T(x) != CONS && T(x) != CLOS && T(x) != MACR) break;
   }
-  else if (T(x) != CONS && T(x) != CLOS && T(x) != MACR) return;
+  else if (T(x) != CONS && T(x) != CLOS && T(x) != MACR) x = y;
+  else count(y);
  }
 }
-/* sweep unused cells after mark() into the free cell pair list, shrink the atom heap when possible */
+/* sweep unused cells after count() into the free cell pair list, shrink the atom heap when possible */
 void sweep() {
  I i; for (hp = 0,i = 0; i < N; ++i) if (ref[i/2] && T(cell[i]) == ATOM && ord(cell[i]) > hp) hp = ord(cell[i]);
  if (hp) hp += strlen(A+hp)+1;
@@ -236,15 +236,15 @@ void rebuild() {
  memcpy(r,ref,sizeof(ref));
 #endif
  memset(ref,0,sizeof(ref));
- mark(env);
+ count(env);
  sweep();
 #if DEBUG                                               /* report on memory management when debugging is enabled */
  for (i = 0; i < N/2; ++i) {
-  if (!(ref[i] & FREE) && (r[i] & FREE))
+  if (!(ref[i]&FREE) && (r[i]&FREE))
    LOG(cell[i+1],"\n\e[31;1muse after free ref[%u] = %u\e[m\t",i,ref[i]),LOG(cell[2*i],"\t");
-  else if ((ref[i] & FREE) && !(r[i] & FREE))
+  else if ((ref[i]&FREE) && !(r[i]&FREE))
    LOG(cell[i+1],"\n\e[31;1mnot freed pair ref[%u] = %u\e[m\t",i,r[i]),LOG(cell[2*i],"\t");
-  else if (!(ref[i] & FREE) && !(r[i] & FREE) && ref[i] != r[i])
+  else if (!(ref[i]&FREE) && !(r[i]&FREE) && ref[i] != r[i])
    LOG(cell[i+1],"\n\e[31;1mref[%u] want %u have %u\e[m\t",i,ref[i],r[i]),LOG(cell[2*i],"\t");
  }
 #endif
@@ -256,7 +256,7 @@ void rebuild() {
 I cyclic(I i,L x,I k) {
  if (T(x) == CONS || T(x) == CLOS) {
   I j = ord(x);
-  if (i != j && !(ref[j/2] & SCC)) {
+  if (i != j && !(ref[j/2]&SCC)) {
    L y = cell[j+1],z = j == k ? nil : cell[j];          /* y = car(x) and z = cdr(x) if not cell[k] */
    ref[i/2] |= MARK;
    if (T(x) != CLOS && cyclic(i,y,k)) ref[j/2] = SCC|i; /* car(x) is in the SCC identified by representative i */
@@ -268,7 +268,7 @@ I cyclic(I i,L x,I k) {
    LOG(x,"\n\e[36m--#@%u=%u\e[m\t",i,ref[i/2]);
    return 1;                                            /* x is in the SCC identified by representative i */
   }
-  if (ref[j/2] & MARK) return 0;                        /* ignore cycles that are not in the SCC */
+  if (ref[j/2]&MARK) return 0;                          /* ignore cycles that are not in the SCC */
   if (ref[j/2] == (SCC|i)) {
    LOG(x,"\n\e[36m%u @%u\e[m\t",j,i);
    return 1;                                            /* x is in the SCC identified by representative i */
@@ -286,10 +286,9 @@ void scc(L x,I k) {
 /* section 16.1: replacing recursion with loops */
 L evlis(L t,L e) {
  L s,*p = &s;
- rc(&s,nil);                                            /* register s to garbage collect when an error is caught by f_catch */
- for (; T(t) == CONS; p = &CDR(*p),t = CDR(t)) *p = cons(eval(CAR(t),e),nil);
+ for (rc(p,nil); T(t) == CONS; p = &CDR(*p),t = CDR(t)) *p = cons(eval(CAR(t),e),nil);
  if (T(t) == ATOM) *p = dup(assoc(t,e));
- rr(1);                                                 /* deregister s */
+ rr(1);
  return s;
 }
 
@@ -309,9 +308,9 @@ I isarg(L *t,L *e,I *a,L *x) {
 }
 
 /* section 6 lisp primitives (optimized with evarg per section 16.4) */
-L f_eval(L t,L *e) { I a = 0; L x,y; rc(&x,evarg(&t,e,&a)); y = eval(x,*e); rg(x); return y; }
+L f_eval(L t,L *e) { I a = 0; L x,y = eval(rc(&x,evarg(&t,e,&a)),*e); rg(x); return y; }
 L f_quote(L t,L *_) { return dup(car(t)); }
-L f_cons(L t,L *e) { I a = 0; L x = evarg(&t,e,&a); return cons(x,evarg(&t,e,&a)); }
+L f_cons(L t,L *e) { I a = 0; L x,p; rc(&x,evarg(&t,e,&a)); p = cons(x,evarg(&t,e,&a)); rr(1); return p; }
 L f_car(L t,L *e) { I a = 0; L x = evarg(&t,e,&a),y = dup(car(x)); gc(x); return y; }
 L f_cdr(L t,L *e) { I a = 0; L x = evarg(&t,e,&a),y = dup(cdr(x)); gc(x); return y; }
 L f_add(L t,L *e) { I a = 0; L x,n = gc(evarg(&t,e,&a)); while (isarg(&t,e,&a,&x)) n += gc(x); return num(n); }
@@ -386,12 +385,12 @@ L f_letreca(L t,L *e) {
  return car(t);
 }
 L f_letrec(L t,L *e) {
- I i,k;L s,d,*p;
- for (s = t,d = *e,p = &d; let(s); s = CDR(s),p = &CDR(*p))
+ I i,k; L s,d,*p;
+ for (rc(&d,*e),p = &d,s = t; let(s); s = CDR(s),p = &CDR(*p))
   if (T(CAR(s)) == CONS && T(CAR(CAR(s))) == ATOM) *p = pair(CAR(CAR(s)),nil,*e);
   else err(2,CAR(s));                           /* bound variable must be an atom, to prevent GC issues when not an atom */
  k = ref[(i = ord(d))/2];
- for (*e = d; let(t); t = CDR(t),i = ord(d),d = CDR(d)) CDR(CAR(d)) = eval(car(CDR(CAR(t))),*e);
+ for (*e = d,rr(1); let(t); t = CDR(t),i = ord(d),d = CDR(d)) CDR(CAR(d)) = eval(car(CDR(CAR(t))),*e);
  if (ref[ord(*e)/2] > k) scc(*e,i);             /* use of *e detected in a CLOS: mark strongly connected component */
  return car(t);
 }
@@ -423,25 +422,30 @@ L f_println(L t,L *e) { f_print(t,e); fputc('\n',out); return nil; }
 /* ++ new: atomize (stringify) x */
 L f_atomize(L t,L *e) {
  I i = hp,k; L s,*p = &s;
- rc(&s,nil);                                    /* register s to garbage collect when an error is caught by f_catch */
- for (; T(t) == CONS; t = CDR(t),p = &CDR(*p)) *p = cons(T(CAR(t)) == ATOM ? CAR(t) : eval(CAR(t),*e),nil);
+ for (rc(p,nil); T(t) == CONS; t = CDR(t),p = &CDR(*p)) *p = cons(T(CAR(t)) == ATOM ? CAR(t) : eval(CAR(t),*e),nil);
  *p = dup(t);                                   /* tail of s is t */
  k = atomize(s,NULL);                           /* the atom string length k, to hold atomized list of arguments */
  if ((hp += k+1) > lp<<3) err(4,nil);           /* ERR 4 if the heap space is not large enough */
  atomize(s,A+i);                                /* store the atomized arguments on the heap */
- rg(s);                                         /* deregister s and garbage collect it */
+ rg(s);
  return box(ATOM,i);
 }
 
 /* ++ updated: read from file with optional pathname argument converted using atomize */
 L f_read(L t,L *e) {
- L x; char c = see;
+ I i; L x; char c = see;
+ jmp_buf savedjb;
+ memcpy(savedjb,jb,sizeof(jb));
  if (T(t) != NIL) {
   x = f_atomize(t,e);
   if (ld >= sizeof(in)/sizeof(*in) || !(in[ld++] = fopen(A+ord(x),"r"))) err(5,x);
  }
- see = 0; x = Read(); see = c;
+ see = 0;
+ if ((i = setjmp(jb)) == 0) x = Read();
+ memcpy(jb,savedjb,sizeof(jb));
+ see = c;
  if (T(t) != NIL) fclose(in[--ld]);
+ if (i) longjmp(jb,i);
  return x;
 }
 
@@ -482,10 +486,10 @@ L f_progn(L t,L *e) {
 }
 L f_while(L t,L *e) {
  L s,x = nil,y;
- rc(&y,nil);                                    /* register y to garbage collect when an error is caught by f_catch */
+ rc(&y,nil);
  while (!not(gc(eval(car(t),*e))))
   for (s = cdr(t); T(s) == CONS; s = CDR(s),gc(y),y = x) x = eval(CAR(s),*e);
- rr(1);                                         /* deregister y */
+ rr(1);
  return x;
 }
 L f_until(L t,L *e) {
@@ -513,7 +517,7 @@ L f_writeto(L t,L *e) {
 }
 
 /* ++ new: return the type of an expression, 0 = number, 1 = atom, 2 = primitive, 3 = pair, 4 = closure, 5 = macro, 6 = nil */
-L f_type(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return (T(x) & ATOM) >= ATOM ? (T(x)) - ATOM + 1 : 0; }
+L f_type(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return (T(x)&ATOM) >= ATOM ? T(x)-ATOM+1 : 0; }
 
 /* ++ new: (number? x) returns #t if x is a number */
 L f_number(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return x == x ? tru : nil; }
@@ -541,12 +545,11 @@ L f_list(L t,L *e) { return evlis(t,*e); }
 
 /* ++ new: (append ...) returns the concatenation of its list arguments as a new list (e.g. used in backquoting) */
 L f_append(L t,L *e) {
- I a = 0; L x = nil,y,s,*p = &s;
- rc(&y,nil); rc(&s,nil);
- while (isarg(&t,e,&a,&x) && !not(t))
+ I a = 0; L x = nil,y,s,*p;
+ for (rc(&y,nil),rc(&s,nil),p = &s; isarg(&t,e,&a,&x) && !not(t); )
   for (gc(y),y = x; !not(x); x = cdr(x),p = &CDR(*p)) *p = cons(dup(car(x)),nil);
  *p = x;
- gc(y); rr(2);
+ rr(1); rg(y);
  return s;
 }
 
@@ -588,23 +591,25 @@ L f_last(L t,L *e) {
 /* ++ new: (reverse t) returns reversed copy of list t */
 L f_reverse(L t,L *e) {
  I a = 0; L x,s = nil;
- for (t = x = evarg(&t,e,&a); T(t) == CONS; t = CDR(t)) s = cons(dup(CAR(t)),s);
- gc(x);
+ for (rc(&x,evarg(&t,e,&a)),t = x; T(t) == CONS; t = CDR(t)) s = cons(dup(CAR(t)),s);
+ rg(x);
  return s;
 }
 
 /* ++ new: (seq n m) returns list with the sequence (n n+1 n+2 ... m-1) */
 L f_seq(L t,L *e) {
- I a = 0; int n = (int)num(gc(evarg(&t,e,&a))),m = (int)num(gc(evarg(&t,e,&a))); L s = nil,*p = &s;
- for (; n < m; ++n,p = &CDR(*p)) *p = cons(n,nil);
+ I a = 0; int n = (int)num(gc(evarg(&t,e,&a))),m = (int)num(gc(evarg(&t,e,&a))); L s,*p;
+ for (rc(&s,nil),p = &s; n < m; ++n,p = &CDR(*p)) *p = cons(n,nil);
+ rr(1);
  return s;
 }
 
 /* ++ new: (range n m k) returns list with the sequence (n n+k n+2k ... m-1) where optional k=1 by default */
 L f_range(L t,L *e) {
- I a = 0; int n = (int)num(gc(evarg(&t,e,&a))),m = (int)num(gc(evarg(&t,e,&a))),k = 1; L x,s = nil,*p = &s;
+ I a = 0; int n = (int)num(gc(evarg(&t,e,&a))),m = (int)num(gc(evarg(&t,e,&a))),k = 1; L x,s,*p;
  if (isarg(&t,e,&a,&x)) k = (int)num(gc(x));
- for (; k*m > k*n; n += k,p = &CDR(*p)) *p = cons(n,nil);
+ for (rc(&s,nil),p = &s; k*m > k*n; n += k,p = &CDR(*p)) *p = cons(n,nil);
+ rr(1);
  return s;
 }
 
@@ -732,12 +737,13 @@ L f_char(L t,L *e) {
 L f_code(L t,L *e) {
  I i,k,a = 0; L x,v = gc(evarg(&t,e,&a));
  k = T(v) == ATOM ? strlen(A+ord(v)) : 0;
- i = isarg(&t,e,&a,&x) ? (I)num(gc(x)) : 0; 
+ i = isarg(&t,e,&a,&x) ? (I)num(gc(x)) : 0;
  return i < k ? *(A+ord(v)+i)&0xff : 0;
 }
 
 #ifdef TIME
 #include <sys/time.h>
+/* ++ new: (time <expr> [n]) display running time of <expr> evaluated n (default n=1) times */
 L f_time(L t,L *e) {
  L x = nil; I i,k = let(t) ? (I)num(car(CDR(t))) : 1;
  struct timeval tv0, tv1;
@@ -866,7 +872,7 @@ void trace(L y,L x,L e) {
  if (tr > 1) while (getchar() >= ' ') continue;
 }
 
-/* section 16.2/3/4: tail-call optimization (section 17.2: hygienic macros - remove MACR branch)*/
+/* section 16.2/3/4: tail-call optimization (section 17.2: hygienic macros - remove MACR branch) */
 L eval(L x,L e) {
  I a; L f,v,d,y,g;
  /* if f_catch-ing then register 4 variables to track and garbage collect when an error is caught by f_catch */
@@ -948,10 +954,10 @@ L Read() { return scan(),parse(); }
 L quote(L x) { return cons(atom("quote"),cons(x,nil)); }        /* returns (quote x) */
 L endl(L t) { return scan() == ')' ? t : err(7,t); }            /* err 7 when closing ) is missing */
 L list() {
- L t,*p;
- for (t = nil,p = &t; ; *p = cons(parse(),nil),p = &CDR(*p)) {
-  if (scan() == ')') return t;
-  if (*buf == '.' && !buf[1]) return *p = Read(),endl(t);
+ L t,*p = &t;
+ for (rc(p,nil); ; *p = cons(parse(),nil),p = &CDR(*p)) {
+  if (scan() == ')') { rr(1); return t; }
+  if (*buf == '.' && !buf[1]) { *p = Read(); rr(1); return endl(t); }
  }
 }
 L tick() {
@@ -961,9 +967,9 @@ L tick() {
  if (*buf == '"') return parse();
  if (*buf == ')') return err(7,atom(buf));
  if (*buf != '(') return quote(parse());
- for (t = cons(atom("list"),nil),p = &t; ; p = &CDR(*p),*p = cons(tick(),nil)) {
-  if (scan() == ')') return t;
-  if (*buf == '.' && !buf[1]) return scan(),endl(cons(atom("append"),cons(t,cons(tick(),nil))));
+ for (rc(&t,cons(atom("list"),nil)),p = &t; ; p = &CDR(*p),*p = cons(tick(),nil)) {
+  if (scan() == ')') { rr(1); return t; }
+  if (*buf == '.' && !buf[1]) { scan(); rr(1); return endl(cons(atom("append"),cons(t,cons(tick(),nil)))); }
  }
 }
 L parse() {
@@ -1041,6 +1047,7 @@ L expand(L x,L e,L b) {
   if (lookup(x,e,&y) && (T(y) == PRIM || T(y) == CLOS || T(y) == MACR)) return dup(y);
   return x;
  }
+ rc(&c,nil); rc(&d,nil);
  if (T(x) == CLOS) {
   /* expand the body of closure x */
   v = w = car(CAR(x));                  /* the variables v of the closure */
@@ -1052,39 +1059,46 @@ L expand(L x,L e,L b) {
   if (T(v) == ATOM) d = pair(v,nil,d),c = pair(v,v,c);
   /* expand the body y of the closure and create a new closure with variables w and lexical scope e */
   z = closure(dup(w),expand(y,d,c),e);
-  gc(d); gc(c);
+  rg(d); rg(c);
   return z;
  }
  if (T(x) == CONS) {
   /* expand the application x = (f ...) in which we first expand f */
-  L f = expand(CAR(x),e,b);
+  L t,*p,f = expand(CAR(x),e,b);
   /* then we construct a new application list t = (f ...) by populating *p = ... with the list of expanded arguments */
-  L t = cons(f,nil),*p = &CDR(t);
+  rc(&t,cons(f,nil)); p = &CDR(t);
   x = CDR(x);
   if (T(f) == MACR) {
    /* f in (f ...) is a macro to apply by expand/eval/expand its body */
    I i; jmp_buf savedjb;
    memcpy(savedjb,jb,sizeof(jb));
-   gc(t);
+   rg(t);
    /* bind the variables v of macro f to the given arguments x quoted (and hold all atoms in x) in environment c */
    for (c = nil,v = release(CAR(f)); T(v) == CONS; v = CDR(v),x = cdr(x)) c = pair(CAR(v),quote(hold(car(x))),c);
    if (T(v) == ATOM) c = pair(v,quote(hold(x)),c);
    /* expand macro body CDR(f) using macro arguments bound in updated environment c */
-   x = expand(CDR(f),e,c); gc(c);
+   rc(&x,expand(CDR(f),e,c));
    /* eval macro body (may fail) then expand the result with macro arguments bound in environment b */
-   if ((i = setjmp(jb)) == 0) { y = nil; y = eval(x,e); z = expand(y,e,b); gc(y); gc(x); }
+   if ((i = setjmp(jb)) == 0) { y = nil; rc(&y,eval(x,e)); z = expand(y,e,b); }
    memcpy(jb,savedjb,sizeof(jb));
-   if (i) { printf("\e[31;1mmacro expansion failed:\e[m "); print(stdout,x); printf("\n"); gc(y); gc(x); longjmp(jb,i); }
+   if (i) {
+    printf("\e[31;1mmacro expansion failed:\e[m "); print(stdout,x); printf("\n");
+    rg(y); rg(x); rg(d); rg(c);
+    longjmp(jb,i);
+   }
+   rg(y); rg(x); rg(d); rg(c);
    return z;
   }
   if (T(f) == PRIM) {
    /* f is a primitive in (f ...) */
    if (equ(f,p_quote)) {                /* <quote>: release variables, but do not expand */
     *p = release(dup(x));
+    rr(1); rg(d); rg(c);
     return t;
    }
    if (equ(f,p_macro)) {                /* <macro>: expand body */
     *p = cons(dup(car(x)),cons(expand(car(cdr(x)),e,b),nil));
+    rr(1); rg(d); rg(c);
     return t;
    }
    if (equ(f,p_lambda)) {
@@ -1095,13 +1109,14 @@ L expand(L x,L e,L b) {
      if (T(CAR(v)) == ATOM) d = pair(CAR(v),nil,d),c = pair(CAR(v),CAR(w),c);
     if (T(v) == ATOM) d = pair(v,nil,d),c = pair(v,w,c);
     CDR(*p) = cons(expand(car(cdr(x)),d,c),nil);        /* expand <lambda> body */
-    gc(c); gc(d);
+    rr(1); rg(d); rg(c);
     return t;
    }
    if (equ(f,p_cond)) {
     /* <cond> arguments are pairs of expressions (each cons pair is not a function application) */
     for (; T(x) == CONS; x = CDR(x),p = &CDR(*p))
      *p = cons(cons(expand(car(CAR(x)),e,b),cons(expand(car(cdr(CAR(x))),e,b),nil)),nil);
+    rr(1); rg(d); rg(c);
     return t;
    }
    if (equ(f,p_leta)) {
@@ -1112,7 +1127,7 @@ L expand(L x,L e,L b) {
      if (T(v) == ATOM) d = pair(v,nil,d),c = pair(v,w,c);
     }
     *p = cons(expand(car(x),d,c),nil);                  /* expand <let*> body */
-    gc(c); gc(d);
+    rr(1); rg(d); rg(c);
     return t;
    }
    if (equ(f,p_let)) {
@@ -1123,7 +1138,7 @@ L expand(L x,L e,L b) {
      if (T(v) == ATOM) d = pair(v,nil,d),c = pair(v,w,c);
     }
     *p = cons(expand(car(x),d,c),nil);                  /* expand <let> body */
-    gc(c); gc(d);
+    rr(1); rg(d); rg(c);
     return t;
    }
    if (equ(f,p_letreca)) {
@@ -1134,7 +1149,7 @@ L expand(L x,L e,L b) {
      *p = cons(cons(w,cons(expand(car(cdr(CAR(x))),d,c),nil)),nil);
     }
     *p = cons(expand(car(x),d,c),nil);                  /* expand <letrec*> body */
-    gc(c); gc(d);
+    rr(1); rg(d); rg(c);
     return t;
    }
    if (equ(f,p_letrec)) {
@@ -1148,15 +1163,17 @@ L expand(L x,L e,L b) {
      *p = cons(cons(w,cons(expand(car(cdr(CAR(y))),d,c),nil)),nil);
     }
     *p = cons(expand(car(y),d,c),nil);                  /* expand <letrec> body */
-    gc(c); gc(d);
+    rr(1); rg(d); rg(c);
     return t;
    }
   }
   /* expand argument expressions x in (f . x) and return a new application t = (f ...) by populating *p */
   for (; T(x) == CONS; x = CDR(x),p = &CDR(*p)) *p = cons(expand(CAR(x),e,b),nil);
   *p = expand(x,e,b);
+  rr(3);
   return t;
  }
+ rr(2);
  return dup(x);
 }
 
