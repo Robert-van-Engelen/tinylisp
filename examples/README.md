@@ -10,3 +10,4 @@ Some of the tinylisp examples may require some additional Lisp features to run. 
 - math.lisp math functions (source from the article)
 - qsort.lisp recursive quicksort (requires list.lisp)
 - qsort-extras.lisp faster recursive quicksort, uses `setq`, `progn`, `while`
+- queue.lisp defines a queue type with enqueue and dequeue operations
