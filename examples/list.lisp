@@ -115,6 +115,11 @@
         (if args
             (seqby n m (car args))
             (seq n m))))
+(define copy-list
+    (lambda (t)
+        (if (pair? t)
+            (cons (car t) (copy-list (cdr t)))
+            t)))
 (define make-list-tr
     (lambda (n x t)
         (if (< 0 n)

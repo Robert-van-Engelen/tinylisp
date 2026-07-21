@@ -26,6 +26,14 @@
             (reverse-tr (cons (car t) r) (cdr t))
             r)))
 (define reverse (lambda (t) (reverse-tr () t)))
+(define last-tr
+    (lambda (t n s)
+        (if t
+            (if (< n 1)
+                (last-tr (cdr t) n (cdr s))
+                (last-tr (cdr t) (- n 1) s))
+            s)))
+(define last (lambda (t . n) (last-tr t (if n (car n) 1) t)))
 (define member
     (lambda (x t)
         (if t
@@ -83,7 +91,7 @@
             ())))
 (define map
     (lambda (f . args)
-        (if (any? null? args)
+        (if (any? not args)
             ()
             (let*
                 (x (mapcar car args))
@@ -107,3 +115,14 @@
         (if args
             (seqby n m (car args))
             (seq n m))))
+(define copy-list
+    (lambda (t)
+        (if (pair? t)
+            (cons (car t) (copy-list (cdr t)))
+            t)))
+(define make-list-tr
+    (lambda (n x t)
+        (if (< 0 n)
+            (make-list-tr (- n 1) x (cons x t))
+            t)))
+(define make-list (lambda (n . x) (make-list-tr n (if x (car x) ()) ())))
