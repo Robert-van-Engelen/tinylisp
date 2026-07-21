@@ -2,6 +2,9 @@
 
 /* ... prim[] = {
    ...
+   {">",        f_gt,      0},
+   {"<=",       f_le,      0},
+   {">=",       f_ge,      0},
    {"=",        f_is,      0},
    {"%",        f_mod,     0},
    {"^",        f_exp,     0},
@@ -39,6 +42,20 @@
    {"time",     f_time,    0},
    {0}};
 */
+
+/* ++ new: (> x y) returns #t if x is greater than y, otherwise returns () */
+L f_gt(L t,L *e) {
+ I a = 0; L x = gc(evarg(&t,e,&a)),y = gc(evarg(&t,e,&a));
+ return (T(x) == ATOM && T(y) == ATOM ? strcmp(A+ord(x),A+ord(y)) > 0 :
+  x == x && y == y ? x > y :                    /* x == x is false when x is NaN i.e. a tagged Lisp expression */
+  T(x) > T(y) || (T(x) == T(y) && ord(x) > ord(y))) ? tru : nil;
+}
+
+/* ++ new: (<= x y) returns #t if x is less or equal to y, otherwise returns () */
+L f_le(L t,L *e) { return not(f_gt(t,e)) ? tru : nil; }
+
+/* ++ new: (<= x y) returns #t if x is greater or equal to y, otherwise returns () */
+L f_ge(L t,L *e) { return not(f_lt(t,e)) ? tru : nil; }
 
 /* (= x y) returns #t if number x equals number y, otherwise returns () */
 L f_is(L t,L *e) { I a = 0; L x = num(gc(evarg(&t,e,&a))); return x == num(gc(evarg(&t,e,&a))); }
@@ -126,9 +143,9 @@ L f_list(L t,L *e) { return evlis(t,*e); }
 /* (append ...) - built-in for speed to replace the append definition in list.lisp (remove it)
    returns the concatenation of its list arguments as a new list */
 L f_append(L t,L *e) {
- I a = 0; L x = nil,y,s,*p;
- for (rc(&y,nil),rc(&s,nil),p = &s; isarg(&t,e,&a,&x) && !not(t); )
-  for (gc(y),y = x; !not(x); x = cdr(x),p = &CDR(*p)) *p = cons(dup(car(x)),nil);
+ I a = 0; L x = nil,y,s,*p = &s;
+ for (rc(&y,nil),rc(p,nil); isarg(&t,e,&a,&x) && !not(t); )
+  for (gc(y),y = x; !not(x); x = cdr(x)) p = &CDR(*p = cons(dup(car(x)),nil));
  *p = x;
  rr(1); rg(y);
  return s;
@@ -185,18 +202,17 @@ L f_reverse(L t,L *e) {
 /* (seq n) - built-in for speed to replace the seq definition in list.lisp (remove it)
    returns list with the sequence (1 2 3 ... n-1) */
 L f_seq(L t,L *e) {
- I a = 0; int n = (int)num(gc(evarg(&t,e,&a))),m = (int)num(gc(evarg(&t,e,&a))); L s,*p;
- for (rc(&s,nil),p = &s; n < m; ++n,p = &CDR(*p)) *p = cons(n,nil);
+ I a = 0; int n = (int)num(gc(evarg(&t,e,&a))),m = (int)num(gc(evarg(&t,e,&a))); L s,*p = &s;
+ for (rc(p,nil); n < m; ++n) p = &CDR(*p = cons(n,nil));
  rr(1);
  return s;
 }
 
-/* (range n m k) - built-in for speed to replace the range definition in list.lisp (remove it)
-   returns list with the sequence (n n+k n+2k ... m-1) where optional k=1 by default */
+/* ++ new: (range n m k) returns list with the sequence (n n+k n+2k ... m-1) where optional k=1 by default */
 L f_range(L t,L *e) {
- I a = 0; int n = (int)num(gc(evarg(&t,e,&a))),m = (int)num(gc(evarg(&t,e,&a))),k = 1; L x,s,*p;
+ I a = 0; int n = (int)num(gc(evarg(&t,e,&a))),m = (int)num(gc(evarg(&t,e,&a))),k = 1; L x,s,*p = &s;
  if (isarg(&t,e,&a,&x)) k = (int)num(gc(x));
- for (rc(&s,nil),p = &s; k*m > k*n; n += k,p = &CDR(*p)) *p = cons(n,nil);
+ for (rc(p,nil); k*m > k*n; n += k) p = &CDR(*p = cons(n,nil));
  rr(1);
  return s;
 }
