@@ -1,20 +1,23 @@
 ; Queues in Lisp implemented with destructive operations using set-car! and set-cdr!
 ; Requires function last from list.lisp (load list.lisp)
+;
+; A queue is represented by a pair (head . tail) where tail "points" to the last singleton list of the queue.
+; The tail "pointer" is updated by enqueue.
 
 ; return a new empty queue
-(define queue (lambda () '(() ())))
+(define queue (lambda () '(())))
 
-; push value x to the back of the queue q to updating it, returns a singleton list (x)
+; push value x to the back of the queue q, updating q, returns a singleton list (x)
 (define enqueue
     (lambda (q x)
         (if (car q)
             (progn
-                (set-cdr! (car (cdr q)) (cons x ()))
-                (set-car! (cdr q) (cdr (car (cdr q)))))
+                (set-cdr! (cdr q) (cons x ()))
+                (set-cdr! q (cdr (cdr q))))
             (let* (t (list x))
                   (progn
                       (set-car! q t)
-                      (set-car! (cdr q) t))))))
+                      (set-cdr! q t))))))
 
 ; remove the front value from the queue q and return it
 (define dequeue
@@ -24,7 +27,7 @@
                 (progn
                     (if (set-car! q (cdr (car q)))
                         ()
-                        (set-car! (cdr q) ()))
+                        (set-cdr! q ()))
                     x))
             ())))
 
@@ -38,7 +41,7 @@
 (define list2queue
     (lambda (t)
        (if t
-           (list t (last t))
+           (cons t (last t))
            (queue))))
 
 ; example
