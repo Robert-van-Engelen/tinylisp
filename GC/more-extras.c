@@ -38,6 +38,7 @@
    {"range",    f_range,   0},
    {"equal?",   f_equal,   0},
    {"member",   f_member,  0},
+   {"copy-list",f_copylist,0},
    {"make-list",f_makelist,0},
    {"time",     f_time,    0},
    {0}};
@@ -245,6 +246,16 @@ L f_member(L t,L *e) {
  t = dup(t);
  gc(s); rg(x);
  return t;
+}
+
+/* (copy-list t)
+   returns a copy of list t */
+L f_copylist(L t,L *e) {
+ I a = 0; L x,s,*p = &s;
+ for (t = rc(&x,evarg(&t,e,&a)); T(t) == CONS; t = CDR(t)) p = &CDR(*p = cons(CAR(t),nil));
+ *p = t;
+ rg(x);
+ return s;
 }
 
 /* (make-list n [x]) - built-in for speed to replace the make-list definition in list.lisp (remove it)

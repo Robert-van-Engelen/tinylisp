@@ -641,6 +641,15 @@ L f_member(L t,L *e) {
  return t;
 }
 
+/* ++ new: (copy-list t) returns a copy of list t */
+L f_copylist(L t,L *e) {
+ I a = 0; L x,s,*p = &s;
+ for (t = rc(&x,evarg(&t,e,&a)); T(t) == CONS; t = CDR(t)) p = &CDR(*p = cons(CAR(t),nil));
+ *p = t;
+ rg(x);
+ return s;
+}
+
 /* ++ new: (make-list n [x]) returns list of n copies of optional x, x is () by default */
 L f_makelist(L t,L *e) {
  I a = 0; int n = (int)num(gc(evarg(&t,e,&a))); L s = nil,x = nil;
@@ -827,6 +836,7 @@ struct { const char *s; L (*f)(L,L*); short t; } prim[] = {
  {"range",    f_range,   0},
  {"equal?",   f_equal,   0},
  {"member",   f_member,  0},
+ {"copy-list",f_copylist,0},
  {"make-list",f_makelist,0},
  {">",        f_gt,      0},
  {"<=",       f_le,      0},
