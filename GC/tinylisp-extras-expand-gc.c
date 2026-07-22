@@ -419,12 +419,13 @@ L f_macro(L t,L *_) { return macro(dup(car(t)),dup(car(cdr(t)))); }
 L f_print(L t,L *e) { I a = 0; L x; for (; isarg(&t,e,&a,&x); gc(x)) print(out,x); return nil; }
 L f_println(L t,L *e) { f_print(t,e); fputc('\n',out); return nil; }
 
-/* ++ new: atomize (stringify) x */
+/* ++ new: atomize (stringify) x (to stringify the value of a variable v use (progn v) as argument) */
 L f_atomize(L t,L *e) {
- I i = hp,k; L s,*p = &s;
+ I i,k; L s,*p = &s;
  for (rc(p,nil); T(t) == CONS; t = CDR(t)) p = &CDR(*p = cons(T(CAR(t)) == ATOM ? CAR(t) : eval(CAR(t),*e),nil));
  *p = dup(t);                                   /* tail of s is t */
  k = atomize(s,NULL);                           /* the atom string length k, to hold atomized list of arguments */
+ i = hp;
  if ((hp += k+1) > lp<<3) err(4,nil);           /* ERR 4 if the heap space is not large enough */
  atomize(s,A+i);                                /* store the atomized arguments on the heap */
  rg(s);
@@ -1225,11 +1226,9 @@ I atomize(L x,char *a) {
   }
   return k;
  }
- if (T(x) == ATOM) strcpy(buf,A+ord(x));
- else if (x != x) strcpy(buf," ");
- else snprintf(buf,sizeof(buf),"%.10lg",x);
- if (a) strcpy(a,buf);
- return strlen(buf);
+ if (T(x) == ATOM) return strlen(a ? strcpy(a,A+ord(x)) : A+ord(x));
+ if (x == x) snprintf(buf,sizeof(buf),"%.10lg",x); else strcpy(buf," ");
+ return strlen(a ? strcpy(a,buf) : buf);
 }
 
 /* section 14: error handling and exceptions */
