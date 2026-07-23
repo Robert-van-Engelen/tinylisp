@@ -1,4 +1,7 @@
 ; binary trees for tinylisp-extras-gc - destructive implementation with set-car! and set-cdr!
+;
+; IMPORTANT: this example requires garbage collection to retain global tree data,
+; otherwise trees will be corrupted when returning to the REPL with the trivial gc()
 
 (load list.lisp)
 

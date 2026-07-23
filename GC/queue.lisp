@@ -1,8 +1,13 @@
 ; Queues in Lisp implemented with destructive operations using set-car! and set-cdr!
 ; Requires function last from list.lisp (load list.lisp)
 ;
+; IMPORTANT: this example requires garbage collection to retain global tree data,
+; otherwise queues will be corrupted when returning to the REPL with the trivial gc()
+;
 ; A queue is represented by a pair (head . tail) where tail "points" to the last singleton list of the queue.
 ; The tail "pointer" is updated by enqueue.
+
+(load list.lisp)
 
 ; return a new empty queue
 (define queue (lambda () '(())))
