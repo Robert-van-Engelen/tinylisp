@@ -37,7 +37,8 @@
   - compile with `cc -O2 -o tinylisp tinylisp-extras-gc.c -lreadline`
 
 - [tinylisp-extras-expand-gc.c](tinylisp-extras-expand-gc.c)
-  - the ultimate version of the above with more built-in extras and hygienic macros
+  - the ultimate version of the above with a lot more built-in extras and automatic hygienic macros
+  - also adds a mark-sweep garbage collector that kicks in when a program runs low on memory (deletes unreachable cyclic data structures)
 
 See also [#20](https://github.com/Robert-van-Engelen/tinylisp/issues/20)
 
@@ -49,9 +50,7 @@ mark-sweep only collects unused memory to recycle for reuse when the
 interpreter runs out of memory.  Mark-sweep may seem simple and fast, however,
 integrating a full mark-sweep impacts memory management overall, because it
 also requires an auxiliary stack to keep track of all temporary lists that are
-being constructed by the interpreter that cannot be released yet.  This adds
-overhead to the interpreter to push and pop Lisp values on this auxiliary
-stack.
+being constructed by the interpreter that cannot be released yet.
 
 The tinylisp reference count garbage collector does all the heavy lifting more
 efficiently, while its simple mark-sweep collector only runs when the tinylisp
@@ -60,28 +59,33 @@ cells that make up the stored Lisp program.  Therefore, we don't need an
 auxiliary stack.
 
 A quick investigation (not scientific) shows the performance difference on a
-Mac M1 compiled with clang 14.0.0 option -O2 to solve the
+Mac M1 compiled with clang 21.0.0 option -O2 to solve the
 [nqueens.lisp](nqueens.lisp) problem for N=8:
 
 | implementation | GC | mem size (cells) | time (ms) |
 | -------------- | -- | ---------------: | --------: |
-| tinylisp-extras-gc                                        | ref count  |  8192 |  396 ms |
-| tinylisp-extras-expand-gc                                 | ref count  |  8192 |   49 ms |
-| [lisp](https://github.com/Robert-van-Engelen/lisp)        | mark-sweep |  8192 |  920 ms |
-| [lisp](https://github.com/Robert-van-Engelen/lisp)        | mark-sweep | 16384 |  895 ms |
-| [lisp-cheney](https://github.com/Robert-van-Engelen/lisp) | cheney     |  8192 | 1880 ms |
-| [lisp-cheney](https://github.com/Robert-van-Engelen/lisp) | cheney     | 16384 | 1420 ms |
+| tinylisp-extras-gc                                        | ref count              |  8192 |  396 ms |
+| tinylisp-extras-expand-gc                                 | ref count + mark-sweep |  8192 |   51 ms |
+| [lisp](https://github.com/Robert-van-Engelen/lisp)        | mark-sweep             |  8192 |  920 ms |
+| [lisp](https://github.com/Robert-van-Engelen/lisp)        | mark-sweep             | 16384 |  895 ms |
+| [lisp-cheney](https://github.com/Robert-van-Engelen/lisp) | cheney                 |  8192 | 1880 ms |
+| [lisp-cheney](https://github.com/Robert-van-Engelen/lisp) | cheney                 | 16384 | 1420 ms |
 
 Tinylisp is a clear winner!  It is faster and the memory size has no effect on
 the running time of tinylisp (since there is no effect, different memory sizes
 are not shown in the table for tinylisp).  But memory size does impact
-mark-sweep and cheney, since more memory means fewer GC stages.
+mark-sweep and cheney, since more memory means lower GC overhead.
 
 The performance of tinylisp-extras-gc versus the Common Lisp interpreter GNU
 [CLISP](https://www.gnu.org/software/clisp) is reasonably comparable (396 ms
-versus CLISP 296 ms) to solve 8-queens.  The performance of
-tinylisp-extras-expand-gc is boosted with early binding global names and more
-built-ins.  [SBCL](https://www.sbcl.org) is a high-performance Common Lisp
+versus CLISP 296 ms) to solve 8-queens.
+
+The performance of tinylisp-extras-expand-gc is significantly boosted with
+early binding global names and built-ins.  Mark-sweep in
+tinylisp-extras-expand-gc is only used to delete unreachable cyclic data
+structures that ref count cannot delete.
+
+By comparison, [SBCL](https://www.sbcl.org) is a high-performance Common Lisp
 implementation.  It runs 8-queens in 6 ms.  However, Common Lisp (compiled or
 not) is not as flexible as tinylisp in which code and data are truly the same.
 The dot operator is supported by tinylisp as should be and there is no need for
@@ -263,8 +267,7 @@ collected.
 
 **Garbage collection in the tinylisp "extras" version**
 
-The tinylisp-extras-gc version implements features that may construct cyclic
-data structures from lists.  In particular `letrec` and `letrec*` construct
+The tinylisp-extras-gc version implements `letrec` and `letrec*` that construct
 cyclic local environments for recursive lambda closures.  Since it is known
 when and where this happens, I am using strongly connected component (SCC)
 analysis to identify these structures to delete them later as part of the
@@ -283,4 +286,26 @@ Furthermore, since this version also implements `catch` and `throw`, I've added
 an exception stack that is used whenever `catch` is called.  This exception
 stack "remembers" all C variables used in the interpeter that may point to
 lists that must be collected when `throw` returns control to the `catch`.
+
+The tinylisp-extras-expand-gc version also implements early binding of globals
+for speed and has automatic hygienic macros.  It also adds many more extra
+built-ins (primitives).  An extra mark-sweep garbage collector is added that
+kicks in when a Lisp program runs low on memory to delete cyclic data
+structures.  This extra mark-sweep garbage collector is useful only when Lisp
+programs construct cyclic data structures.  Reference-count garbage collection
+does all the heavy lifting efficiently.  An example function that contructs
+cyclic data structures with `set-cdr!` while recursively calling itself:
+
+```lisp
+(define loopy
+    (lambda ()
+        (progn
+            (let* (t (list 1 2 3))
+                (set-cdr! (cdr (cdr t)) t))
+            (loopy))))
+```
+Calling this function `(loopy)` does not run out of memory in
+tinylisp-extras-expand-gc.  In fact, efficient tail-call recursion combined with
+reference counting and mark-sweep garbage collection makes this call never
+terminate.
 
