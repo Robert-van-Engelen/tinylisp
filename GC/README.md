@@ -268,30 +268,32 @@ collected.
 
 **Garbage collection in the tinylisp "extras" version**
 
-The tinylisp-extras-gc version implements `letrec` and `letrec*` that construct
-cyclic local environments for recursive lambda closures.  Since it is known
-when and where this happens, I am using strongly connected component (SCC)
-analysis to identify these structures to delete them later as part of the
-reference count garbage collection strategy implemented in this "extras"
-version.
+In Lisp the `letrec` and `letrec*` construct cyclic local environments for
+recursive lambda closures.  Since it is known when and where this happens, I am
+using strongly connected component (SCC) analysis to identify these structures
+to delete them later as part of the reference count garbage collection strategy
+implemented in tinylisp-extras-gc and tinylisp-extras-expand-gc.
 
-Constructing an SCC, when it is detected in a `letrec` or `letrec*` for
-recursive functions, takes *O(n)* time for *n* cells that constitute the source
-code lists of the recursive local `letrec` and `letrec*` function definitions.
-This is done only once when evaluating the `letrec` or `letrec*`, even when the
-local functions recurses many times.  Garbage collecting the SCC afterwards
-only takes *O(1)* unit time to check if all references to the SCC are gone,
-then it takes *O(n)* time to delete the entire SCC.
+Local recursive lambdas in `letrec` and `letrec*` are detected in *O(1)* time
+each, by checking if the reference count of the local lambda increases.
+Then, when detected, constructing an SCC takes *O(n)* time for the *n* cells
+that constitute the cycle and cells referenced from the cycle in the local
+environment of the `letrec` and `letrec*`.  Typically *n* is small, only a few
+cells make up the local environment in the SCC.  SCC construction is done only
+once when evaluating the `letrec` or `letrec*`, even when the local functions
+recurses many times.  Garbage collecting the SCC afterwards only takes *O(1)*
+unit time to check if all references to the SCC are gone, then it takes *O(n)*
+time to delete the entire SCC.
 
-Furthermore, since this version also implements `catch` and `throw`, I've added
-an exception stack that is used whenever `catch` is called.  This exception
-stack "remembers" all C variables used in the interpeter that may point to
-lists that must be collected when `throw` returns control to the `catch`.
+Furthermore, since tinylisp also implements `catch` and `throw`, I've added a
+stack that is used whenever `catch` is called.  This stack "remembers" all C
+variables used in the interpeter that may point to lists that must be collected
+when `throw` returns control to the `catch`.
 
 The tinylisp-extras-expand-gc version also implements early binding of globals
-for speed and has automatic hygienic macros.  It also adds many more extra
-built-ins (primitives).  An extra mark-sweep garbage collector is added that
-kicks in when a Lisp program runs low on memory to delete cyclic data
+for speed.  This version also has automatic hygienic macros and adds many more
+extra built-ins (primitives).  An extra mark-sweep garbage collector is added
+that kicks in when a Lisp program runs low on memory to delete cyclic data
 structures.  This extra mark-sweep garbage collector is useful only when Lisp
 programs construct cyclic data structures.  Reference-count garbage collection
 does all the heavy lifting efficiently.  An example function that contructs
@@ -309,4 +311,3 @@ Calling this function `(loopy)` does not run out of memory in
 tinylisp-extras-expand-gc.  In fact, efficient tail-call recursion combined with
 reference counting and mark-sweep garbage collection makes this call never
 terminate.
-
