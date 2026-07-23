@@ -198,29 +198,30 @@ though, as long as we don't extend the implementation with `letrec` and
 can be created.
 
 Cyclic data structures can be collected with mark-sweep garbage collection.  We
-do this when we return to the REPL:
+do this when we return to the REPL by recounting all cell references then
+sweeping all zero reference cells into the free memory list:
 
 ```c
-void mark(L x) {
+void count(L x) {
   if ((T(x) == CONS || T(x) == CLOS || T(x) == MACR) && !ref[ord(x)/2]++) {
-    mark(cell[ord(x)+1]); mark(cell[ord(x)]);
+    count(cell[ord(x)+1]); count(cell[ord(x)]);
   }
 }
 void sweep() {
   for (fp = 0,lp = N-2,fn = 1,i = 2; i < N; i += 2)
     if (!ref[i/2]) del(i); else lomem(i);
 }
-void rebuild() { memset(ref,0,sizeof(ref)); mark(env); sweep(); }
+void rebuild() { memset(ref,0,sizeof(ref)); count(env); sweep(); }
 ```
 
-where `rebuild()` resets all reference counts to zero, then `mark(env)`
-recursively traverses all cells reachable from `env` marking them used with a
-nonzero reference count.  The car `cell[i+1]` and cdr `cell[i]` are recursively
-marked when `ref[i/2]++ == 0`, which is when the cell pair is visited for the
-very first time.  Subsequent visits only increase the reference count without
-recursing.
+where `rebuild()` resets all reference counts to zero, then `count(env)`
+recursively traverses all cells reachable from `env` to increase the reference
+count by one for each cell pair referenced.  The car `cell[i+1]` and cdr
+`cell[i]` are recursively marked when `ref[i/2]++ == 0`, which is when the cell
+pair is visited for the very first time.  Subsequent visits only increase the
+reference count without recursing to rebuild the reference counts.
 
-After `mark()` determines the reference count for each cell pair, `sweep()`
+After `count()` determines the reference count for each cell pair, `sweep()`
 deletes all unused cell pairs by reclaiming them with `del(i)` and also
 determines the `lomem(i)` pointer `lp` over all used cell pairs.
 
