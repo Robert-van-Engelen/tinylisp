@@ -99,7 +99,7 @@ L atom(const char *s) {
  return i == hp && ((hp += strlen(s)+1) > lp<<3 || !strcpy(A+i,s)) ? err(4,nil) : box(ATOM,i);
 }
 
-/* ++ new: mark-sweep garbage collector registry stack size, max depth of nested evals = S/4 */
+/* ++ new: mark-sweep garbage collector registry stack size, max depth of nested calls to eval() = S/4 */
 #define S 4096
 /* mark-sweep garbage collector roots stack, stack pointer, and catch exception pointer */
 L *stk[S],**sp = stk,**xp = stk;
@@ -1148,13 +1148,13 @@ L expand(L x,L e,L b) {
    /* expand macro body CDR(f) using macro arguments bound in updated environment c */
    rc(&x,expand(CDR(f),e,c));
    /* eval macro body (may fail) then expand the result with macro arguments bound in environment b */
-   if ((i = setjmp(jb)) == 0) { rc(&y,eval(x,e)); z = expand(y,e,b); }
+   if ((i = setjmp(jb)) == 0) rc(&y,eval(x,e));
    memcpy(jb,savedjb,sizeof(jb));
    if (i) {
     printf("\e[31;1mmacro expansion failed:\e[m "); print(stdout,x); printf("\n");
-    rg(5);
     longjmp(jb,i);
    }
+   z = expand(y,e,b);
    rg(5);
    return z;
   }

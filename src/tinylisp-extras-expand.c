@@ -532,10 +532,10 @@ L expand(L x,L e,L b) {
    /* expand macro body cdr(f) using macro arguments bound in updated environment c */
    x = expand(cdr(f),e,c);
    /* eval macro body (may fail) then expand the result with macro arguments bound in environment b */
-   if ((i = setjmp(jb)) == 0) y = expand(eval(x,e),e,b);
+   if ((i = setjmp(jb)) == 0) y = eval(x,e);
    memcpy(jb,savedjb,sizeof(jb));
    if (i) { printf("\e[31;1mmacro expansion failed:\e[m "); print(x); printf("\n"); longjmp(jb,i); }
-   return y;
+   return expand(y,e,b);
   }
   if (T(f) == PRIM) {
    /* f is a primitive in (f ...) */
