@@ -240,11 +240,11 @@ void rebuild() {
 #if DEBUG                                               /* report on memory management when debugging is enabled */
  for (i = 0; i < N/2; ++i) {
   if (!(ref[i]&FREE) && (r[i]&FREE))
-   LOG(cell[2*i+1],"\n\e[31;1muse after free ref[%u] = %u\e[m\t",i,ref[i]),LOG(cell[2*i],"\t");
+   LOG(cell[2*i+1],"\n\e[31;1muse after free ref[%u] = %u\e[m\t",2*i,ref[i]),LOG(cell[2*i],"\t");
   else if ((ref[i]&FREE) && !(r[i]&FREE))
-   LOG(cell[2*i+1],"\n\e[31;1mnot freed pair ref[%u] = %u\e[m\t",i,r[i]),LOG(cell[2*i],"\t");
+   LOG(cell[2*i+1],"\n\e[31;1mnot freed pair ref[%u] = %u\e[m\t",2*i,r[i]),LOG(cell[2*i],"\t");
   else if (!(ref[i]&FREE) && !(r[i]&FREE) && ref[i] != r[i])
-   LOG(cell[2*i+1],"\n\e[31;1mref[%u] want %u have %u\e[m\t",i,ref[i],r[i]),LOG(cell[2*i],"\t");
+   LOG(cell[2*i+1],"\n\e[31;1mref[%u] want %u have %u\e[m\t",2*i,ref[i],r[i]),LOG(cell[2*i],"\t");
  }
 #endif
  if (k < fn) printf("\ncollected %u unused cells",2*(fn-k));
@@ -687,13 +687,13 @@ L list() {
 L tick() {
  L t,*p;
  if (*buf == ',') return Read();
- if (*buf == '\'') return scan(),cons(atom("list"),cons(quote(atom("quote")),cons(tick(),nil)));
+ if (*buf == '\'') { scan(); rc(&t,cons(tick(),nil)); t = cons(atom("list"),cons(quote(atom("quote")),t)); rr(1); return t; }
  if (*buf == '"') return parse();
  if (*buf == ')') return err(7,atom(buf));
  if (*buf != '(') return quote(parse());
  for (p = &CDR(rc(&t,cons(atom("list"),nil))); ; p = &CDR(*p = cons(tick(),nil))) {
   if (scan() == ')') { rr(1); return t; }
-  if (*buf == '.' && !buf[1]) { scan(); rr(1); return endl(cons(atom("append"),cons(t,cons(tick(),nil)))); }
+  if (*buf == '.' && !buf[1]) { scan(); t = endl(cons(atom("append"),cons(t,cons(tick(),nil)))); rr(1); return t; }
  }
 }
 L parse() {

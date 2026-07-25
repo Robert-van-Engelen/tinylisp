@@ -212,9 +212,9 @@ void ms(L x) {
 #if DEBUG                                               /* report on memory management when debugging is enabled */
  for (i = 0; i < N/2; ++i) {
   if (!(ref[i]&FREE) && (r[i]&FREE))
-   LOG(cell[2*i+1],"\n\e[31;1muse after free ref[%u] = %u\e[m\t",i,ref[i]),LOG(cell[2*i],"\t");
+   LOG(cell[2*i+1],"\n\e[31;1mms() use after free ref[%u] = %u\e[m\t",2*i,ref[i]),LOG(cell[2*i],"\t");
   else if ((ref[i]&FREE) && !(r[i]&FREE))
-   LOG(cell[2*i+1],"\n\e[31;1mnot freed pair ref[%u] = %u\e[m\t",i,r[i]),LOG(cell[2*i],"\t");
+   LOG(cell[2*i+1],"\n\e[31;1mms() not freed pair ref[%u] = %u\e[m\t",2*i,r[i]),LOG(cell[2*i],"\t");
  }
 #endif
 #if TEST
@@ -298,11 +298,11 @@ void rebuild() {
 #if DEBUG                                               /* report on memory management when debugging is enabled */
  for (i = 0; i < N/2; ++i) {
   if (!(ref[i]&FREE) && (r[i]&FREE))
-   LOG(cell[2*i+1],"\n\e[31;1muse after free ref[%u] = %u\e[m\t",i,ref[i]),LOG(cell[2*i],"\t");
+   LOG(cell[2*i+1],"\n\e[31;1muse after free ref[%u] = %u\e[m\t",2*i,ref[i]),LOG(cell[2*i],"\t");
   else if ((ref[i]&FREE) && !(r[i]&FREE))
-   LOG(cell[2*i+1],"\n\e[31;1mnot freed pair ref[%u] = %u\e[m\t",i,r[i]),LOG(cell[2*i],"\t");
+   LOG(cell[2*i+1],"\n\e[31;1mnot freed pair ref[%u] = %u\e[m\t",2*i,r[i]),LOG(cell[2*i],"\t");
   else if (!(ref[i]&FREE) && !(r[i]&FREE) && ref[i] != r[i])
-   LOG(cell[2*i+1],"\n\e[31;1mref[%u] want %u have %u\e[m\t",i,ref[i],r[i]),LOG(cell[2*i],"\t");
+   LOG(cell[2*i+1],"\n\e[31;1mref[%u] want %u have %u\e[m\t",2*i,ref[i],r[i]),LOG(cell[2*i],"\t");
  }
 #endif
  if (k < fn) printf("\ncollected %u unused cells",2*(fn-k));
@@ -459,17 +459,17 @@ L f_setq(L t,L *e) {
  return CDR(CAR(d)) = dup(x);
 }
 L f_setcar(L t,L *e) {
- I a = 0; L x,p;
+ I a = 0; L x,p,z;
  rc(&p,evarg(&t,e,&a));
  if (T(p) != CONS) err(1,p);
- x = dup(evarg(&t,e,&a)); gc(CAR(p)); CAR(p) = x; rg(1);
+ x = dup(evarg(&t,e,&a)); z = CAR(p); CAR(p) = x; gc(z); rg(1);
  return x;
 }
 L f_setcdr(L t,L *e) {
- I a = 0; L x,p;
+ I a = 0; L x,p,z;
  rc(&p,evarg(&t,e,&a));
  if (T(p) != CONS) err(1,p);
- x = dup(evarg(&t,e,&a)); gc(CDR(p)); CDR(p) = x; rg(1);
+ x = dup(evarg(&t,e,&a)); z = CDR(p); CDR(p) = x; gc(z); rg(1);
  return x;
 }
 L f_macro(L t,L *_) { return macro(dup(car(t)),dup(car(cdr(t)))); }
@@ -1031,13 +1031,13 @@ L list() {
 L tick() {
  L t,*p;
  if (*buf == ',') return Read();
- if (*buf == '\'') return scan(),cons(atom("list"),cons(quote(atom("quote")),cons(tick(),nil)));
+ if (*buf == '\'') { scan(); rc(&t,cons(tick(),nil)); t = cons(atom("list"),cons(quote(atom("quote")),t)); rr(1); return t; }
  if (*buf == '"') return parse();
  if (*buf == ')') return err(7,atom(buf));
  if (*buf != '(') return quote(parse());
  for (p = &CDR(rc(&t,cons(atom("list"),nil))); ; p = &CDR(*p = cons(tick(),nil))) {
   if (scan() == ')') { rr(1); return t; }
-  if (*buf == '.' && !buf[1]) { scan(); rr(1); return endl(cons(atom("append"),cons(t,cons(tick(),nil)))); }
+  if (*buf == '.' && !buf[1]) { scan(); t = endl(cons(atom("append"),cons(t,cons(tick(),nil)))); rr(1); return t; }
  }
 }
 L parse() {
@@ -1142,21 +1142,20 @@ L expand(L x,L e,L b) {
    /* f in (f ...) is a macro to apply by expand/eval/expand its body */
    I i; jmp_buf savedjb;
    memcpy(savedjb,jb,sizeof(jb));
-   rg(1);
    /* bind the variables v of macro f to the given arguments x quoted (and hold all atoms in x) in environment c */
    for (c = nil,v = release(CAR(f)); T(v) == CONS; v = CDR(v),x = cdr(x)) c = pair(CAR(v),quote(hold(car(x))),c);
    if (T(v) == ATOM) c = pair(v,quote(hold(x)),c);
    /* expand macro body CDR(f) using macro arguments bound in updated environment c */
    rc(&x,expand(CDR(f),e,c));
    /* eval macro body (may fail) then expand the result with macro arguments bound in environment b */
-   if ((i = setjmp(jb)) == 0) { y = nil; rc(&y,eval(x,e)); z = expand(y,e,b); }
+   if ((i = setjmp(jb)) == 0) { rc(&y,eval(x,e)); z = expand(y,e,b); }
    memcpy(jb,savedjb,sizeof(jb));
    if (i) {
     printf("\e[31;1mmacro expansion failed:\e[m "); print(stdout,x); printf("\n");
-    rg(4);
+    rg(5);
     longjmp(jb,i);
    }
-   rg(4);
+   rg(5);
    return z;
   }
   if (T(f) == PRIM) {
@@ -1254,7 +1253,7 @@ L expand(L x,L e,L b) {
        z = dup(car(cdr(CDR(y))));
        gc(CAR(f));
        CAR(f) = cons(w,z);                              /* update the pre-constructed f = closure(w,z,nil) */
-       CDR(*p) = cons(f,nil);                           /* to return expanded (<define> v z) with closure z */
+       CDR(*p) = cons(dup(f),nil);                      /* to return expanded (<define> v z) with closure z */
       }
       else return err(2,v);                             /* v references itself in non-function body value y, reject */
      }
