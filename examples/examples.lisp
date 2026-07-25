@@ -218,3 +218,12 @@
 ; display the factorial function and try it out to compute 7! = 5040
 (de-fun factorial)
 (factorial 7)
+
+; return multiple values from a function (as a list)
+(defun foobar (name) (list 'foo 'bar name))
+
+; define a macro to bind the return values to local variables v with (bind <funapp> (v1 v2 ... vk) <expr>)
+(defmacro bind (x v y) `(let* (_ ,x) ((lambda ,v ,y) . _)))
+          
+; (foobar 'baz) returns (foo bar baz) bind this to (first second third) then (println first second third)
+(bind (foobar 'baz) (first second third) (println first second third))
