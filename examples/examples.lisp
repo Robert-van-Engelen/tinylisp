@@ -1,4 +1,4 @@
-; examples for tinylist-extras (tinylisp with article's extras)
+; examples for tinylist-extras (tinylisp with article's extras) and tinylisp-extras-gc
 ; requires list.lisp (load it first!)
 
 ; compute the dot product of (1 2 3) and (4 5 6) using map
@@ -146,7 +146,7 @@
 ; try it out
 (countup)
 
-; (dolist (<var> <list>) <expr1> ... <exprn>) loop <var> over <list> elements to execute <expr>
+; (dolist (<var> <list>) <expr> ... <expr>) loop <var> over <list> elements to execute <expr>
 (defmacro dolist (x . args)
     `(let*                              ; (let*
         (,(car x) ())                   ;     (<var> ())
@@ -154,10 +154,47 @@
         (while _                        ;     (while _
             (setq ,(car x) (car _))     ;         (setq <var> (car _))
             (setq _ (cdr _))            ;         (setq _ (cdr _))
-            . ,args)))                  ;         <expr1> ... <exprn>)))
+            . ,args)))                  ;         <expr> ... <expr>)))
 
 ; try it out, we use (list ...) with "-atoms that are quoted, since '("foo" "bar") gives (quote ((quote foo) (quote bar)))
 (dolist (v (list "Hello" "Lisp" "World")) (print v " "))
+
+; (foreach (<var> <list> ... <list>) <expr> ... <expr>) loops <var> over each element in each <list>
+(defmacro foreach (x . args)
+    (letrec*
+        (v (car x))
+        (cc (lambda (t)
+            (if t
+                (cons
+                    `(let*
+                        (,v ())
+                        (_ ,(car t))
+                        (while _
+                            (setq ,v (car _))
+                            (setq _ (cdr _))
+                            . ,args))
+                    (cc (cdr t)))
+                ())))
+        (cons 'progn (cc (cdr x)))))
+
+; try it out
+(foreach (v (list "Hello" "Lisp") (list "World")) (print v " "))
+
+; (for (<var> <from> <to> [<step>]) <expr> ... <expr>) loops <var> from <from> to <to>, and by <step> when given
+(defmacro for (x . args)
+    (let*
+        (v (car x))
+        (a (car (cdr x)))
+        (b (car (cdr (cdr x))))
+        (if (cdr (cdr (cdr x)))
+            (let* (s (car (cdr (cdr (cdr x)))))
+                `(let* (,v (- ,a ,s)) (_ (* ,s ,b))
+                     (while (not (< _ (* ,s (setq ,v (+ ,v ,s))))) . ,args)))
+            `(let* (,v (- ,a 1)) (_ (+ ,b 1))
+                 (while (< (setq ,v (+ ,v 1)) _) . ,args)))))
+
+; try it out
+(for (i 1 10 3) (print (* i i) " "))
 
 ; backquote is a handy construct, not only for macros, but anytime when we need a (list ...) of things
 (defun greet (name)
