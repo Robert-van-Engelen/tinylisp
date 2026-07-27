@@ -124,7 +124,7 @@ L alloc() { I i = fp; fp = ref[i/2]&~FREE; ref[i/2] = 1; --fn; return hp > lomem
 /* register x with initial value y to collect with rg(x) or in a f_catch exception handler when an error occurred */
 L rc(L *x,L y) { *x = y; if (xp) *xp = x,++xp; return y; }      /* GCC incorrectly warns about *xp++ = x dangling pointer */
 /* remove x from catch-throw registry and garbage collect x */
-L rg(L x) { if (xp) --xp; return gc(x); }
+void rg(L x) { if (xp) --xp; gc(x); }
 /* remove k registrations without garbage collecting them */
 void rr(I k) { if (xp) xp -= k; }
 
@@ -599,7 +599,8 @@ L eval(L x,L e) {
   if (T(x) == ATOM) { x = dup(assoc(x,e)); break; }
   if (T(x) != CONS) { x = dup(x); break; }
   /* save g = old f to garbage collect, evaluate f in the application (f . x) and get the list of arguments x */
-  g = f; f = eval(CAR(x),e); x = CDR(x);
+  g = f; f = CAR(x); x = CDR(x);
+  f = T(f) == ATOM ? dup(assoc(f,e)) : T(f) == CONS ? eval(f,e) : dup(f);
   if (T(f) == PRIM) {
    /* apply Lisp primitive to argument list x, return value in x */
    x = prim[ord(f)].f(x,&e);
@@ -621,13 +622,13 @@ L eval(L x,L e) {
   }
   if (T(f) != CLOS) return err(3,f);
   /* get the list of variables v of closure f and its local environment d (use global env when nil) */
-  v = car(CAR(f)); d = dup(CDR(f));
+  v = CAR(CAR(f)); d = dup(CDR(f));
   if (T(d) == NIL) d = dup(env);
   /* bind closure f variables v to the evaluated argument values */
   for (a = 0; T(v) == CONS; v = CDR(v)) d = pair(CAR(v),evarg(&x,&e,&a),d);
   if (T(v) == ATOM) d = pair(v,a ? dup(x) : evlis(x,e),d);
   /* next, evaluate body x of closure f in environment e = d while keeping f in memory as long as x */
-  x = cdr(CAR(f));
+  x = CDR(CAR(f));
   /* discard copy of the old environment e to use new environment d */
   gc(e); e = d; d = nil;
   /* garbage collect closure g = old f with old body x, garbage collect old macro body h */

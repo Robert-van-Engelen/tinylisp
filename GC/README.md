@@ -38,6 +38,7 @@
 
 - [tinylisp-extras-expand-gc.c](tinylisp-extras-expand-gc.c)
   - the ultimate version of the above with a lot more built-in extras and automatic hygienic macros
+  - fast interpreter optimized with early binding names to globals (part of early macro expansion)
   - also adds a mark-sweep garbage collector that kicks in when a program runs low on memory (deletes unreachable cyclic data structures)
 
 See also [#20](https://github.com/Robert-van-Engelen/tinylisp/issues/20)
@@ -64,8 +65,8 @@ Mac M1 compiled with clang 21.0.0 option -O2 to solve the
 
 | implementation | GC | mem size (cells) | time (ms) |
 | -------------- | -- | ---------------: | --------: |
-| tinylisp-extras-gc                                        | ref count              |  8192 |  396 ms |
-| tinylisp-extras-expand-gc                                 | ref count + mark-sweep |  8192 |   50 ms |
+| tinylisp-extras-gc                                        | ref count              |  8192 |  466 ms |
+| tinylisp-extras-expand-gc                                 | ref count + mark-sweep |  8192 |   40 ms |
 | [lisp](https://github.com/Robert-van-Engelen/lisp)        | mark-sweep             |  8192 |  920 ms |
 | [lisp](https://github.com/Robert-van-Engelen/lisp)        | mark-sweep             | 16384 |  895 ms |
 | [lisp-cheney](https://github.com/Robert-van-Engelen/lisp) | cheney                 |  8192 | 1880 ms |
@@ -77,11 +78,17 @@ are not shown in the table for tinylisp).  But memory size does impact
 mark-sweep and cheney, since more memory means lower GC overhead.
 
 The performance of tinylisp-extras-gc versus the Common Lisp interpreter GNU
-[CLISP](https://www.gnu.org/software/clisp) is reasonably comparable (396 ms
+[CLISP](https://www.gnu.org/software/clisp) is reasonably comparable (466 ms
 versus CLISP 296 ms) to solve 8-queens.
 
+However, tinylisp-extras-gc and all other versions, except
+tinylisp-extras-expand-gc, slow down when more definitions are added.  This is
+caused by the runtime overhead of frequent `assoc()` calls in `eval()` to
+find the definitions of globals in the environment.
+
 The performance of tinylisp-extras-expand-gc is significantly boosted with
-early binding global names and built-ins.  Mark-sweep in
+early binding global names and built-ins.  This avoids the runtime overhead of
+`assoc()` calls.  Since this version uses reference counting, mark-sweep in
 tinylisp-extras-expand-gc is only used to delete unreachable cyclic data
 structures that ref count cannot delete.
 

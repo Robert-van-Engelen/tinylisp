@@ -941,10 +941,10 @@ void trace(L y,L x,L e) {
 
 /* section 16.2/3/4: tail-call optimization (section 17.2: hygienic macros - remove MACR branch) */
 L eval(L x,L e) {
- I a; L f,v,d,y,g,z;
+ I a; L f,g,h,d,v,y,z;
  /* pre-check for stack overflow, expect 4 + 1 (for evlis) rc() calls to register variables */
  if (sp >= stk+S-5) return err(4,nil);
- rc(&d,nil); rc(&e,dup(e)); rc(&f,nil); rc(&g,nil);
+ rc(&d,nil); rc(&e,dup(e)); rc(&g,nil); rc(&h,nil);
  /* we dup(e) the environment to extend with locals and formal arguments, then gc(e) all of them afterwards */
  while (1) {
   /* copy x to y to output y => x when tracing is enabled */
@@ -952,35 +952,37 @@ L eval(L x,L e) {
   /* if x is an atom, then return its value; if x is not an application list (it is constant), then return x */
   if (T(x) == ATOM) { x = dup(assoc(x,e)); break; }
   if (T(x) != CONS) { x = dup(x); break; }
-  /* save g = old f to garbage collect, evaluate f in the application (f . x) and get the list of arguments x */
-  g = f; f = eval(CAR(x),e); x = CDR(x);
+  /* save h = old f to garbage collect, evaluate f in the application (f . x) and get the list of arguments x */
+  h = g; g = nil; f = CAR(x); x = CDR(x);
+  if (T(f) == ATOM) f = assoc(f,e);
+  else if (T(f) == CONS) f = g = eval(f,e);
   if (T(f) == PRIM) {
    /* apply Lisp primitive to argument list x, return value in x */
    x = prim[ord(f)].f(x,&e);
-   /* garbage collect g = old f (use temp z for gc() receive SIGINT interrupted) */
-   z = g; g = nil; gc(z);
+   /* garbage collect h = old f (use temp z in case gc() gets SIGINT interrupted) */
+   z = h; h = nil; gc(z);
    /* if tail-call then continue evaluating x, otherwise return x */
    if (prim[ord(f)].t) continue;
    break;
   }
   if (T(f) != CLOS) return err(3,f);
   /* get the list of variables v of closure f and its local environment d (use global env when nil) */
-  v = car(CAR(f)); d = dup(CDR(f));
+  v = CAR(CAR(f)); d = dup(CDR(f));
   if (T(d) == NIL) d = dup(env);
   /* bind closure f variables v to the evaluated argument values */
   for (a = 0; T(v) == CONS; v = CDR(v)) d = pair(CAR(v),evarg(&x,&e,&a),d);
   if (T(v) == ATOM) d = pair(v,a ? dup(x) : evlis(x,e),d);
   /* next, evaluate body x of closure f in environment e = d while keeping f in memory as long as x */
-  x = cdr(CAR(f));
-  /* discard copy of the old environment e to use new environment d (use temp z for gc() may receive SIGINT) */
+  x = CDR(CAR(f));
+  /* discard copy of the old environment e to use new environment d (use temp z in case gc() gets SIGINT) */
   z = e; e = d; d = nil; gc(z);
-  /* garbage collect closure g = old f with old body x (use temp z for gc() may receive SIGINT) */
-  z = g; g = nil; gc(z);
+  /* garbage collect closure h = old f with old body x (use temp z in case gc() gets SIGINT) */
+  z = h; h = nil; gc(z);
   if (tr) trace(y,x,e);
  }
  if (tr && !equ(x,y)) trace(y,x,e);
- /* garbage collect environment e, closure f (use temp z for gc() may receive SIGINT) */
- z = e; e = nil; gc(z); z = f; f = nil; gc(z);
+ /* garbage collect environment e, garbage collect g (use temp z in case gc() gets SIGINT) */
+ z = e; e = nil; gc(z); z = g; g = nil; gc(z);
  /* deregister 4 variables, if registered, without gc'ing them */
  rr(4);
  return x;
