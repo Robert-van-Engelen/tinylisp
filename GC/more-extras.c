@@ -24,6 +24,7 @@
    {"acos",     f_acos,    0},
    {"atan",     f_atan,    0},
    {"atan2",    f_atan2,   0},
+   {"round",    f_round,   0},
    {"floor",    f_floor,   0},
    {"ceiling",  f_ceiling, 0},
    {"char",     f_char,    0},
@@ -117,6 +118,9 @@ L f_atan(L t,L *e) { I a = 0; return num(atan(gc(evarg(&t,e,&a)))); }
 
 /* (atan2 x y) */
 L f_atan2(L t,L *e) { I a = 0; L x,n = gc(evarg(&t,e,&a)); while (isarg(&t,e,&a,&x)) n = atan2(n,gc(x)); return num(n); }
+
+/* (round x) */
+L f_round(L t,L *e) { I a = 0; return num(round(gc(evarg(&t,e,&a)))); }
 
 /* (floor x) */
 L f_floor(L t,L *e) { I a = 0; return num(floor(gc(evarg(&t,e,&a)))); }
