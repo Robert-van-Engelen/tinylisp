@@ -47,10 +47,14 @@
 
 ; display a green circle with radius 20 
 (char 27) "[32;1m"      ; \e[32;1m bright green
-(circle 20)
+(circle 14)
 (char 27) "[35;1m"      ; \e[33;1m bright magenta
-"this is a circle with r = 20"
+"this is a circle with r = 14"
 (char 27) "[m"          ; \e[m normal
+
+; define an emoji character (note that a . can be used as a character in names)
+(define emoji.heart-eyes (atomize (char 0xf0) (char 0x9f) (char 0x98) (char 0x8d)))
+emoji.heart-eyes
 
 ; define pi/2 and pi as a numeric values
 (define pi/2 (acos 0))
