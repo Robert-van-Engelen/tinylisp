@@ -14,6 +14,7 @@
    {"|",        f_bitor,   0},
    {"~",        f_bitxor,  0},
    {"abs",      f_abs,     0},
+   {"sgn",      f_sgn,     0},
    {"neg",      f_neg,     0},
    {"sqrt",     f_sqrt,    0},
    {"sin",      f_sin,     0},
@@ -27,6 +28,8 @@
    {"ceiling",  f_ceiling, 0},
    {"char",     f_char,    0},
    {"code",     f_code,    0},
+   {"cpos",     f_cpos,    0},
+   {"clen",     f_clen,    0},
    {"list",     f_list,    0},
    {"append",   f_append,  0},
    {"length",   f_length,  0},
@@ -85,6 +88,9 @@ L f_bitxor(L t,L *e) { I a = 0; L x; int64_t n = (int64_t)num(gc(evarg(&t,e,&a))
 /* (abs x) */
 L f_abs(L t,L *e) { I a = 0; return num(fabs(gc(evarg(&t,e,&a)))); }
 
+/* (sgn x) sign of x returns 1, -1 or 0 */
+L f_sgn(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return x > 0 ? 1 : x < 0 ? -1 : 0; }
+
 /* (neg x) */
 L f_neg(L t,L *e) { I a = 0; return num(-gc(evarg(&t,e,&a))); }
 
@@ -135,6 +141,25 @@ L f_code(L t,L *e) {
  k = T(v) == ATOM ? strlen(A+ord(v)) : 0;
  i = isarg(&t,e,&a,&x) ? (I)num(gc(x)) : 0; 
  return i < k ? *(A+ord(v)+i)&0xff : 0;
+}
+
+/* (cpos <atom> <atom> [n])
+   return character position of the first <atom> in the second <atom> or nil (), look after position n */
+L f_cpos(L t,L *e) {
+ I i,a = 0; L x,v = gc(evarg(&t,e,&a)),w = gc(evarg(&t,e,&a));
+ i = isarg(&t,e,&a,&x) ? (I)num(gc(x)) : 0;
+ if (T(v) == ATOM && T(w) == ATOM && i < strlen(A+ord(w))) {
+  char *s = strstr(A+ord(w)+i,A+ord(v));
+  if (s != NULL) return s-(A+ord(w));
+ }
+ return nil;
+}
+
+/* (clen <atom>)
+   return character length of <atom> */
+L f_clen(L t,L *e) {
+ I a = 0; L v = gc(evarg(&t,e,&a));
+ return T(v) == ATOM ? strlen(A+ord(v)) : 0;
 }
 
 /* (list ...) - built-in for speed to replace the list definition in common.lisp (remove it)
