@@ -9,15 +9,20 @@
 
 (load list.lisp)
 
-; return a new empty queue
-(define queue (lambda () (list ())))
+; return a new empty queue (())
+(define queue (lambda () (cons () ())))
+
+; (queued q) returns () when queue q is empty, otherwise returns a list of queued values
+; the returned list will be shared by the queue, enqueued values are also added to the list
+; use (copy-list (queued q)) to duplicate list t from the queue without sharing
+(define queued car)
 
 ; push value x to the back of the queue q, updating q, returns a singleton list (x)
 (define enqueue
     (lambda (q x)
-        (if (car q)
-            (set-cdr! q (set-cdr! (cdr q) (cons x ())))
-            (set-car! q (set-cdr! q (list x))))))
+        (if (queued q)
+            (set-cdr! q (set-cdr! (cdr q) (cons x ()))) ; append (x) to the non-empty queue
+            (set-car! q (set-cdr! q (cons x ()))))))    ; assign queue (t . t) where t = (x)
 
 ; remove the front value from the queue q and return it
 (define dequeue
@@ -30,11 +35,6 @@
                         (set-cdr! q ()))
                     x))
             ())))
-
-; (queued q) returns () when queue q is empty, otherwise returns a list of queued values
-; the returned list will be shared by the queue, enqueued values are also added to the list
-; use (copy-list (queued q)) to duplicate list t from the queue without sharing
-(define queued car)
 
 ; convert list to queue in O(1) time, list will be shared by the queue, enqueued values are also added to the list
 ; use (list2queue (copy-list t)) to duplicate list t as a new queue without sharing
