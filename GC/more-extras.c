@@ -44,6 +44,8 @@
    {"member",   f_member,  0},
    {"copy-list",f_copylist,0},
    {"make-list",f_makelist,0},
+   {"rplaca",   f_rplaca,  0},
+   {"rplacd",   f_rplacd,  0},
    {"time",     f_time,    0},
    {0}};
 */
@@ -295,6 +297,26 @@ L f_makelist(L t,L *e) {
  while (n-- > 0) s = cons(dup(x),s);
  gc(x);
  return s;
+}
+
+/* (rplaca p x)
+   ANSI Lisp rplaca replace car of a cons pair p with x */
+L f_rplaca(L t,L *e) {
+ I a = 0; L p,z;
+ rc(&p,evarg(&t,e,&a));
+ if (T(p) != CONS) err(1,p);
+ z = CAR(p); CAR(p) = evarg(&t,e,&a); gc(z); rr(1);
+ return p;
+}
+
+/* (rplacd p x)
+   ANSI Lisp rplacd replace cdr of a cons pair p with x */
+L f_rplacd(L t,L *e) {
+ I a = 0; L p,z;
+ rc(&p,evarg(&t,e,&a));
+ if (T(p) != CONS) err(1,p);
+ z = CDR(p); CDR(p) = evarg(&t,e,&a); gc(z); rr(1);
+ return p;
 }
 
 /* (time <expr> [n]) 
