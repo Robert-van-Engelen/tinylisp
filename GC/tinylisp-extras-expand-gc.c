@@ -1277,14 +1277,17 @@ L expand(L x,L e,L b) {
      d = pair(v,f,dup(e));                              /* update environment d of e to include (v . f) */
      rc(&y,expand(x,d,b));                              /* y is expanded body x of (<define> v x) */
      if (ref[ord(f)/2] > 1) {                           /* if v references itself in y then ... */
-      if (T(y) == CONS && equ(CAR(y),p_lambda)) {       /* if body y is a (lambda w z) then ... */
-       w = dup(car(CDR(y)));
-       z = dup(car(cdr(CDR(y))));
+      z = eval(y,e);                                    /* evaluate expanded y of body x */
+      if (T(z) == CLOS) {                               /* if this is a closure then ... */
        gc(CAR(f));
-       CAR(f) = cons(w,z);                              /* update the pre-constructed f = closure(w,z,nil) */
-       CDR(*p) = cons(dup(f),nil);                      /* to return expanded (<define> v z) with closure z */
+       CAR(f) = dup(CAR(z));                            /* replace the variables and body of closure f with z's */
+       CDR(f) = dup(CDR(z));                            /* replace the environment of closure f with z's */
+       CDR(*p) = cons(z,nil);                           /* to return expanded (<define> v z) with closure z */
       }
-      else return err(2,v);                             /* v references itself in non-function body value y, reject */
+      else {                                            /* v references itself in non-function body value y, reject */
+       printf("\e[31;1mcircular definition:\e[m "); print(stdout,v); printf(" = "); print(stdout,x);
+       return err(2,v);
+      }
      }
      else CDR(*p) = cons(dup(y),nil);                   /* to return expanded (<define> v y) */
      rg(1);
