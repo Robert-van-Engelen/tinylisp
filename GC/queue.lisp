@@ -1,8 +1,8 @@
 ; Queues in Lisp implemented with destructive operations using set-car! and set-cdr!
 ; Requires function last from list.lisp (load list.lisp)
 ;
-; IMPORTANT: this example requires garbage collection to retain global tree data,
-; otherwise queues will be corrupted when returning to the REPL with the trivial gc()
+; IMPORTANT: this example requires garbage collection to retain global queue data, otherwise
+; globally-defined queues will be corrupted when returning to the REPL with the trivial gc()
 ;
 ; A queue is represented by a pair (head . tail) where tail "points" to the last singleton list of the queue.
 ; The tail "pointer" is updated by enqueue.
@@ -10,19 +10,14 @@
 (load list.lisp)
 
 ; return a new empty queue
-(define queue (lambda () '(())))
+(define queue (lambda () (list ())))
 
 ; push value x to the back of the queue q, updating q, returns a singleton list (x)
 (define enqueue
     (lambda (q x)
         (if (car q)
-            (progn
-                (set-cdr! (cdr q) (cons x ()))
-                (set-cdr! q (cdr (cdr q))))
-            (let* (t (list x))
-                  (progn
-                      (set-car! q t)
-                      (set-cdr! q t))))))
+            (set-cdr! q (set-cdr! (cdr q) (cons x ())))
+            (set-car! q (set-cdr! q (list x))))))
 
 ; remove the front value from the queue q and return it
 (define dequeue
@@ -57,3 +52,16 @@
 (dequeue Q)             ; hello
 (dequeue Q)             ; world
 (queued Q)              ; ()
+
+; queues are brilliant to rewrite functions to tail-recursive versions
+(define my-copy-list-tr
+    (lambda (t q)
+        (if t
+            (progn
+                (enqueue q (car t))
+                (my-copy-list-tr (cdr t) q))
+            (queued q))))
+(define my-copy-list (lambda (t) (my-copy-list-tr t (queue))))
+
+; copy a list
+(my-copy-list '(1 a (x y z)))
