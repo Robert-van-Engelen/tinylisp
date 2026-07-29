@@ -65,7 +65,7 @@ L f_le(L t,L *e) { return not(f_gt(t,e)) ? tru : nil; }
 L f_ge(L t,L *e) { return not(f_lt(t,e)) ? tru : nil; }
 
 /* (= x y) returns #t if number x equals number y, otherwise returns () */
-L f_is(L t,L *e) { I a = 0; L x = num(gc(evarg(&t,e,&a))); return x == num(gc(evarg(&t,e,&a))); }
+L f_is(L t,L *e) { I a = 0; L x = num(gc(evarg(&t,e,&a))); return x == num(gc(evarg(&t,e,&a))) ? tru : nil; }
 
 /* (% x y ...) modulo of dividing x by y, then by ... */
 L f_mod(L t,L *e) { I a = 0; L x; int64_t n = (int64_t)num(gc(evarg(&t,e,&a))); while (isarg(&t,e,&a,&x)) n %= (int64_t)num(gc(x)); return n; }
