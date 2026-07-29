@@ -96,7 +96,7 @@ I equ(L x,L y) { union { L x; uint64_t i; } u = {x},v = {y}; return u.i == v.i; 
 /* interning of atom names (Lisp symbols), returns a unique NaN-boxed ATOM */
 L atom(const char *s) {
  I i = 0; while (i < hp && strcmp(A+i,s)) i += strlen(A+i)+1;
- return i == hp && ((hp += strlen(s)+1) > lp<<3 || !strcpy(A+i,s)) ? err(4,nil) : box(ATOM,i);
+ return i == hp && ((hp += strlen(s)+1) > lp<<3 || !memmove(A+i,s,hp-i)) ? err(4,nil) : box(ATOM,i);
 }
 
 /* ++ new: mark-sweep garbage collector registry stack size, max depth of nested calls to eval() = S/4 */
@@ -399,11 +399,11 @@ L f_lambda(L t,L *e) { return closure(dup(car(t)),dup(car(cdr(t))),equ(*e,env) ?
 /* section 17.1-2: early binding and efficient macro expansion with hygienic macros */
 /* ++ new: garbage collect the old unreachable definitions when redefined */
 L f_define(L t,L *e) {
- L d = *e,v = car(t);
+ L d = env,v = car(t);
  if (T(v) == PRIM) printf("not redefined built-in ");
  else if (T(v) != ATOM && T(v) != CLOS && T(v) != MACR) return err(2,v);
  else {
-  L x = eval(car(cdr(t)),d);
+  L x = eval(car(cdr(t)),*e);
   if (T(v) == CLOS || T(v) == MACR) {
    if (T(x) != T(v)) { gc(x); printf("cannot redefine "); return dup(v); }
    gc(CAR(v)); CAR(v) = dup(CAR(x)); gc(CDR(v)); CDR(v) = dup(CDR(x)); gc(x);
@@ -478,16 +478,15 @@ L f_println(L t,L *e) { f_print(t,e); fputc('\n',out); return nil; }
 
 /* ++ new: atomize (stringify) x (to stringify the value of a variable v use (progn v) as argument) */
 L f_atomize(L t,L *e) {
- I i,k; L s,*p = &s;
+ I k; L s,*p = &s;
  for (rc(p,nil); T(t) == CONS; t = CDR(t))
   p = &CDR(*p = cons(T(CAR(t)) == ATOM || T(CAR(t)) == HOLD ? CAR(t) : eval(CAR(t),*e),nil));
  *p = dup(t);                                   /* tail of s is t */
  k = atomize(s,NULL);                           /* the atom string length k, to hold atomized list of arguments */
- i = hp;
- if ((hp += k+1) > lp<<3) err(4,nil);           /* ERR 4 if the heap space is not large enough */
- atomize(s,A+i);                                /* store the atomized arguments on the heap */
+ if (hp+k+1 > lp<<3) err(4,nil);                /* ERR 4 if the heap space is not large enough */
+ atomize(s,A+hp);                               /* store the atomized arguments on the heap */
  rg(1);
- return box(ATOM,i);
+ return atom(A+hp);                             /* this requires memmove() instead of strcpy() in atom() */
 }
 
 /* ++ updated: read from file with optional pathname argument converted using atomize */

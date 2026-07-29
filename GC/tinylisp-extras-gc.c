@@ -85,7 +85,7 @@ I equ(L x,L y) { union { L x; uint64_t i; } u = {x},v = {y}; return u.i == v.i; 
 /* interning of atom names (Lisp symbols), returns a unique NaN-boxed ATOM */
 L atom(const char *s) {
  I i = 0; while (i < hp && strcmp(A+i,s)) i += strlen(A+i)+1;
- return i == hp && ((hp += strlen(s)+1) > lp<<3 || !strcpy(A+i,s)) ? err(4,nil) : box(ATOM,i);
+ return i == hp && ((hp += strlen(s)+1) > lp<<3 || !memmove(A+i,s,hp-i)) ? err(4,nil) : box(ATOM,i);
 }
 
 /* section 14: error handling and exceptions
@@ -340,9 +340,9 @@ L f_leta(L t,L *e) {
 L f_lambda(L t,L *e) { return closure(dup(car(t)),dup(car(cdr(t))),equ(*e,env) ? nil : dup(*e)); }
 /* define a global symbol, garbage collect the old unreachable definitions when redefined */
 L f_define(L t,L *e) {
- L d = *e,v = car(t),x;
+ L d = env,v = car(t),x;
  if (T(v) != ATOM) return err(2,v);             /* bound variable must be an atom, to prevent GC issues when not an atom */
- x = eval(car(cdr(t)),d);
+ x = eval(car(cdr(t)),*e);
  while (T(d) == CONS && !equ(v,car(CAR(d)))) d = CDR(d);
  if (T(d) != CONS) env = pair(v,x,env);
  else {
@@ -411,15 +411,14 @@ L f_println(L t,L *e) { f_print(t,e); fputc('\n',out); return nil; }
 
 /* ++ new: atomize (stringify) x (to stringify the value of a variable v use (progn v) as argument) */
 L f_atomize(L t,L *e) {
- I i,k; L s,*p = &s;
+ I k; L s,*p = &s;
  for (rc(p,nil); T(t) == CONS; t = CDR(t)) p = &CDR(*p = cons(T(CAR(t)) == ATOM ? CAR(t) : eval(CAR(t),*e),nil));
  *p = dup(t);                                   /* tail of s is t */
  k = atomize(s,NULL);                           /* the atom string length k, to hold atomized list of arguments */
- i = hp;
- if ((hp += k+1) > lp<<3) err(4,nil);           /* ERR 4 if the heap space is not large enough */
- atomize(s,A+i);                                /* store the atomized arguments on the heap */
+ if ((hp+k+1) > lp<<3) err(4,nil);              /* ERR 4 if the heap space is not large enough */
+ atomize(s,A+hp);                               /* store the atomized arguments on the heap */
  rg(s);
- return box(ATOM,i);
+ return atom(A+hp);                             /* this requires memmove() instead of strcpy() in atom() */
 }
 
 /* ++ updated: read from file with optional pathname argument converted using atomize */
