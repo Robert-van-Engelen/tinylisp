@@ -61,3 +61,10 @@ emoji.heart-eyes
 "=" pi/2
 (define pi (* 2 pi/2))
 "=" pi
+
+; define a macro that defines functions with (defun fun<name> () '<name>) that return <name>
+(defmacro fun (v)
+    (let* (f (atomize 'fun v))
+        `(defun ,f () ',v)))
+(fun ny)        ; (defun funny () 'ny)
+(funny)         ; gives ny
