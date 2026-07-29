@@ -207,17 +207,21 @@
     (letrec*
         (cc (lambda (t)
             (if t
-                `(((eq? _ ,(car (car t))) ,(car (cdr (car t)))) . ,(cc (cdr t)))
+                (if (eq? (car (car t)) 'otherwise)
+                    `((#t ,(car (cdr (car t)))))
+                    `(((eq? _ ',(car (car t))) ,(car (cdr (car t)))) . ,(cc (cdr t))))
                 `((#t ())))))
         `(let* (_ ,x) (cond . ,(cc args)))))
 ; (case ...) is converted by a local recursive case-compiling function (cc args) that iterates over args to construct the
 ; (let* (_ <expr>) (cond ((eq? _ <key1>) <expr1>) ... (#t ())) conditions ((eq? _ <key>) <expr>) for each <key> <expr>
+; note that <key> are constants that are not evaluated, this quoting of constants is done with (eq? _ ',(car (car t)))
 
 ; try it out
 (case 2
     (1 "first")
     (2 "second")
-    (3 "third"))
+    (3 "third")
+    (otherwise "nothing"))
 
 ; tinylisp names may contain punctuation and digits, may start with a digit, but may not start with a , ( ) ' ` " ;
 (defmacro 2nd-cdr (t) `(cdr ,t))

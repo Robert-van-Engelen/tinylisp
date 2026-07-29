@@ -42,7 +42,7 @@ char buf[256],see = 0,*ptr = "",*line = NULL,ps[80];
 #define PS2 "\001\e[32;1m\002? \001\e[m\002"
 
 /* forward proto declarations */
-L eval(L,L),expand(L,L,L),Read(),parse(),err(I,L); void print(L);
+L eval(L,L),expand(L,L,L),cede(L),Read(),parse(),err(I,L); void print(L);
 
 /* section 4: constructing Lisp expressions */
 /* hp: top of the atom heap pointer, A+hp with hp=0 points to the first atom string in cell[]
@@ -148,7 +148,7 @@ L f_mul(L t,L *e) { I a = 0; L x,n = evarg(&t,e,&a); while (isarg(&t,e,&a,&x)) n
 L f_div(L t,L *e) { I a = 0; L x,n = evarg(&t,e,&a); while (isarg(&t,e,&a,&x)) n /= x; return num(n); }
 L f_int(L t,L *e) { I a = 0; L n = evarg(&t,e,&a); return n < 1e16 && n > -1e16 ? (long long)n : n; }
 L f_lt(L t,L *e) { I a = 0; L n = evarg(&t,e,&a); return n - evarg(&t,e,&a) < 0 ? tru : nil; }
-L f_eq(L t,L *e) { I a = 0; L x = evarg(&t,e,&a); return equ(x,evarg(&t,e,&a)) ? tru : nil; }
+L f_eq(L t,L *e) { I a = 0; L x = evarg(&t,e,&a); return equ(cede(x),cede(evarg(&t,e,&a))) ? tru : nil; }
 L f_pair(L t,L *e) { I a = 0; L x = evarg(&t,e,&a); return T(x) == CONS ? tru : nil; }
 L f_or(L t,L *e) { I a = 0; L x = nil; while (isarg(&t,e,&a,&x) && not(x)) continue; return x; }
 L f_and(L t,L *e) { I a = 0; L x = tru; while (isarg(&t,e,&a,&x) && !not(x)) continue; return x; }
@@ -480,15 +480,16 @@ L hygienic(L v,L x) {
  if (T(v) == ATOM) while (holds(v,x)) v = gensym(v);
  return v;
 }
+/* return HOLD v as an ATOM v, otherwise just return v */
+L cede(L v) { return T(v) == HOLD ? box(ATOM,ord(v)) : v; }
 /* release all variables held in x; this operation destructively replaces each HOLD by ATOM throughout x */
 L release(L x) {
- if (T(x) == HOLD) return box(ATOM,ord(x));
  if (T(x) == CONS) {
   L *p = &x;
   for (; T(*p) == CONS; p = &cell[ord(*p)]) cell[ord(*p)+1] = release(car(*p));
   *p = release(*p);
  }
- return x;
+ return cede(x);
 }
 /* section 17.1-2: early binding and efficient macro expansion with hygienic macros */
 L expand(L x,L e,L b) {

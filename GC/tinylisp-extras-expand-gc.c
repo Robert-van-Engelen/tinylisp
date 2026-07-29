@@ -61,7 +61,7 @@ char buf[256],see = 0,*ptr = "",*line = NULL,ps[80];
 #define PS2 "\001\e[32;1m\002? \001\e[m\002"
 
 /* forward proto declarations */
-L eval(L,L),expand(L,L,L),Read(),parse(),err(I,L); void collect(L),ms(L),print(FILE*,L),stop(int); I atomize(L,char*);
+L eval(L,L),expand(L,L,L),cede(L),Read(),parse(),err(I,L); void collect(L),ms(L),print(FILE*,L),stop(int); I atomize(L,char*);
 
 /* section 4: constructing Lisp expressions (using a cell pool managed with reference count garbage collection) */
 /* hp: top of the atom heap pointer, A+hp with hp=0 points to the first atom string in cell[]
@@ -382,7 +382,7 @@ L f_lt(L t,L *e) {
   x == x && y == y ? x < y :                    /* x == x is false when x is NaN i.e. a tagged Lisp expression */
   T(x) < T(y) || (T(x) == T(y) && ord(x) < ord(y))) ? tru : nil;
 }
-L f_eq(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return equ(x,gc(evarg(&t,e,&a))) ? tru : nil; }
+L f_eq(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return equ(cede(x),cede(gc(evarg(&t,e,&a)))) ? tru : nil; }
 L f_pair(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return T(x) == CONS ? tru : nil; }
 L f_or(L t,L *e) { I a = 0; L x = nil; while (isarg(&t,e,&a,&x) && not(x)) continue; return x; }
 L f_and(L t,L *e) { I a = 0; L x = tru,y = nil; while (isarg(&t,e,&a,&x)) { gc(y); y = x; if (not(x)) break; } return x; }
@@ -479,7 +479,8 @@ L f_println(L t,L *e) { f_print(t,e); fputc('\n',out); return nil; }
 /* ++ new: atomize (stringify) x (to stringify the value of a variable v use (progn v) as argument) */
 L f_atomize(L t,L *e) {
  I i,k; L s,*p = &s;
- for (rc(p,nil); T(t) == CONS; t = CDR(t)) p = &CDR(*p = cons(T(CAR(t)) == ATOM ? CAR(t) : eval(CAR(t),*e),nil));
+ for (rc(p,nil); T(t) == CONS; t = CDR(t))
+  p = &CDR(*p = cons(T(CAR(t)) == ATOM || T(CAR(t)) == HOLD ? CAR(t) : eval(CAR(t),*e),nil));
  *p = dup(t);                                   /* tail of s is t */
  k = atomize(s,NULL);                           /* the atom string length k, to hold atomized list of arguments */
  i = hp;
@@ -1122,15 +1123,16 @@ L hygienic(L v,L x) {
  if (T(v) == ATOM) while (holds(v,x)) v = gensym(v);
  return v;
 }
+/* return HOLD v as an ATOM v, otherwise just return v */
+L cede(L v) { return T(v) == HOLD ? box(ATOM,ord(v)) : v; }
 /* release all variables held in x; this operation destructively replaces each HOLD by ATOM throughout x */
 L release(L x) {
- if (T(x) == HOLD) return box(ATOM,ord(x));
  if (T(x) == CONS) {
   L *p = &x;
   for (; T(*p) == CONS; p = &CDR(*p)) CAR(*p) = release(CAR(*p));
   *p = release(*p);
  }
- return x;
+ return cede(x);
 }
 /* section 17.1-2: early binding and efficient macro expansion with hygienic macros */
 L expand(L x,L e,L b) {
@@ -1343,7 +1345,7 @@ I atomize(L x,char *a) {
   }
   return k;
  }
- if (T(x) == ATOM) return strlen(a ? strcpy(a,A+ord(x)) : A+ord(x));
+ if (T(x) == ATOM || T(x) == HOLD) return strlen(a ? strcpy(a,A+ord(x)) : A+ord(x));
  if (x == x) snprintf(buf,sizeof(buf),"%.10lg",x); else strcpy(buf," ");
  return strlen(a ? strcpy(a,buf) : buf);
 }
