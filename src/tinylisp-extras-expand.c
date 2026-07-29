@@ -159,7 +159,7 @@ L f_leta(L t,L *e) { for (; let(t); t = cdr(t)) *e = pair(car(car(t)),eval(car(c
 L f_lambda(L t,L *e) { return closure(car(t),car(cdr(t)),*e); }
 /* section 17.1-2: early binding and efficient macro expansion with hygienic macros */
 L f_define(L t,L *e) {
- L d = *e,v = car(t);
+ L d = env,v = car(t);
  if (T(v) == PRIM) printf("not redefined built-in ");
  else if (T(v) != ATOM) {
   if (T(v) != CLOS && T(v) != MACR) return err(2,v);
