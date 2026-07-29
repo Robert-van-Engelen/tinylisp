@@ -45,6 +45,12 @@
 ; zip three lists (transpose) and append them together
 (map-reduce list append '(1 2 3) '(4 5 6) '(7 8 9))
 
+; define a function that takes a function f to return its complement function
+(define complement (lambda (f) (lambda args (not (f . args)))))
+
+; which numbers in two lists are pairwise not equal?
+(map (complement =) '(1 2 3 4) '(1 3 2 4))
+
 ; define a macro-defining macro
 (define defmacro
     (macro (f v x)
