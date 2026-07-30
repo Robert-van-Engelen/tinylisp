@@ -40,14 +40,14 @@
         e,d    environment, a list of pairs, e.g. created with (define v x)
         b,c    macro argument bindings environment, used in expand()
         v,w    the name of a variable (an atom) or a list of variables */
-#define I uint32_t
-#define L double
+#define I uint32_t      /* uint32_t or uint16_t, see value of N below */
+#define L float
 
 /* address of the atom heap is at the bottom of the cell pool */
 #define A (char*)cell
 
 /* number of cells for the shared pool and atom heap, increase N as desired */
-#define N 8192
+#define N 8192  /* I=uint32_t: N <= 262144 (= 2^20/4 cells = 1048576 bytes); I=uin16_t: N <= 16384 (65536 bytes) */
 
 /* section 12: adding readline with history ++ new: support nested load, new err 5 can't open file */
 #include <readline/readline.h>
@@ -70,12 +70,12 @@ L eval(L,L),expand(L,L,L),cede(L),Read(),parse(),err(I,L); void collect(L),ms(L)
    fn: number of free cell cons pairs in cell[] (not taking atoms stored in cell[] into account)
    tr: tracing off (0), on (1), wait on ENTER (2), dump and wait (3)
    ld: number of open loads from input files (nested load up to 10 levels deep)
-   safety invariant: hp < (lp-2)<<3 */
+   safety invariant: hp < (lp-2)<<2 */
 I hp = 0,fp = N-2,lp = N-2,fn = N/2,tr = 0,ld = 0;
 /* ref[] array with ref count of a used cell pair or ref to next free cell pair in the free list */
 I ref[N/2];
 /* atom, primitive, cons, closure and nil tags for NaN boxing */
-enum { ATOM = 0x7ff8,PRIM = 0x7ff9,CONS = 0x7ffa,CLOS = 0x7ffb,MACR = 0x7ffc,NIL = 0x7ffd,HOLD = 0x7ffe };
+enum { ATOM = 0x7fc,HOLD = 0x7fd,PRIM = 0x7fe,CONS = 0xffc,CLOS = 0xffd,MACR = 0xffe,NIL = 0xfff };
 /* cell[N] pool of allocatable Lisp expressions shared by the atom heap */
 L cell[N];
 /* Lisp constant expressions () (nil), #t, the global environment env, primitives <quote>, <list>, <append> */
@@ -88,15 +88,15 @@ L p_quote,p_lambda,p_macro,p_cond,p_leta,p_let,p_letreca,p_letrec,p_define;
    ord(x):   returns the ordinal of the NaN-boxed double x
    num(n):   check number, return NAN = ERR = box(ATOM,0) when not a number to avoid ref-count GC on a list when n is a list
    equ(x,y): returns nonzero if x equals y */
-I T(L x) { union { L x; uint64_t i; } u = {x}; return u.i>>48; }
-L box(I t,I i) { union { uint64_t i; L x; } u = {(uint64_t)t<<48|i}; return u.x; }
-I ord(L x) { union { L x; uint64_t i; } u = {x}; return u.i; }
-L num(L n) { return n == n ? n : NAN; }
-I equ(L x,L y) { union { L x; uint64_t i; } u = {x},v = {y}; return u.i == v.i; }
+I T(L x) { union { L x; uint32_t i; } u = {x}; return u.i>>20; }
+L box(I t,I i) { union { uint32_t i; L x; } u = {(uint32_t)t<<20|i}; return u.x; }
+I ord(L x) { union { L x; uint32_t i; } u = {x}; return u.i&0xfffff; }
+L num(L n) { return n; }
+I equ(L x,L y) { union { L x; uint32_t i; } u = {x},v = {y}; return u.i == v.i; }
 /* interning of atom names (Lisp symbols), returns a unique NaN-boxed ATOM */
 L atom(const char *s) {
  I i = 0; while (i < hp && strcmp(A+i,s)) i += strlen(A+i)+1;
- return i == hp && ((hp += strlen(s)+1) > (lp-2)<<3 || !memmove(A+i,s,hp-i)) ? err(4,nil) : box(ATOM,i);
+ return i == hp && ((hp += strlen(s)+1) > (lp-2)<<2 || !memmove(A+i,s,hp-i)) ? err(4,nil) : box(ATOM,i);
 }
 
 /* ++ new: mark-sweep garbage collector registry stack size S, max depth of nested calls to eval() = S/4 */
@@ -111,7 +111,7 @@ I lomem(I i) { return lp = i < lp ? i : lp; }
 L cons(L x,L y) {
  I i = fp; L p = box(CONS,i);
  fp = ref[i/2]&~FREE; ref[i/2] = 1; --fn; cell[i+1] = x; cell[i] = y; LOG(p,"\n\e[32mcons %u\e[m\t",i);
- if (TEST || hp > (fp-2)<<3) ms(p); else lomem(fp);
+ if (TEST || hp > (fp-2)<<2) ms(p); else lomem(fp);
  return p;
 }
 /* delete the pair cell[i] cell[i+1] to reuse by adding it to the free cell pair list */
@@ -220,7 +220,7 @@ void ms(L x) {
 #if TEST
  if (k < fn) printf("\n\e[31;1mms() collected %u unused cells\e[m\t",2*(fn-k));
 #endif
- if (hp > (lp-2)<<3) err(4,nil);
+ if (hp > (lp-2)<<2) err(4,nil);
 }
 
 /* section 14: error handling and exceptions
@@ -374,7 +374,7 @@ L f_add(L t,L *e) { I a = 0; L x,n = gc(evarg(&t,e,&a)); while (isarg(&t,e,&a,&x
 L f_sub(L t,L *e) { I a = 0; L x,n = gc(evarg(&t,e,&a)); while (isarg(&t,e,&a,&x)) n -= gc(x); return num(n); }
 L f_mul(L t,L *e) { I a = 0; L x,n = gc(evarg(&t,e,&a)); while (isarg(&t,e,&a,&x)) n *= gc(x); return num(n); }
 L f_div(L t,L *e) { I a = 0; L x,n = gc(evarg(&t,e,&a)); while (isarg(&t,e,&a,&x)) n /= gc(x); return num(n); }
-L f_int(L t,L *e) { I a = 0; L n = gc(evarg(&t,e,&a)); return n < 1e16 && n > -1e16 ? (int64_t)n : num(n); }
+L f_int(L t,L *e) { I a = 0; L n = gc(evarg(&t,e,&a)); return n < 1e7 && n > -1e7 ? (int64_t)n : num(n); }
 /* ++ updated: compare two values of any type, not only compare numbers (make it a total ordering) */
 L f_lt(L t,L *e) {
  I a = 0; L x = gc(evarg(&t,e,&a)),y = gc(evarg(&t,e,&a));
@@ -483,7 +483,7 @@ L f_atomize(L t,L *e) {
   p = &CDR(*p = cons(T(CAR(t)) == ATOM || T(CAR(t)) == HOLD ? CAR(t) : eval(CAR(t),*e),nil));
  *p = dup(t);                                   /* tail of s is t */
  k = atomize(s,NULL);                           /* the atom string length k, to hold atomized list of arguments */
- if (hp+k+1 > (lp-2)<<3) err(4,nil);            /* ERR 4 if the heap space is not large enough */
+ if (hp+k+1 > (lp-2)<<2) err(4,nil);            /* ERR 4 if the heap space is not large enough */
  atomize(s,A+hp);                               /* store the atomized arguments on the heap */
  rg(1);
  return atom(A+hp);                             /* this requires memmove() instead of strcpy() in atom() */
@@ -1077,7 +1077,7 @@ L parse() {
  if (*buf == '"') return quote(atom(buf+1));
  if (*buf == ',') return err(7,atom(buf));
  if (*buf == ')') return err(7,atom(buf));
- return sscanf(buf,"%lg%n",&n,&i) > 0 && !buf[i] ? n : atom(buf);
+ return sscanf(buf,"%g%n",&n,&i) > 0 && !buf[i] ? n : atom(buf);
 }
 
 /* section 17.1: early binding and efficient macro expansion */
@@ -1327,7 +1327,7 @@ void print(FILE *f,L x) {
  else if (T(x) == CLOS) fprintf(f,"{%u}",ord(x));
  else if (T(x) == MACR) fprintf(f,"[%u]",ord(x));
  else if (T(x) == HOLD) fprintf(f,"|%s|",A+ord(x));
- else fprintf(f,"%.10lg",x);
+ else fprintf(f,"%.10g",x);
 }
 
 /* ++ new: atomize (stringify) x to buffer a when not NULL, must be large enough to hold the string, return string length */
@@ -1351,7 +1351,7 @@ I atomize(L x,char *a) {
 
 /* section 10: read-eval-print loop (REPL) with additions */
 int main(int argc,char **argv) {
- I i; printf("tinylisp-extras-expand-gc");
+ I i; printf("tinylisp-float-extras-expand-gc");
  sweep(); /* sweep all cells to the free list (since all ref[] are zero) */
  nil = box(NIL,0); atom("ERR"); tru = atom("#t"); env = pair(tru,tru,nil);
  for (i = 0; prim[i].s; ++i) env = pair(atom(prim[i].s),box(PRIM,i),env);
@@ -1378,7 +1378,7 @@ int main(int argc,char **argv) {
  while (1) {
   L x,y,z;
   rebuild();
-  putchar('\n'); snprintf(ps,sizeof(ps),PS1,2*fn-hp/8);
+  putchar('\n'); snprintf(ps,sizeof(ps),PS1,2*fn-hp/4);
   /* section 17.1: early binding and efficient macro expansion (REEPL = REPL with expand) */
   print(out,rc(&z,eval(rc(&y,expand(rc(&x,Read()),env,nil)),env)));
   rg(3);

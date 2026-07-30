@@ -676,7 +676,7 @@ L Read() { return scan(),parse(); }
 
 /* section 16.1: replacing recursion with loops (in list parsing) */
 L quote(L x) { return cons(atom("quote"),cons(x,nil)); }        /* returns (quote x) */
-L endl(L t) { return scan() == ')' ? t : err(7,t); }            /* err 7 when closing ) is missing */
+L endl(L t) { return scan() == ')' ? t : err(7,t); }            /* ERR 7 when closing ) is missing */
 L list() {
  L t,*p = &t;
  for (rc(p,nil); ; p = &CDR(*p = cons(parse(),nil))) {

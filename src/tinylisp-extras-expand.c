@@ -82,7 +82,8 @@ L atom(const char *s) {
    ERR 3: cannot apply
    ERR 4: out of memory
    ERR 5: cannot open
-   ERR 6: program stopped */
+   ERR 6: program stopped
+   ERR 7: syntax error */
 #include <setjmp.h>
 #include <signal.h>
 jmp_buf jb;
@@ -409,7 +410,7 @@ L Read() { return scan(),parse(); }
 
 /* section 16.1: replacing recursion with loops (in list parsing) */
 L quote(L x) { return cons(atom("quote"),cons(x,nil)); }        /* returns (quote x) */
-L endl(L t) { return scan() == ')' ? t : err(7,t); }            /* err 7 when closing ) is missing */
+L endl(L t) { return scan() == ')' ? t : err(7,t); }            /* ERR 7 when closing ) is missing */
 L list() {
  L t,*p;
  for (t = nil,p = &t; ; *p = cons(parse(),nil),p = cell+sp) {

@@ -20,14 +20,14 @@
         p      pair, a cons of two Lisp expressions
         e,d,h  environment, a list of pairs, e.g. created with (define v x)
         v      the name of a variable (an atom) or a list of variables */
-#define I uint32_t
+#define I uint32_t      /* uint32_t or uint16_t, see value of N below */
 #define L float
 
 /* address of the atom heap is at the bottom of the cell stack */
 #define A (char*)cell
 
 /* number of cells for the shared stack of cells and atom heap, increase N as desired */
-#define N 8192 /* N should not exceed 262144 = 2^20/4 cells = 1048576 bytes */
+#define N 8192  /* I=uint32_t: N <= 262144 (= 2^20/4 cells = 1048576 bytes); I=uin16_t: N <= 16384 (65536 bytes) */
 
 /* section 12: adding readline with history */
 #include <readline/readline.h>
@@ -62,11 +62,11 @@ L nil,tru,env;
    ord(x):   returns the ordinal of the NaN-boxed float x
    num(n):   convert or check number n (does nothing, e.g. could check for NaN)
    equ(x,y): returns nonzero if x equals y */
-I T(L x) { union { L x; I i; } u = {x}; return u.i>>20; }
-L box(I t,I i) { union { I i; L x; } u = {(I)t<<20|i}; return u.x; }
-I ord(L x) { union { L x; I i; } u = {x}; return u.i&0xfffff; }
+I T(L x) { union { L x; uint32_t i; } u = {x}; return u.i>>20; }
+L box(I t,I i) { union { uint32_t i; L x; } u = {(uint32_t)t<<20|i}; return u.x; }
+I ord(L x) { union { L x; uint32_t i; } u = {x}; return u.i&0xfffff; }
 L num(L n) { return n; }
-I equ(L x,L y) { union { L x; I i; } u = {x},v = {y}; return u.i == v.i; }
+I equ(L x,L y) { union { L x; uint32_t i; } u = {x},v = {y}; return u.i == v.i; }
 /* interning of atom names (Lisp symbols), returns a unique NaN-boxed ATOM */
 L atom(const char *s) {
  I i = 0; while (i < hp && strcmp(A+i,s)) i += strlen(A+i)+1;
@@ -79,7 +79,8 @@ L atom(const char *s) {
    ERR 3: cannot apply
    ERR 4: out of memory
    ERR 5: cannot open
-   ERR 6: program stopped */
+   ERR 6: program stopped
+   ERR 7: syntax error */
 #include <setjmp.h>
 #include <signal.h>
 jmp_buf jb;
@@ -388,7 +389,7 @@ L Read() { return scan(),parse(); }
 
 /* section 16.1: replacing recursion with loops (in list parsing) */
 L quote(L x) { return cons(atom("quote"),cons(x,nil)); }        /* returns (quote x) */
-L endl(L t) { return scan() == ')' ? t : err(7,t); }            /* err 7 when closing ) is missing */
+L endl(L t) { return scan() == ')' ? t : err(7,t); }            /* ERR 7 when closing ) is missing */
 L list() {
  L t,*p;
  for (t = nil,p = &t; ; *p = cons(parse(),nil),p = cell+sp) {
