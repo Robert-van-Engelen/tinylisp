@@ -107,6 +107,21 @@
 ; the first 100 Fibonacci numbers
 (fibo 100)
 
+; define a macro to shift variables like the shift command of shells such as bash, but with named Lisp variables
+(defmacro shift v
+    (letrec*
+        (cc (lambda (_)
+            (if (cdr _)
+                (cons `(setq ,(car _) ,(car (cdr _))) (cc (cdr _)))
+                ())))
+        `(progn . ,(cc v))))
+
+; locally assign a=1 b=2 c=3 then shift a<-b b<-c c<-4 to get a=2 b=3 c=4
+(let* (a 1) (b 2) (c 3)
+    (progn
+        (shift a b c 4)
+        (println "a=" a " b=" b " c=" c)))
+
 ; Macros such as (when ...) and (unless ...) defined below are expanded at
 ; runtime when used in a function body, so they incur overhead.  But defun and
 ; defmacro are macros that expand to a definition that is added to the
