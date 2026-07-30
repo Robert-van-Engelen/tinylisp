@@ -1,4 +1,4 @@
-/* tinylisp-extras-expand-gc.c more extras + expand hygienic macros + ref-count/mark-sweep GC by Robert A. van Engelen 2026 */
+/* tinylisp-float-extras-expand-gc.c single precision float + more extras + expand hygienic macros + ref-count/mark-sweep GC by Robert A. van Engelen 2026 */
 
 #include <stdlib.h>
 #include <stdio.h>
