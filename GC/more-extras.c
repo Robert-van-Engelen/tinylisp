@@ -31,6 +31,9 @@
    {"code",     f_code,    0},
    {"cpos",     f_cpos,    0},
    {"clen",     f_clen,    0},
+   {"see",      f_see,     0},
+   {"get",      f_get,     0},
+   {"val",      f_val,     0},
    {"list",     f_list,    0},
    {"append",   f_append,  0},
    {"length",   f_length,  0},
@@ -50,19 +53,61 @@
    {0}};
 */
 
-/* ++ new: (> x y) returns #t if x is greater than y, otherwise returns () */
-L f_gt(L t,L *e) {
- I a = 0; L x = gc(evarg(&t,e,&a)),y = gc(evarg(&t,e,&a));
- return (T(x) == ATOM && T(y) == ATOM ? strcmp(A+ord(x),A+ord(y)) > 0 :
-  x == x && y == y ? x > y :                    /* x == x is false when x is NaN i.e. a tagged Lisp expression */
-  T(x) > T(y) || (T(x) == T(y) && ord(x) > ord(y))) ? tru : nil;
+/* ++ updated: (< x y [z ...])
+   returns #t if x < y and y < z ... etc when given, otherwise returns () */
+L f_lt(L t,L *e) {
+ I a = 0; L x = gc(evarg(&t,e,&a)),y;
+ while (isarg(&t,e,&a,&y)) {
+  gc(y);
+  if (T(x) == ATOM && T(y) == ATOM ? strcmp(A+ord(x),A+ord(y)) >= 0 :
+      x == x && y == y ? x >= y :
+      T(x) >= T(y) || (T(x) == T(y) && ord(x) >= ord(y))) return nil;
+  x = y;
+ }
+ return tru;
 }
 
-/* ++ new: (<= x y) returns #t if x is less or equal to y, otherwise returns () */
-L f_le(L t,L *e) { return not(f_gt(t,e)) ? tru : nil; }
+/* ++ new: (> x y [z ...])
+   returns #t if x > y and y > z ... etc when given, otherwise returns () */
+L f_gt(L t,L *e) {
+ I a = 0; L x = gc(evarg(&t,e,&a)),y;
+ while (isarg(&t,e,&a,&y)) {
+  gc(y);
+  if (T(x) == ATOM && T(y) == ATOM ? strcmp(A+ord(x),A+ord(y)) <= 0 :
+      x == x && y == y ? x <= y :
+      T(x) <= T(y) || (T(x) == T(y) && ord(x) <= ord(y))) return nil;
+  x = y;
+ }
+ return tru;
+}
 
-/* ++ new: (<= x y) returns #t if x is greater or equal to y, otherwise returns () */
-L f_ge(L t,L *e) { return not(f_lt(t,e)) ? tru : nil; }
+/* ++ new: (<= x y [z ...])
+   returns #t if x <= y and y <= z ... etc when given, otherwise returns () */
+L f_le(L t,L *e) {
+ I a = 0; L x = gc(evarg(&t,e,&a)),y;
+ while (isarg(&t,e,&a,&y)) {
+  gc(y);
+  if (T(x) == ATOM && T(y) == ATOM ? strcmp(A+ord(x),A+ord(y)) > 0 :
+      x == x && y == y ? x > y :
+      T(x) > T(y) || (T(x) == T(y) && ord(x) > ord(y))) return nil;
+  x = y;
+ }
+ return tru;
+}
+
+/* ++ new: (>= x y [z ...])
+   returns #t if x >= y and y >= z ... etc when given, otherwise returns () */
+L f_ge(L t,L *e) {
+ I a = 0; L x = gc(evarg(&t,e,&a)),y;
+ while (isarg(&t,e,&a,&y)) {
+  gc(y);
+  if (T(x) == ATOM && T(y) == ATOM ? strcmp(A+ord(x),A+ord(y)) > 0 :
+      x == x && y == y ? x > y :
+      T(x) > T(y) || (T(x) == T(y) && ord(x) > ord(y))) return nil;
+  x = y;
+ }
+ return tru;
+}
 
 /* (= x y) returns #t if number x equals number y, otherwise returns () */
 L f_is(L t,L *e) { I a = 0; L x = num(gc(evarg(&t,e,&a))); return x == num(gc(evarg(&t,e,&a))) ? tru : nil; }
@@ -166,6 +211,23 @@ L f_cpos(L t,L *e) {
 L f_clen(L t,L *e) {
  I a = 0; L v = gc(evarg(&t,e,&a));
  return T(v) == ATOM ? strlen(A+ord(v)) : 0;
+}
+/* (see)
+   return the code of the current character in the input or 0 when no input is present, use (get) to advance input */
+L f_see(L t,L *e) { return see; }
+
+/* (get)
+   return the code of the current character in the input and advance to the next */
+char get();
+L f_get(L t,L *e) { return get(); }
+
+/* (val a)
+   converts an atom symbol a to a number, throws ERR 7 when invalid */
+L f_val(L t,L *e) {
+ I a = 0; L n,x = evarg(&t,e,&a); char *s;
+ if (T(x) != ATOM) return err(7,nil);
+ n = strtod(A+ord(x),&s);
+ return *s ? err(7,x) : n;
 }
 
 /* (list ...) - built-in for speed to replace the list definition in common.lisp (remove it)

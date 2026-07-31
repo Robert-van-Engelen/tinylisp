@@ -375,12 +375,17 @@ L f_sub(L t,L *e) { I a = 0; L x,n = gc(evarg(&t,e,&a)); while (isarg(&t,e,&a,&x
 L f_mul(L t,L *e) { I a = 0; L x,n = gc(evarg(&t,e,&a)); while (isarg(&t,e,&a,&x)) n *= gc(x); return num(n); }
 L f_div(L t,L *e) { I a = 0; L x,n = gc(evarg(&t,e,&a)); while (isarg(&t,e,&a,&x)) n /= gc(x); return num(n); }
 L f_int(L t,L *e) { I a = 0; L n = gc(evarg(&t,e,&a)); return n < 1e7 && n > -1e7 ? (int64_t)n : num(n); }
-/* ++ updated: compare two values of any type, not only compare numbers (make it a total ordering) */
+/* ++ updated: (< x y [z ...]) returns #t if x < y and y < z ... etc when given, otherwise returns () */
 L f_lt(L t,L *e) {
- I a = 0; L x = gc(evarg(&t,e,&a)),y = gc(evarg(&t,e,&a));
- return (T(x) == ATOM && T(y) == ATOM ? strcmp(A+ord(x),A+ord(y)) < 0 :
-  x == x && y == y ? x < y :                    /* x == x is false when x is NaN i.e. a tagged Lisp expression */
-  T(x) < T(y) || (T(x) == T(y) && ord(x) < ord(y))) ? tru : nil;
+ I a = 0; L x = gc(evarg(&t,e,&a)),y;
+ while (isarg(&t,e,&a,&y)) {
+  gc(y);
+  if (T(x) == ATOM && T(y) == ATOM ? strcmp(A+ord(x),A+ord(y)) >= 0 :
+      x == x && y == y ? x >= y :
+      T(x) >= T(y) || (T(x) == T(y) && ord(x) >= ord(y))) return nil;
+  x = y;
+ }
+ return tru;
 }
 L f_eq(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return equ(cede(x),cede(gc(evarg(&t,e,&a)))) ? tru : nil; }
 L f_pair(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return T(x) == CONS ? tru : nil; }
@@ -725,19 +730,44 @@ L f_makelist(L t,L *e) {
  return s;
 }
 
-/* ++ new: (> x y) returns #t if x is greater than y, otherwise returns () */
+/* ++ new: (> x y [z ...]) returns #t if x > y and y > z ... etc when given, otherwise returns () */
 L f_gt(L t,L *e) {
- I a = 0; L x = gc(evarg(&t,e,&a)),y = gc(evarg(&t,e,&a));
- return (T(x) == ATOM && T(y) == ATOM ? strcmp(A+ord(x),A+ord(y)) > 0 :
-  x == x && y == y ? x > y :                    /* x == x is false when x is NaN i.e. a tagged Lisp expression */
-  T(x) > T(y) || (T(x) == T(y) && ord(x) > ord(y))) ? tru : nil;
+ I a = 0; L x = gc(evarg(&t,e,&a)),y;
+ while (isarg(&t,e,&a,&y)) {
+  gc(y);
+  if (T(x) == ATOM && T(y) == ATOM ? strcmp(A+ord(x),A+ord(y)) <= 0 :
+      x == x && y == y ? x <= y :
+      T(x) <= T(y) || (T(x) == T(y) && ord(x) <= ord(y))) return nil;
+  x = y;
+ }
+ return tru;
 }
 
-/* ++ new: (<= x y) returns #t if x is less or equal to y, otherwise returns () */
-L f_le(L t,L *e) { return not(f_gt(t,e)) ? tru : nil; }
+/* ++ new: (<= x y [z ...]) returns #t if x <= y and y <= z ... etc when given, otherwise returns () */
+L f_le(L t,L *e) {
+ I a = 0; L x = gc(evarg(&t,e,&a)),y;
+ while (isarg(&t,e,&a,&y)) {
+  gc(y);
+  if (T(x) == ATOM && T(y) == ATOM ? strcmp(A+ord(x),A+ord(y)) > 0 :
+      x == x && y == y ? x > y :
+      T(x) > T(y) || (T(x) == T(y) && ord(x) > ord(y))) return nil;
+  x = y;
+ }
+ return tru;
+}
 
-/* ++ new: (<= x y) returns #t if x is greater or equal to y, otherwise returns () */
-L f_ge(L t,L *e) { return not(f_lt(t,e)) ? tru : nil; }
+/* ++ new: (>= x y [z ...]) returns #t if x >= y and y >= z ... etc when given, otherwise returns () */
+L f_ge(L t,L *e) {
+ I a = 0; L x = gc(evarg(&t,e,&a)),y;
+ while (isarg(&t,e,&a,&y)) {
+  gc(y);
+  if (T(x) == ATOM && T(y) == ATOM ? strcmp(A+ord(x),A+ord(y)) > 0 :
+      x == x && y == y ? x > y :
+      T(x) > T(y) || (T(x) == T(y) && ord(x) > ord(y))) return nil;
+  x = y;
+ }
+ return tru;
+}
 
 /* ++ new: (= x y) returns #t if number x equals number y, otherwise returns () */
 L f_is(L t,L *e) { I a = 0; L x = num(gc(evarg(&t,e,&a))); return x == num(gc(evarg(&t,e,&a))) ? tru : nil; }
