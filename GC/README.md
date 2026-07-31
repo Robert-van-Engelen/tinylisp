@@ -27,7 +27,6 @@
   - includes a memory debugger, compile with `-DDEBUG` or `-DDEBUG=2` (verbose) to enable
   - new primitive [`atomize`](atomize.lisp) (convert expressions to atom) (+37 lines of C)
   - new primitive `write-to` (redirect print/ln to a file) (+16 lines of C)
-  - new primitive `type` to type check, 0=number, 1=atom, 2=primitive, 3=pair, 4=closure, 5=macro, 6=nil (+4 lines of C)
   - new primitives `list` and `append` for backquoting without having to load list.lisp (+16 lines of C)
   - upgrades `read` to take an optional pathname to read a Lisp expression from a file (+12 lines of C)
   - upgrades `load` to load multiple files and permit nesting up to 10 levels deep (+14 lines of C)

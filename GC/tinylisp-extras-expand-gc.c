@@ -574,28 +574,28 @@ L f_writeto(L t,L *e) {
 }
 
 /* ++ new: return the type of an expression, 0 = number, 1 = atom, 2 = primitive, 3 = pair, 4 = closure, 5 = macro, 6 = nil */
-L f_type(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return (T(x)&ATOM) >= ATOM ? T(x)-ATOM+1 : 0; }
+L f_type(L t,L *e) { I a = 0,k = T(cede(gc(evarg(&t,e,&a)))); return k >= ATOM && k <= NIL ? k-ATOM+1 : 0; }
 
 /* ++ new: (number? x) returns #t if x is a number */
-L f_number(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return x == x ? tru : nil; }
+L f_numbert(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return x == x ? tru : nil; }
 
 /* ++ new: (err? x) returns #t if x is ERR (NaN) */
-L f_err(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return equ(x,box(ATOM,0)) ? tru : nil; }
+L f_errt(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return equ(x,box(ATOM,0)) ? tru : nil; }
 
 /* ++ new: (null? x) returns #t if x is nil () */
-L f_null(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return T(x) == NIL ? tru : nil; }
+L f_nullt(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return T(x) == NIL ? tru : nil; }
 
 /* ++ new: (symbol? v) returns #t if v is a symbol (an atom except ERR) */
-L f_symbol(L t,L *e) { I a = 0; L v = gc(evarg(&t,e,&a)); return T(v) == ATOM && ord(v) > 0 ? tru : nil; }
+L f_symbolt(L t,L *e) { I a = 0; L v = gc(evarg(&t,e,&a)); return T(v) == ATOM && ord(v) > 0 ? tru : nil; }
 
 /* ++ new: (atom? x) returns #t if x is atomic (nil () or an atom except ERR) */
-L f_atom(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return T(x) == NIL ? tru : T(x) == ATOM && ord(x) > 0 ? tru : nil; }
+L f_atomt(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return T(x) == NIL ? tru : T(x) == ATOM && ord(x) > 0 ? tru : nil; }
 
 /* ++ new: (list? t) returns #t if t is a proper list */
-L f_listp(L t,L *e) { I a = 0; L s = t = evarg(&t,e,&a); while (T(t) == CONS) t = CDR(t); gc(s); return T(t) == NIL ? tru : nil; }
+L f_listt(L t,L *e) { I a = 0; L s = t = evarg(&t,e,&a); while (T(t) == CONS) t = CDR(t); gc(s); return T(t) == NIL ? tru : nil; }
 
 /* ++ new: (func? f) returns #t if f is a function (primitive or closure) */
-L f_func(L t,L *e) { I a = 0; L f = gc(evarg(&t,e,&a)); return T(f) == PRIM || T(f) == CLOS ? tru : nil; }
+L f_funct(L t,L *e) { I a = 0; L f = gc(evarg(&t,e,&a)); return T(f) == PRIM || T(f) == CLOS ? tru : nil; }
 
 /* ++ new: (list ...) returns a list of its arguments (e.g. used in backquoting) */
 L f_list(L t,L *e) { return evlis(t,*e); }
@@ -900,13 +900,13 @@ struct { const char *s; L (*f)(L,L*); short t; } prim[] = {
  {"atomize",  f_atomize, 0},
  {"write-to", f_writeto, 0},
  {"type",     f_type,    0},
- {"number?",  f_number,  0},
- {"err?",     f_err,     0},
- {"null?",    f_null,    0},
- {"symbol?",  f_symbol,  0},
- {"atom?",    f_atom,    0},
- {"list?",    f_listp,   0},
- {"func?",    f_func,    0},
+ {"number?",  f_numbert, 0},
+ {"err?",     f_errt,    0},
+ {"null?",    f_nullt,   0},
+ {"symbol?",  f_symbolt, 0},
+ {"atom?",    f_atomt,   0},
+ {"list?",    f_listt,   0},
+ {"func?",    f_funct,   0},
  {"length",   f_length,  0},
  {"nthcdr",   f_nthcdr,  0},
  {"nth",      f_nth,     0},

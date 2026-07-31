@@ -507,7 +507,7 @@ L f_writeto(L t,L *e) {
 }
 
 /* ++ new: the type of an expression, 0 = number, 1 = atom, 2 = primitive, 3 = pair, 4 = closure, 5 = macro, 6 = nil */
-L f_type(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return (T(x)&ATOM) >= ATOM ? T(x)-ATOM+1 : 0; }
+L f_type(L t,L *e) { I a = 0,k = T(gc(evarg(&t,e,&a))); return k >= ATOM && k <= NIL ? k-ATOM+1 : 0; }
 
 /* ++ new: (list ...) returns a list of its arguments (e.g. used in backquoting) */
 L f_list(L t,L *e) { return evlis(t,*e); }
