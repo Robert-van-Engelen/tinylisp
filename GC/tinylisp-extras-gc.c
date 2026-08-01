@@ -588,9 +588,12 @@ void trace(L y,L x,L e) {
 /* section 16.2/3/4: tail-call optimization */
 L eval(L x,L e) {
  I a; L f,v,d,y,g,h;
+ /* if x is an atom, then return its value; if x is not an application list (it is constant), then return x */
+ if (T(x) == ATOM) return dup(assoc(x,e));
+ if (T(x) != CONS) return dup(x);
+ /* we dup(e) the environment to extend with locals and formal arguments, then gc(e) all of them afterwards */
  /* if f_catch-ing then register 5 variables to track and garbage collect when an error is caught by f_catch */
  rc(&d,nil); rc(&e,dup(e)); rc(&f,nil); rc(&g,nil); rc(&h,nil);
- /* we dup(e) the environment to extend with locals and formal arguments, then gc(e) all of them afterwards */
  while (1) {
   /* copy x to y to output y => x when tracing is enabled */
   y = x;

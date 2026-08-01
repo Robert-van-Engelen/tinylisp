@@ -64,8 +64,8 @@ Mac M1 compiled with clang 21.0.0 option -O2 to solve the
 
 | implementation | GC | mem size (cells) | time (ms) |
 | -------------- | -- | ---------------: | --------: |
-| tinylisp-extras-gc                                        | ref count              |  8192 |  466 ms |
-| tinylisp-extras-expand-gc                                 | ref count + mark-sweep |  8192 |   40 ms |
+| tinylisp-extras-gc                                        | ref count              |  8192 |  373 ms |
+| tinylisp-extras-expand-gc                                 | ref count + mark-sweep |  8192 |   35 ms |
 | [lisp](https://github.com/Robert-van-Engelen/lisp)        | mark-sweep             |  8192 |  920 ms |
 | [lisp](https://github.com/Robert-van-Engelen/lisp)        | mark-sweep             | 16384 |  895 ms |
 | [lisp-cheney](https://github.com/Robert-van-Engelen/lisp) | cheney                 |  8192 | 1880 ms |
@@ -77,7 +77,7 @@ are not shown in the table for tinylisp).  But memory size does impact
 mark-sweep and cheney, since more memory means lower GC overhead.
 
 The performance of tinylisp-extras-gc versus the Common Lisp interpreter GNU
-[CLISP](https://www.gnu.org/software/clisp) is reasonably comparable (466 ms
+[CLISP](https://www.gnu.org/software/clisp) is reasonably comparable (373 ms
 versus CLISP 296 ms) to solve 8-queens.
 
 However, tinylisp-extras-gc and all other versions, except

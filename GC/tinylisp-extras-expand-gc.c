@@ -78,8 +78,8 @@ I ref[N/2];
 enum { ATOM = 0x7ff8,PRIM = 0x7ff9,CONS = 0x7ffa,CLOS = 0x7ffb,MACR = 0x7ffc,NIL = 0x7ffd,HOLD = 0x7ffe };
 /* cell[N] pool of allocatable Lisp expressions shared by the atom heap */
 L cell[N];
-/* Lisp constant expressions () (nil), #t, the global environment env, primitives <quote>, <list>, <append> */
-L nil,tru,env;
+/* Lisp global environment env */
+L env;
 /* section 17.1: early binding and efficient macro expansion */
 L p_quote,p_lambda,p_macro,p_cond,p_leta,p_let,p_letreca,p_letrec,p_define;
 /* NaN-boxing specific functions:
@@ -93,6 +93,10 @@ L box(I t,I i) { union { uint64_t i; L x; } u = {(uint64_t)t<<48|i}; return u.x;
 I ord(L x) { union { L x; uint64_t i; } u = {x}; return u.i; }
 L num(L n) { return n == n ? n : NAN; }
 I equ(L x,L y) { union { L x; uint64_t i; } u = {x},v = {y}; return u.i == v.i; }
+/* Lisp constant expressions () (nil is false), ERR (same as NAN), and #t (true) */
+#define nil box(NIL,0)          /* fixed constant, instead of nil = box(NIL,0) in main() */
+#define ERR box(ATOM,0)         /* fixed constant, instead of ERR = atom("ERR") in main() */
+#define tru box(ATOM,4)         /* fixed constant, instead of tru = atom("#t") in main() */
 /* interning of atom names (Lisp symbols), returns a unique NaN-boxed ATOM */
 L atom(const char *s) {
  I i = 0; while (i < hp && strcmp(A+i,s)) i += strlen(A+i)+1;
@@ -176,7 +180,7 @@ L dup(L x) {
  }
  return x;
 }
-/* mark-sweep collector marking stage: recursively mark all cell pairs reachable from cell pair x */
+/* ++ new: mark-sweep collector marking stage: recursively mark all cell pairs reachable from cell pair x */
 void mk(L x) {
  I i; L y;
  while (!(ref[(i = ord(x))/2]&MARK)) {                  /* repeat until all reachable cell pairs are marked */
@@ -189,7 +193,7 @@ void mk(L x) {
   else mk(y);
  }
 }
-/* ref-count compatible mark-sweep garbage collector, releases unreachable cell pairs (cyclic data structures) */
+/* ++ new: ref-count compatible mark-sweep garbage collector, releases unreachable cell pairs (cyclic data structures) */
 void ms(L x) {
  I i; L **p;
 #if DEBUG
@@ -999,10 +1003,13 @@ void trace(L y,L x,L e) {
 /* section 16.2/3/4: tail-call optimization (section 17.2: hygienic macros - remove MACR branch) */
 L eval(L x,L e) {
  I a; L f,g,h,d,v,y,z;
+ /* if x is an atom, then return its value; if x is not an application list (it is constant), then return x */
+ if (T(x) == ATOM) return dup(assoc(x,e));
+ if (T(x) != CONS) return dup(x);
  /* pre-check for stack overflow, expect 4 + 1 (for evlis) rc() calls to register variables */
  if (sp >= stk+S-5) return err(4,nil);
- rc(&d,nil); rc(&e,dup(e)); rc(&g,nil); rc(&h,nil);
  /* we dup(e) the environment to extend with locals and formal arguments, then gc(e) all of them afterwards */
+ rc(&d,nil); rc(&e,dup(e)); rc(&g,nil); rc(&h,nil);
  while (1) {
   /* copy x to y to output y => x when tracing is enabled */
   y = x;
@@ -1383,7 +1390,7 @@ I atomize(L x,char *a) {
 int main(int argc,char **argv) {
  I i; printf("tinylisp-extras-expand-gc");
  sweep(); /* sweep all cells to the free list (since all ref[] are zero) */
- nil = box(NIL,0); atom("ERR"); tru = atom("#t"); env = pair(tru,tru,nil);
+ atom("ERR"); atom("#t"); env = pair(tru,tru,nil);
  for (i = 0; prim[i].s; ++i) env = pair(atom(prim[i].s),box(PRIM,i),env);
  /* section 17.1: early binding and efficient macro expansion */
  p_quote   = assoc(atom("quote"),env);
