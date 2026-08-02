@@ -1356,12 +1356,20 @@ void printlist(FILE *f,L t) {
  }
  fputc(')',f);
 }
+/* ++ new: display closure, with its name if in the global environment */
+void printclos(FILE *f,L x) {
+ L e = env;
+ fprintf(f,"{%u",ord(x));
+ while (T(e) == CONS && !equ(x,CDR(CAR(e)))) e = CDR(e);
+ if (T(e) == CONS && T(CAR(CAR(e))) == ATOM) fprintf(f,":%s",A+ord(CAR(CAR(e))));
+ fprintf(f,"}");
+}
 void print(FILE *f,L x) {
  if (T(x) == NIL) fprintf(f,"()");
  else if (T(x) == ATOM) fprintf(f,"%s",A+ord(x));
  else if (T(x) == PRIM) fprintf(f,"<%s>",prim[ord(x)].s);
  else if (T(x) == CONS) printlist(f,x);
- else if (T(x) == CLOS) fprintf(f,"{%u}",ord(x));
+ else if (T(x) == CLOS) printclos(f,x);
  else if (T(x) == MACR) fprintf(f,"[%u]",ord(x));
  else if (T(x) == HOLD) fprintf(f,"|%s|",A+ord(x));
  else fprintf(f,"%.10lg",x);
