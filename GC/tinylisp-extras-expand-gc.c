@@ -1320,7 +1320,8 @@ L expand(L x,L e,L b) {
        gc(CAR(f));
        CAR(f) = dup(CAR(z));                            /* replace the variables and body of closure f with z's */
        CDR(f) = dup(CDR(z));                            /* replace the environment of closure f with z's */
-       CDR(*p) = cons(z,nil);                           /* to return expanded (<define> v z) with closure z */
+       gc(z);                                           /* delete duplicate closure z of f */
+       CDR(*p) = cons(f,nil);                           /* to return expanded (<define> v f) with closure f */
       }
       else {                                            /* v references itself in non-function body value y, reject */
        printf("\e[31;1mcircular definition:\e[m "); print(stdout,v); printf(" = "); print(stdout,x);
