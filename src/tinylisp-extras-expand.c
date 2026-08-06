@@ -83,13 +83,14 @@ L atom(const char *s) {
    ERR 4: out of memory
    ERR 5: cannot open
    ERR 6: program stopped
-   ERR 7: syntax error */
+   ERR 7: syntax error
+   ERR 8: too few arguments */
 #include <setjmp.h>
 #include <signal.h>
 jmp_buf jb;
 L err(I i,L x) {
- const char *msg[7] = {"not a pair","unbound","cannot apply","out of memory","cannot open","stopped","syntax"};
- if (!xh || tr) { printf("\n\e[31;1mERR %u: ",i); print(x); printf(" %s\e[m\n",i >= 1 && i <= 7 ? msg[i-1] : ""); }
+ const char *s[8] = {"not a pair","unbound","cannot apply","out of memory","cannot open","stopped","syntax","few arg"};
+ if (!xh || tr) { printf("\n\e[31;1mERR %u: ",i); print(x); printf(" %s\e[m\n",i >= 1 && i <= 8 ? s[i-1] : ""); }
  longjmp(jb,i);
 }
 /* SIGINT CTRL-C break running programs */
@@ -126,12 +127,13 @@ L evlis(L t,L e) {
 L evarg(L *t,L *e,I *a) {
  L x;
  if (T(*t) == ATOM && !*a) *t = assoc(*t,*e),*a = 1;
+ if (T(*t) != CONS) return err(8,nil);
  x = car(*t); *t = cdr(*t);
  return *a ? x : eval(x,*e);
 }
 I isarg(L *t,L *e,I *a,L *x) {
  if (T(*t) == ATOM && !*a) *t = assoc(*t,*e),*a = 1;
- if (not(*t)) return 0;
+ if (T(*t) != CONS) return 0;
  *x = car(*t); *t = cdr(*t);
  if (!*a) *x = eval(*x,*e);
  return 1;
@@ -528,8 +530,10 @@ L expand(L x,L e,L b) {
    I i; jmp_buf savedjb;
    memcpy(savedjb,jb,sizeof(jb));
    /* bind the variables v of macro f to the given arguments x quoted (and hold all atoms in x) in environment c */
-   for (c = nil,v = release(car(f)); T(v) == CONS; v = cdr(v),x = cdr(x)) c = pair(car(v),quote(hold(car(x))),c);
+   for (c = nil,v = release(car(f)); T(v) == CONS && T(x) == CONS; v = cdr(v),x = cdr(x))
+    c = pair(car(v),quote(hold(car(x))),c);
    if (T(v) == ATOM) c = pair(v,quote(hold(x)),c);
+   else if (T(v) != NIL) err(8,nil);
    /* expand macro body cdr(f) using macro arguments bound in updated environment c */
    x = expand(cdr(f),e,c);
    /* eval macro body (may fail) then expand the result with macro arguments bound in environment b */

@@ -58,7 +58,7 @@ L eval(L,L),Read(),parse(),err(I,L),gc(L); void collect(L),print(FILE*,L); I ato
 /* hp: top of the atom heap pointer, A+hp with hp=0 points to the first atom string in cell[]
    fp: free cell pairs list pointer, ref[fp/2] is the head of the linked list of free cell pairs
    lp: pointer to the lowest allocated and used cell pair in cell[]
-   fn: number of free cell cons pairs in cell[] (not taking atoms stored in cell[] into account)
+   fn: number of free cell cons pairs, not taking space used by atoms into account (for reporting only, not required)
    tr: tracing off (0), on (1), wait on ENTER (2), dump and wait (3)
    ld: number of open loads from input files (nested load up to 10 levels deep)
    safety invariant: hp < lp<<3 */
@@ -95,7 +95,8 @@ L atom(const char *s) {
    ERR 4: out of memory
    ERR 5: cannot open file
    ERR 6: program stopped
-   ERR 7: syntax error */
+   ERR 7: syntax error
+   ERR 8: too few arguments */
 #include <setjmp.h>
 #include <signal.h>
 /* max number of nested eval() calls between f_catch and f_throw */
@@ -103,12 +104,16 @@ L atom(const char *s) {
 /* exception stack and pointers to track "lost" variables between f_catch() and err() to garbage collect */
 L *xstk[5*K],**xb = NULL,**xp = NULL;
 jmp_buf jb;
+/* report an error message when tracing or if error 1<=i<=8 without a catch handler */
+void msg(I i,L x) {
+ if (xp ? tr : i >= 1 && i <= 8) {
+  const char *s[8] = {"not a pair","unbound","cannot apply","out of memory","cannot open","stopped","syntax","few arg"};
+  printf("\n\e[31;1mERR %u: ",i); print(stdout,x); printf(" %s\e[m\n",i >= 1 && i <= 8 ? s[i-1] : "");
+ }
+}
 /* throw an error, if f_catch handler is used (xb < xp are not NULL) then garbage collect "lost" variables */
 L err(I i,L x) {
- const char *msg[7] = {"not a pair","unbound","cannot apply","out of memory","cannot open","stopped","syntax"};
- if (xp ? tr : i >= 1 && i <= 7) {
-  printf("\n\e[31;1mERR %u: ",i); print(stdout,x); printf(" %s\e[m\n",i >= 1 && i <= 7 ? msg[i-1] : "");
- }
+ msg(i,x);
  while (xp != xb) gc(**--xp);
  longjmp(jb,i);
 }
@@ -295,13 +300,14 @@ L evlis(L t,L e) {
 L evarg(L *t,L *e,I *a) {
  L x;
  if (T(*t) == ATOM && !*a) *t = assoc(*t,*e),*a = 1;
- x = car(*t); *t = cdr(*t);
+ if (T(*t) != CONS) err(8,nil);
+ x = CAR(*t); *t = CDR(*t);
  return *a ? dup(x) : eval(x,*e);
 }
 I isarg(L *t,L *e,I *a,L *x) {
  if (T(*t) == ATOM && !*a) *t = assoc(*t,*e),*a = 1;
- if (not(*t)) return 0;
- *x = car(*t); *t = cdr(*t);
+ if (T(*t) != CONS) return 0;
+ *x = CAR(*t); *t = CDR(*t);
  *x = *a ? dup(*x) : eval(*x,*e);
  return 1;
 }
@@ -614,8 +620,9 @@ L eval(L x,L e) {
   }
   if (T(f) == MACR) {
    /* bind macro f variables v to the given arguments literally (i.e. without evaluating the arguments) */
-   for (d = dup(env),v = CAR(f); T(v) == CONS; v = CDR(v),x = cdr(x)) d = pair(CAR(v),dup(car(x)),d);
+   for (d = dup(env),v = CAR(f); T(v) == CONS && T(x) == CONS; v = CDR(v),x = CDR(x)) d = pair(CAR(v),dup(CAR(x)),d);
    if (T(v) == ATOM) d = pair(v,dup(x),d);
+   else if (T(v) != NIL) err(8,nil);
    /* expand macro f, then continue evaluating the expanded x */
    x = eval(CDR(f),d);
    /* garbage collect bindings d, garbage collect g = old f and old macro body h, save macro body h = x to gc later */

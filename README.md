@@ -209,7 +209,8 @@ Errors are necessarily simplistic in tinylisp to keep it small with no error mes
 | 4   | out of memory
 | 5   | cannot open
 | 6   | program stopped
-| 7   | syntax
+| 7   | syntax error
+| 8   | too few arguments
 
 ## Additional Lisp primitives introduced in the [article](tinylisp.pdf)
 
@@ -277,7 +278,8 @@ catch exceptions in the evaluation of an expression, returns the value of the ex
 | 4   | out of memory
 | 5   | cannot open
 | 6   | program stopped
-| 7   | syntax
+| 7   | syntax error
+| 8   | too few arguments
 
     (throw n)
 

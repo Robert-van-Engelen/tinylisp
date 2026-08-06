@@ -233,19 +233,20 @@ void ms(L p) {
    ERR 4: out of memory
    ERR 5: cannot open file
    ERR 6: program stopped
-   ERR 7: syntax error */
+   ERR 7: syntax error
+   ERR 8: too few arguments */
 #include <setjmp.h>
 #include <signal.h>
 jmp_buf jb;
-/* throw an error and garbage collect "lost" variables */
-L err(I i,L x) {
- const char *msg[7] = {"not a pair","unbound","cannot apply","out of memory","cannot open","stopped","syntax"};
- if (xp != stk ? tr : i >= 1 && i <= 7) {
-  printf("\n\e[31;1mERR %u: ",i); print(stdout,x); printf(" %s\e[m\n",i >= 1 && i <= 7 ? msg[i-1] : "");
+/* report an error message when tracing or if error 1<=i<=8 without a catch handler */
+void msg(I i,L x) {
+ if (xp != stk ? tr : i >= 1 && i <= 8) {
+  const char *s[8] = {"not a pair","unbound","cannot apply","out of memory","cannot open","stopped","syntax","few arg"};
+  printf("\n\e[31;1mERR %u: ",i); print(stdout,x); printf(" %s\e[m\n",i >= 1 && i <= 8 ? s[i-1] : "");
  }
- rg(sp-xp);
- longjmp(jb,i);
 }
+/* throw an error */
+L err(I i,L x) { msg(i,x); longjmp(jb,i); }
 /* SIGINT CTRL-C break running programs */
 void stop(int i) { if (line) err(6,nil); else abort(); }
 
@@ -356,13 +357,14 @@ L evlis(L t,L e) {
 L evarg(L *t,L *e,I *a) {
  L x;
  if (T(*t) == ATOM && !*a) *t = assoc(*t,*e),*a = 1;
- x = car(*t); *t = cdr(*t);
+ if (T(*t) != CONS) err(8,nil);
+ x = CAR(*t); *t = CDR(*t);
  return *a ? dup(x) : eval(x,*e);
 }
 I isarg(L *t,L *e,I *a,L *x) {
  if (T(*t) == ATOM && !*a) *t = assoc(*t,*e),*a = 1;
- if (not(*t)) return 0;
- *x = car(*t); *t = cdr(*t);
+ if (T(*t) != CONS) return 0;
+ *x = CAR(*t); *t = CDR(*t);
  *x = *a ? dup(*x) : eval(*x,*e);
  return 1;
 }
@@ -539,6 +541,7 @@ L f_catch(L t,L *e) {
  xp = sp;                                       /* set exception stack pointer xp = sp */
  if ((i = setjmp(jb)) == 0) x = eval(car(t),*e);
  memcpy(jb,savedjb,sizeof(jb));
+ rg(sp-xp);                                     /* deregister and garbage collect "lost" variables */
  sp = saved[0]; xp = saved[1];                  /* restore stack pointers */
  return i == 0 ? x : i == 4 || i == 6 ? err(i,nil) : cons(atom("ERR"),i);
 }
@@ -1217,8 +1220,10 @@ L expand(L x,L e,L b) {
    I i; jmp_buf savedjb;
    memcpy(savedjb,jb,sizeof(jb));
    /* bind the variables v of macro f to the given arguments x quoted (and hold all atoms in x) in environment c */
-   for (c = nil,v = release(CAR(f)); T(v) == CONS; v = CDR(v),x = cdr(x)) c = pair(CAR(v),quote(hold(car(x))),c);
+   for (c = nil,v = release(CAR(f)); T(v) == CONS && T(x) == CONS; v = CDR(v),x = CDR(x))
+    c = pair(CAR(v),quote(hold(car(x))),c);
    if (T(v) == ATOM) c = pair(v,quote(hold(x)),c);
+   else if (T(v) != NIL) err(8,nil);
    /* expand macro body CDR(f) using macro arguments bound in updated environment c */
    rc(&x,expand(CDR(f),e,c));
    /* eval macro body (may fail) then expand the result with macro arguments bound in environment b */
@@ -1425,6 +1430,7 @@ int main(int argc,char **argv) {
   while (ld) if (in[--ld]) fclose(in[ld]);
   printf("ERR %u",i);
   if (i == 7) see = 0;
+  rg(sp-xp);                    /* deregister and garbage collect "lost" variables */
  }
  out = stdout;
  while (1) {

@@ -80,13 +80,14 @@ L atom(const char *s) {
    ERR 4: out of memory
    ERR 5: cannot open
    ERR 6: program stopped
-   ERR 7: syntax error */
+   ERR 7: syntax error
+   ERR 8: too few arguments */
 #include <setjmp.h>
 #include <signal.h>
 jmp_buf jb;
 L err(I i,L x) {
- const char *msg[7] = {"not a pair","unbound","cannot apply","out of memory","cannot open","stopped","syntax"};
- if (!xh || tr) { printf("\n\e[31;1mERR %u: ",i); print(x); printf(" %s\e[m\n",i >= 1 && i <= 7 ? msg[i-1] : ""); }
+ const char *s[8] = {"not a pair","unbound","cannot apply","out of memory","cannot open","stopped","syntax","few arg"};
+ if (!xh || tr) { printf("\n\e[31;1mERR %u: ",i); print(x); printf(" %s\e[m\n",i >= 1 && i <= 8 ? s[i-1] : ""); }
  longjmp(jb,i);
 }
 /* SIGINT CTRL-C break running programs */
@@ -123,12 +124,13 @@ L evlis(L t,L e) {
 L evarg(L *t,L *e,I *a) {
  L x;
  if (T(*t) == ATOM && !*a) *t = assoc(*t,*e),*a = 1;
+ if (T(*t) != CONS) return err(8,nil);
  x = car(*t); *t = cdr(*t);
  return *a ? x : eval(x,*e);
 }
 I isarg(L *t,L *e,I *a,L *x) {
  if (T(*t) == ATOM && !*a) *t = assoc(*t,*e),*a = 1;
- if (not(*t)) return 0;
+ if (T(*t) != CONS) return 0;
  *x = car(*t); *t = cdr(*t);
  if (!*a) *x = eval(*x,*e);
  return 1;
@@ -326,8 +328,9 @@ L eval(L x,L e) {
   }
   if (T(f) == MACR) {
    /* bind macro f variables v to the given arguments literally (i.e. without evaluating the arguments) */
-   for (d = env,v = car(f); T(v) == CONS; v = cdr(v),x = cdr(x)) d = pair(car(v),car(x),d);
+   for (d = env,v = car(f); T(v) == CONS && T(x) == CONS; v = cdr(v),x = cdr(x)) d = pair(car(v),car(x),d);
    if (T(v) == ATOM) d = pair(v,x,d);
+   else if (T(v) != NIL) err(8,nil);
    /* expand macro f, then continue evaluating the expanded x */
    x = eval(cdr(f),d);
    continue;
