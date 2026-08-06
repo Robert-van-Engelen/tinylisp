@@ -35,7 +35,6 @@
         n      number
         t,s    list
         f,g    function, a lambda closure or Lisp primitive or macro
-        h      macro body expression, used in eval()
         p      pair, a cons of two Lisp expressions
         e,d    environment, a list of pairs, e.g. created with (define v x)
         b,c    macro argument bindings environment, used in expand()
@@ -67,7 +66,7 @@ L eval(L,L),expand(L,L,L),cede(L),Read(),parse(),err(I,L); void collect(L),ms(L)
 /* hp: top of the atom heap pointer, A+hp with hp=0 points to the first atom string in cell[]
    fp: free cell pairs list pointer, ref[fp/2] is the head of the linked list of free cell pairs
    lp: pointer to the lowest allocated and used cell pair in cell[]
-   fn: number of free cell cons pairs in cell[] (not taking atoms stored in cell[] into account)
+   fn: number of free cell cons pairs, not taking space used by atoms into account (for reporting only, not required)
    tr: tracing off (0), on (1), wait on ENTER (2), dump and wait (3)
    ld: number of open loads from input files (nested load up to 10 levels deep)
    safety invariant: hp < (lp-2)<<3 */
@@ -103,7 +102,7 @@ L atom(const char *s) {
  return i == hp && ((hp += strlen(s)+1) > (lp-2)<<3 || !memmove(A+i,s,hp-i)) ? err(4,nil) : box(ATOM,i);
 }
 
-/* ++ new: mark-sweep garbage collector registry stack size S, max depth of nested calls to eval() = S/4 */
+/* ++ new: mark-sweep garbage collector registry stack size S, max depth of nested calls to eval() = S/3 */
 #define S 4096
 /* mark-sweep garbage collector roots stack, stack pointer, and catch exception pointer */
 L *stk[S],**sp = stk,**xp = stk;
@@ -194,8 +193,8 @@ void mk(L x) {
  }
 }
 /* ++ new: ref-count compatible mark-sweep garbage collector, releases unreachable cell pairs (cyclic data structures) */
-void ms(L x) {
- I i; L **p;
+void ms(L p) {
+ I i; L **q;
 #if DEBUG
  I k = fn,r[N/2];
  memcpy(r,ref,sizeof(ref));
@@ -204,10 +203,10 @@ void ms(L x) {
 #endif
  signal(SIGINT,SIG_IGN);                                /* disable SIGINT CTRL-C: don't interrupt mark-sweep */
  for (i = 0; i < N/2; ++i) ref[i] &= ~FREE;             /* remove FREE/MARK markers from all cell refs */
- mk(x);                                                 /* mark root x */
+ mk(p);                                                 /* mark root p as used */
  if (T(env) == CONS) mk(env);                           /* mark root env, recursively marks env cells as used */
- for (p = stk; p < sp; ++p)                             /* mark stack roots, marks registered cells as used */
-  if (T(**p) == CONS || T(**p) == CLOS || T(**p) == MACR) mk(**p);
+ for (q = stk; q < sp; ++q)                             /* mark stack roots, marks registered cells as used */
+  if (T(**q) == CONS || T(**q) == CLOS || T(**q) == MACR) mk(**q);
  for (fp = 0,lp = N-2,fn = 1,i = 2; i < N; i += 2)      /* add unused cells to the free list */
   if (ref[i/2]&MARK) lomem(i); else del(i);
  for (i = 0; i < N/2; ++i) ref[i] &= ~MARK;             /* clean up FREE/MARK markers from all cell refs */
@@ -560,8 +559,7 @@ L f_while(L t,L *e) {
 }
 L f_until(L t,L *e) {
  L s,x = nil;
- do
-  for (s = t; T(s) == CONS; s = CDR(s)) gc(x),x = eval(CAR(s),*e);
+ do for (s = t; T(s) == CONS; s = CDR(s)) gc(x),x = eval(CAR(s),*e);
  while (not(x));
  return x;
 }
@@ -819,7 +817,7 @@ L f_acos(L t,L *e) { I a = 0; return num(acos(gc(evarg(&t,e,&a)))); }
 L f_atan(L t,L *e) { I a = 0; return num(atan(gc(evarg(&t,e,&a)))); }
 
 /* ++ new: (atan2 x y) */
-L f_atan2(L t,L *e) { I a = 0; L x,n = gc(evarg(&t,e,&a)); while (isarg(&t,e,&a,&x)) n = atan2(n,gc(x)); return num(n); }
+L f_atan2(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return num(atan2(x,gc(evarg(&t,e,&a)))); }
 
 /* ++ new: (round x) */
 L f_round(L t,L *e) { I a = 0; return num(round(gc(evarg(&t,e,&a)))); }
@@ -1002,14 +1000,14 @@ void trace(L y,L x,L e) {
 
 /* section 16.2/3/4: tail-call optimization (section 17.2: hygienic macros - remove MACR branch) */
 L eval(L x,L e) {
- I a; L f,g,h,d,v,y,z;
+ I a; L f,g,h,v,y,z;
  /* if x is an atom, then return its value; if x is not an application list (it is constant), then return x */
  if (T(x) == ATOM) return dup(assoc(x,e));
  if (T(x) != CONS) return dup(x);
- /* pre-check for stack overflow, expect 4 + 1 (for evlis) rc() calls to register variables */
- if (sp >= stk+S-5) return err(4,nil);
+ /* pre-check for stack overflow, expect 3 + 1 (for evlis) rc() calls to register variables */
+ if (sp >= stk+S-4) return err(4,nil);
  /* we dup(e) the environment to extend with locals and formal arguments, then gc(e) all of them afterwards */
- rc(&d,nil); rc(&e,dup(e)); rc(&g,nil); rc(&h,nil);
+ rc(&e,dup(e)); rc(&g,nil); rc(&h,nil);
  while (1) {
   /* copy x to y to output y => x when tracing is enabled */
   y = x;
@@ -1023,32 +1021,32 @@ L eval(L x,L e) {
   if (T(f) == PRIM) {
    /* apply Lisp primitive to argument list x, return value in x */
    x = prim[ord(f)].f(x,&e);
-   /* garbage collect h = old f (use temp z in case gc() gets SIGINT interrupted) */
+   /* garbage collect h (use temp z in case gc() gets SIGINT interrupted) */
    z = h; h = nil; gc(z);
    /* if tail-call then continue evaluating x, otherwise return x */
    if (prim[ord(f)].t) continue;
    break;
   }
   if (T(f) != CLOS) return err(3,f);
-  /* get the list of variables v of closure f and its local environment d (use global env when nil) */
-  v = CAR(CAR(f)); d = dup(CDR(f));
-  if (T(d) == NIL) d = dup(env);
-  /* bind closure f variables v to the evaluated argument values */
-  for (a = 0; T(v) == CONS; v = CDR(v)) d = pair(CAR(v),evarg(&x,&e,&a),d);
-  if (T(v) == ATOM) d = pair(v,a ? dup(x) : evlis(x,e),d);
-  /* next, evaluate body x of closure f in environment e = d while keeping f in memory as long as x */
-  x = CDR(CAR(f));
-  /* discard copy of the old environment e to use new environment d (use temp z in case gc() gets SIGINT) */
-  z = e; e = d; d = nil; gc(z);
-  /* garbage collect closure h = old f with old body x (use temp z in case gc() gets SIGINT) */
+  /* garbage collect closure h (use temp z in case gc() gets SIGINT) */
   z = h; h = nil; gc(z);
+  /* get the list of variables v of closure f and its local environment h (use global env when nil) */
+  v = CAR(CAR(f)); h = dup(CDR(f));
+  if (T(h) == NIL) h = dup(env);
+  /* bind closure f variables v to the evaluated argument values */
+  for (a = 0; T(v) == CONS; v = CDR(v)) h = pair(CAR(v),evarg(&x,&e,&a),h);
+  if (T(v) == ATOM) h = pair(v,a ? dup(x) : evlis(x,e),h);
+  /* next, evaluate body x of closure f in environment e = h while keeping f in memory as long as x */
+  x = CDR(CAR(f));
+  /* discard copy of the old environment e to use new environment h (use temp z in case gc() gets SIGINT) */
+  z = e; e = h; h = nil; gc(z);
   if (tr) trace(y,x,e);
  }
  if (tr && !equ(x,y)) trace(y,x,e);
  /* garbage collect environment e, garbage collect g (use temp z in case gc() gets SIGINT) */
  z = e; e = nil; gc(z); z = g; g = nil; gc(z);
- /* deregister 4 variables, if registered, without gc'ing them */
- rr(4);
+ /* deregister variables, if registered, without gc'ing them */
+ rr(3);
  return x;
 }
 
@@ -1357,21 +1355,20 @@ void printlist(FILE *f,L t) {
  }
  fputc(')',f);
 }
-/* ++ new: display closure, with its name if in the global environment */
-void printclos(FILE *f,L x) {
+/* ++ new: display closure or macro, with its name if in the global environment */
+void printpair(FILE *f,char c[2],L x) {
  L e = env;
- fprintf(f,"{%u",ord(x));
  while (T(e) == CONS && !equ(x,CDR(CAR(e)))) e = CDR(e);
- if (T(e) == CONS && T(CAR(CAR(e))) == ATOM) fprintf(f,":%s",A+ord(CAR(CAR(e))));
- fprintf(f,"}");
+ if (T(e) == CONS && T(CAR(CAR(e))) == ATOM) fprintf(f,"%c%s%c",c[0],A+ord(CAR(CAR(e))),c[1]);
+ else fprintf(f,"%c%u%c",c[0],ord(x),c[1]);
 }
 void print(FILE *f,L x) {
  if (T(x) == NIL) fprintf(f,"()");
  else if (T(x) == ATOM) fprintf(f,"%s",A+ord(x));
  else if (T(x) == PRIM) fprintf(f,"<%s>",prim[ord(x)].s);
  else if (T(x) == CONS) printlist(f,x);
- else if (T(x) == CLOS) printclos(f,x);
- else if (T(x) == MACR) fprintf(f,"[%u]",ord(x));
+ else if (T(x) == CLOS) printpair(f,"{}",x);
+ else if (T(x) == MACR) printpair(f,"[]",x);
  else if (T(x) == HOLD) fprintf(f,"|%s|",A+ord(x));
  else fprintf(f,"%.10lg",x);
 }

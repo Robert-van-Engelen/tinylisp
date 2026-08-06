@@ -164,7 +164,7 @@ L f_acos(L t,L *e) { I a = 0; return num(acos(gc(evarg(&t,e,&a)))); }
 L f_atan(L t,L *e) { I a = 0; return num(atan(gc(evarg(&t,e,&a)))); }
 
 /* (atan2 x y) */
-L f_atan2(L t,L *e) { I a = 0; L x,n = gc(evarg(&t,e,&a)); while (isarg(&t,e,&a,&x)) n = atan2(n,gc(x)); return num(n); }
+L f_atan2(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return num(atan2(x,gc(evarg(&t,e,&a)))); }
 
 /* (round x) */
 L f_round(L t,L *e) { I a = 0; return num(round(gc(evarg(&t,e,&a)))); }

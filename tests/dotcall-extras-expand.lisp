@@ -141,7 +141,7 @@
         'failed)
     '(static scoping))
 
-; check curring with the dot operator
+; check currying with the dot operator
 (cons
     (if (equal?
             (((lambda (f x)

@@ -240,8 +240,7 @@ L f_while(L t,L *e) {
 }
 L f_until(L t,L *e) {
  L s,x = nil;
- do
-  for (s = t; T(s) == CONS; s = cdr(s)) x = eval(car(s),*e);
+ do for (s = t; T(s) == CONS; s = cdr(s)) x = eval(car(s),*e);
  while (not(x));
  return x;
 }
