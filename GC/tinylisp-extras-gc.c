@@ -155,6 +155,8 @@ L assoc(L v,L e) { while (T(e) == CONS && !equ(v,car(CAR(e)))) e = CDR(e); retur
 I not(L x) { return T(x) == NIL; }
 /* let(x) is nonzero if x has more than one list item, used by let* */
 I let(L x) { return T(x) == CONS && T(CDR(x)) == CONS; }
+/* ++ new: opt(t) returns the first list item or (), i.e. the list t and the first item are optional */
+L opt(L t) { return let(t) ? CAR(CDR(t)) : nil; }
 
 /* duplicate expression x: if x is a pair then increment its ref count by one */
 L dup(L x) {
@@ -335,20 +337,20 @@ L f_pair(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return T(x) == CONS ? tr
 L f_or(L t,L *e) { I a = 0; L x = nil; while (isarg(&t,e,&a,&x) && not(x)) continue; return x; }
 L f_and(L t,L *e) { I a = 0; L x = tru,y = nil; while (isarg(&t,e,&a,&x)) { gc(y); y = x; if (not(x)) break; } return x; }
 L f_not(L t,L *e) { I a = 0; return not(gc(evarg(&t,e,&a))) ? tru : nil; }
-L f_cond(L t,L *e) { while (not(gc(eval(car(car(t)),*e)))) t = cdr(t); return car(cdr(car(t))); }
-L f_if(L t,L *e) { return car(cdr(not(gc(eval(car(t),*e))) ? cdr(t) : t)); }
+L f_cond(L t,L *e) { while (not(gc(eval(car(car(t)),*e)))) t = cdr(t); return opt(car(t)); }
+L f_if(L t,L *e) { return opt(not(gc(eval(car(t),*e))) ? cdr(t) : t); }
 L f_leta(L t,L *e) {
  for (; let(t); t = CDR(t))
-  if (T(CAR(t)) == CONS && T(CAR(CAR(t))) == ATOM) *e = pair(CAR(CAR(t)),eval(car(CDR(CAR(t))),*e),*e);
+  if (T(CAR(t)) == CONS && T(CAR(CAR(t))) == ATOM) *e = pair(CAR(CAR(t)),eval(opt(CAR(t)),*e),*e);
   else err(2,CAR(t));                           /* bound variable must be an atom, to prevent GC issues when not an atom */
  return car(t);
 }
-L f_lambda(L t,L *e) { return closure(dup(car(t)),dup(car(cdr(t))),equ(*e,env) ? nil : dup(*e)); }
+L f_lambda(L t,L *e) { return closure(dup(car(t)),dup(opt(t)),equ(*e,env) ? nil : dup(*e)); }
 /* define a global symbol, garbage collect the old unreachable definitions when redefined */
 L f_define(L t,L *e) {
  L d = env,v = car(t),x;
  if (T(v) != ATOM) return err(2,v);             /* bound variable must be an atom, to prevent GC issues when not an atom */
- x = eval(car(cdr(t)),*e);
+ x = eval(opt(t),*e);
  while (T(d) == CONS && !equ(v,car(CAR(d)))) d = CDR(d);
  if (T(d) != CONS) env = pair(v,x,env);
  else {
@@ -365,7 +367,7 @@ L f_env(L _,L *e) { return dup(*e); }
 L f_let(L t,L *e) {
  L d = *e;
  for (; let(t); t = CDR(t))
-  if (T(CAR(t)) == CONS && T(CAR(CAR(t))) == ATOM) *e = pair(CAR(CAR(t)),eval(car(CDR(CAR(t))),d),*e);
+  if (T(CAR(t)) == CONS && T(CAR(CAR(t))) == ATOM) *e = pair(CAR(CAR(t)),eval(opt(CAR(t)),d),*e);
   else err(2,CAR(t));                           /* bound variable must be an atom, to prevent GC issues when not an atom */
  return car(t);
 }
@@ -375,7 +377,7 @@ L f_letreca(L t,L *e) {
   if (T(CAR(t)) == CONS && T(CAR(CAR(t))) == ATOM) *e = pair(CAR(CAR(t)),nil,*e);
   else err(2,CAR(t));                           /* bound variable must be an atom, to prevent GC issues when not an atom */
   k = ref[(i = ord(*e))/2];
-  CDR(CAR(*e)) = eval(car(CDR(CAR(t))),*e);
+  CDR(CAR(*e)) = eval(opt(CAR(t)),*e);
   if (ref[i/2] > k) scc(*e,i);                  /* use of *e detected in a CLOS: mark strongly connected component */
  }
  return car(t);
@@ -386,12 +388,12 @@ L f_letrec(L t,L *e) {
   if (T(CAR(s)) == CONS && T(CAR(CAR(s))) == ATOM) p = &CDR(*p = pair(CAR(CAR(s)),nil,*e));
   else err(2,CAR(s));                           /* bound variable must be an atom, to prevent GC issues when not an atom */
  k = ref[(i = ord(d))/2];
- for (*e = d,rr(1); let(t); t = CDR(t),i = ord(d),d = CDR(d)) CDR(CAR(d)) = eval(car(CDR(CAR(t))),*e);
+ for (*e = d,rr(1); let(t); t = CDR(t),i = ord(d),d = CDR(d)) CDR(CAR(d)) = eval(opt(CAR(t)),*e);
  if (ref[ord(*e)/2] > k) scc(*e,i);             /* use of *e detected in a CLOS: mark strongly connected component */
  return car(t);
 }
 L f_setq(L t,L *e) {
- L d = *e,v = car(t),x = eval(car(cdr(t)),d);
+ L d = *e,v = car(t),x = eval(opt(t),d);
  while (T(d) == CONS && !equ(v,car(CAR(d)))) d = CDR(d);
  if (T(d) != CONS) err(2,v);
  gc(CDR(CAR(d)));
@@ -411,7 +413,7 @@ L f_setcdr(L t,L *e) {
  x = dup(evarg(&t,e,&a)); gc(CDR(p)); CDR(p) = x; rg(p);
  return x;
 }
-L f_macro(L t,L *_) { return macro(dup(car(t)),dup(car(cdr(t)))); }
+L f_macro(L t,L *_) { return macro(dup(car(t)),dup(opt(t))); }
 L f_print(L t,L *e) { I a = 0; L x; for (; isarg(&t,e,&a,&x); gc(x)) print(out,x); return nil; }
 L f_println(L t,L *e) { f_print(t,e); fputc('\n',out); return nil; }
 

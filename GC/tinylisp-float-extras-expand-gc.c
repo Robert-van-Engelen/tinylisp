@@ -270,6 +270,8 @@ L assoc(L v,L e) { while (T(e) == CONS && !equ(v,car(CAR(e)))) e = CDR(e); retur
 I not(L x) { return T(x) == NIL; }
 /* let(x) is nonzero if x has more than one list item, used by let* */
 I let(L x) { return T(x) == CONS && T(CDR(x)) == CONS; }
+/* ++ new: opt(t) returns the first list item or (), i.e. the list t and the first item are optional */
+L opt(L t) { return let(t) ? CAR(CDR(t)) : nil; }
 
 /* rebuild ref count by incrementing the ref count of all cells reachable from cell pair x */
 void count(L x) {
@@ -397,15 +399,15 @@ L f_pair(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return T(x) == CONS ? tr
 L f_or(L t,L *e) { I a = 0; L x = nil; while (isarg(&t,e,&a,&x) && not(x)) continue; return x; }
 L f_and(L t,L *e) { I a = 0; L x = tru,y = nil; while (isarg(&t,e,&a,&x)) { gc(y); y = x; if (not(x)) break; } return x; }
 L f_not(L t,L *e) { I a = 0; return not(gc(evarg(&t,e,&a))) ? tru : nil; }
-L f_cond(L t,L *e) { while (not(gc(eval(car(car(t)),*e)))) t = cdr(t); return car(cdr(car(t))); }
-L f_if(L t,L *e) { return car(cdr(not(gc(eval(car(t),*e))) ? cdr(t) : t)); }
+L f_cond(L t,L *e) { while (not(gc(eval(car(car(t)),*e)))) t = cdr(t); return opt(car(t)); }
+L f_if(L t,L *e) { return opt(not(gc(eval(car(t),*e))) ? cdr(t) : t); }
 L f_leta(L t,L *e) {
  for (; let(t); t = CDR(t))
-  if (T(CAR(t)) == CONS && T(CAR(CAR(t))) == ATOM) *e = pair(CAR(CAR(t)),eval(car(CDR(CAR(t))),*e),*e);
+  if (T(CAR(t)) == CONS && T(CAR(CAR(t))) == ATOM) *e = pair(CAR(CAR(t)),eval(opt(CAR(t)),*e),*e);
   else err(2,CAR(t));                           /* bound variable must be an atom, to prevent GC issues when not an atom */
  return car(t);
 }
-L f_lambda(L t,L *e) { return closure(dup(car(t)),dup(car(cdr(t))),equ(*e,env) ? nil : dup(*e)); }
+L f_lambda(L t,L *e) { return closure(dup(car(t)),dup(opt(t)),equ(*e,env) ? nil : dup(*e)); }
 /* section 17.1-2: early binding and efficient macro expansion with hygienic macros */
 /* ++ new: garbage collect the old unreachable definitions when redefined */
 L f_define(L t,L *e) {
@@ -413,7 +415,7 @@ L f_define(L t,L *e) {
  if (T(v) == PRIM) printf("not redefined built-in ");
  else if (T(v) != ATOM && T(v) != CLOS && T(v) != MACR) return err(2,v);
  else {
-  L x = eval(car(cdr(t)),*e);
+  L x = eval(opt(t),*e);
   if (T(v) == CLOS || T(v) == MACR) {
    if (T(x) != T(v)) { gc(x); printf("cannot redefine "); return dup(v); }
    gc(CAR(v)); CAR(v) = dup(CAR(x)); gc(CDR(v)); CDR(v) = dup(CDR(x)); gc(x);
@@ -436,7 +438,7 @@ L f_env(L _,L *e) { return dup(*e); }
 L f_let(L t,L *e) {
  L d = *e;
  for (; let(t); t = CDR(t))
-  if (T(CAR(t)) == CONS && T(CAR(CAR(t))) == ATOM) *e = pair(CAR(CAR(t)),eval(car(CDR(CAR(t))),d),*e);
+  if (T(CAR(t)) == CONS && T(CAR(CAR(t))) == ATOM) *e = pair(CAR(CAR(t)),eval(opt(CAR(t)),d),*e);
   else err(2,CAR(t));                           /* bound variable must be an atom, to prevent GC issues when not an atom */
  return car(t);
 }
@@ -446,7 +448,7 @@ L f_letreca(L t,L *e) {
   if (T(CAR(t)) == CONS && T(CAR(CAR(t))) == ATOM) *e = pair(CAR(CAR(t)),nil,*e);
   else err(2,CAR(t));                           /* bound variable must be an atom, to prevent GC issues when not an atom */
   k = ref[(i = ord(*e))/2];
-  CDR(CAR(*e)) = eval(car(CDR(CAR(t))),*e);
+  CDR(CAR(*e)) = eval(opt(CAR(t)),*e);
   if (ref[i/2] > k) scc(*e,i);                  /* use of *e detected in a CLOS: mark strongly connected component */
  }
  return car(t);
@@ -457,12 +459,12 @@ L f_letrec(L t,L *e) {
   if (T(CAR(s)) == CONS && T(CAR(CAR(s))) == ATOM) p = &CDR(*p = pair(CAR(CAR(s)),nil,*e));
   else err(2,CAR(s));                           /* bound variable must be an atom, to prevent GC issues when not an atom */
  k = ref[(i = ord(d))/2];
- for (*e = d,rr(1); let(t); t = CDR(t),i = ord(d),d = CDR(d)) CDR(CAR(d)) = eval(car(CDR(CAR(t))),*e);
+ for (*e = d,rr(1); let(t); t = CDR(t),i = ord(d),d = CDR(d)) CDR(CAR(d)) = eval(opt(CAR(t)),*e);
  if (ref[ord(*e)/2] > k) scc(*e,i);             /* use of *e detected in a CLOS: mark strongly connected component */
  return car(t);
 }
 L f_setq(L t,L *e) {
- L d = *e,v = car(t),x = eval(car(cdr(t)),d);
+ L d = *e,v = car(t),x = eval(opt(t),d);
  while (T(d) == CONS && !equ(v,car(CAR(d)))) d = CDR(d);
  if (T(d) != CONS) err(2,v);
  gc(CDR(CAR(d)));
@@ -482,7 +484,7 @@ L f_setcdr(L t,L *e) {
  x = dup(evarg(&t,e,&a)); z = CDR(p); CDR(p) = x; gc(z); rg(1);
  return x;
 }
-L f_macro(L t,L *_) { return macro(dup(car(t)),dup(car(cdr(t)))); }
+L f_macro(L t,L *_) { return macro(dup(car(t)),dup(opt(t))); }
 L f_print(L t,L *e) { I a = 0; L x; for (; isarg(&t,e,&a,&x); gc(x)) print(out,x); return nil; }
 L f_println(L t,L *e) { f_print(t,e); fputc('\n',out); return nil; }
 
@@ -1245,7 +1247,7 @@ L expand(L x,L e,L b) {
     return t;
    }
    if (equ(f,p_macro)) {                /* <macro>: expand body */
-    *p = cons(dup(car(x)),cons(expand(car(cdr(x)),e,b),nil));
+    *p = cons(dup(car(x)),cons(expand(opt(x),e,b),nil));
     rr(1); rg(2);
     return t;
    }
@@ -1256,7 +1258,7 @@ L expand(L x,L e,L b) {
     for (d = dup(e),c = dup(b); T(v) == CONS; v = CDR(v),w = CDR(w))
      if (T(CAR(v)) == ATOM) d = pair(CAR(v),nil,d),c = pair(CAR(v),CAR(w),c);
     if (T(v) == ATOM) d = pair(v,nil,d),c = pair(v,w,c);
-    CDR(*p) = cons(expand(car(cdr(x)),d,c),nil);        /* expand <lambda> body */
+    CDR(*p) = cons(expand(opt(x),d,c),nil);             /* expand <lambda> body */
     rr(1); rg(2);
     return t;
    }
@@ -1264,7 +1266,7 @@ L expand(L x,L e,L b) {
     /* <cond> arguments are pairs of expressions (each cons pair is not a function application) */
     rc(&y,nil); rc(&z,nil);
     for (; T(x) == CONS; x = CDR(x)) {
-     y = expand(car(CAR(x)),e,b); z = expand(car(cdr(CAR(x))),e,b);
+     y = expand(car(CAR(x)),e,b); z = expand(opt(CAR(x)),e,b);
      p = &CDR(*p = cons(cons(y,cons(z,nil)),nil));
     }
     rr(3); rg(2);
@@ -1274,7 +1276,7 @@ L expand(L x,L e,L b) {
     /* <let*> local variables hide macro variables in b and hide global primitives and macros in e */
     for (d = dup(e),c = dup(b); let(x); x = CDR(x)) {
      v = car(CAR(x)); w = hygienic(v,CDR(x));
-     p = &CDR(*p = cons(cons(w,cons(expand(car(cdr(CAR(x))),d,c),nil)),nil));
+     p = &CDR(*p = cons(cons(w,cons(expand(opt(CAR(x)),d,c),nil)),nil));
      if (T(v) == ATOM) d = pair(v,nil,d),c = pair(v,w,c);
     }
     *p = cons(expand(car(x),d,c),nil);                  /* expand <let*> body */
@@ -1285,7 +1287,7 @@ L expand(L x,L e,L b) {
     /* <let> local variables hide macro variables in b and hide global primitives and macros in e */
     for (d = dup(e),c = dup(b); let(x); x = CDR(x)) {
      v = car(CAR(x)); w = hygienic(v,CDR(x));
-     p = &CDR(*p = cons(cons(w,cons(expand(car(cdr(CAR(x))),e,c),nil)),nil));
+     p = &CDR(*p = cons(cons(w,cons(expand(opt(CAR(x)),e,c),nil)),nil));
      if (T(v) == ATOM) d = pair(v,nil,d),c = pair(v,w,c);
     }
     *p = cons(expand(car(x),d,c),nil);                  /* expand <let> body */
@@ -1297,7 +1299,7 @@ L expand(L x,L e,L b) {
     for (d = dup(e),c = dup(b); let(x); x = CDR(x)) {
      v = car(CAR(x)); w = hygienic(v,x);
      if (T(v) == ATOM) d = pair(v,nil,d),c = pair(v,w,c);
-     p = &CDR(*p = cons(cons(w,cons(expand(car(cdr(CAR(x))),d,c),nil)),nil));
+     p = &CDR(*p = cons(cons(w,cons(expand(opt(CAR(x)),d,c),nil)),nil));
     }
     *p = cons(expand(car(x),d,c),nil);                  /* expand <letrec*> body */
     rr(1); rg(2);
@@ -1311,7 +1313,7 @@ L expand(L x,L e,L b) {
     }
     for (y = x; let(y); y = CDR(y)) {
      v = car(CAR(y)); w = hygienic(v,x);
-     p = &CDR(*p = cons(cons(w,cons(expand(car(cdr(CAR(y))),d,c),nil)),nil));
+     p = &CDR(*p = cons(cons(w,cons(expand(opt(CAR(y)),d,c),nil)),nil));
     }
     *p = cons(expand(car(y),d,c),nil);                  /* expand <letrec> body */
     rr(1); rg(2);
@@ -1321,8 +1323,8 @@ L expand(L x,L e,L b) {
     /* ++ new: <define> early bind self-recursive calls in functions to its closure of the function */
     v = expand(car(x),e,b);                             /* expand variable v of (<define> v x) */
     *p = cons(v,nil);                                   /* to return expanded (<define> v ...) */
+    x = opt(x);                                         /* body x of (<define> v x) */
     if (T(v) == ATOM) {                                 /* if v is an atom then ... */
-     x = car(cdr(x));                                   /* body x of (<define> v x) */
      f = closure(nil,nil,nil);                          /* v may reference itself, assume it's a function */
      d = pair(v,f,dup(e));                              /* update environment d of e to include (v . f) */
      rc(&y,expand(x,d,b));                              /* y is expanded body x of (<define> v x) */
@@ -1343,7 +1345,7 @@ L expand(L x,L e,L b) {
      else CDR(*p) = cons(dup(y),nil);                   /* to return expanded (<define> v y) */
      rg(1);
     }
-    else CDR(*p) = cons(expand(car(cdr(x)),e,b),nil);   /* to return expanded (<define> v y) */
+    else CDR(*p) = cons(expand(x,e,b),nil);             /* to return expanded (<define> v y) */
     rr(1); rg(2);
     return t;
    }
