@@ -40,7 +40,24 @@
   - fast interpreter optimized with early binding names to globals (part of early macro expansion)
   - also adds a mark-sweep garbage collector that kicks in when a program runs low on memory (deletes unreachable cyclic data structures)
 
-See also [#20](https://github.com/Robert-van-Engelen/tinylisp/issues/20)
+**Tinylisp versions with mark-sweep garbage collector**
+
+- [tinylisp-extras-ms.c](tinylisp-extras-ms.c)
+  - based on tinylisp-extras.c that includes all of the article's extras (+184 lines of C)
+  - adds mark-sweep garbage collection, supporting three modes `MS=0`, `MS=1`, and `MS=2`
+  - new primitive [`atomize`](atomize.lisp) (convert expressions to atom) (+37 lines of C)
+  - new primitive `write-to` (redirect print/ln to a file) (+16 lines of C)
+  - new primitives `list` and `append` for backquoting without having to load list.lisp (+16 lines of C)
+  - upgrades `read` to take an optional pathname to read a Lisp expression from a file (+12 lines of C)
+  - upgrades `load` to load multiple files and permit nesting up to 10 levels deep (+14 lines of C)
+  - the source code is commented to explain the code
+  - passes `tests/dotcall-extras.lisp` tests and runs 8-queens `nqueens.lisp`
+  - optimized internal logic with unchecked CAR and CDR when safe to use
+  - compile with `cc -DMS=2 -O2 -o tinylisp tinylisp-extras-ms.c -lreadline` or without `MS=2` for speed, but with possible runtime atom symbol allocation problems due to memory fragmentation
+
+- [tinylisp-extras-expand-ms.c](tinylisp-extras-expand-ms.c)
+  - the ultimate version of the above with a lot more built-in extras and automatic hygienic macros
+  - fast interpreter optimized with early binding names to globals (part of early macro expansion)
 
 **Reference counting or mark-sweep, which is faster?**
 
