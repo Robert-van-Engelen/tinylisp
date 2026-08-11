@@ -47,16 +47,17 @@ See also [#20](https://github.com/Robert-van-Engelen/tinylisp/issues/20)
 Reference counting continuously releases unused memory (i.e. unused cons cell
 pairs that form lists) back into the pool to recycle for reuse.  By contrast,
 mark-sweep only collects unused memory to recycle for reuse when the
-interpreter runs out of memory.  Mark-sweep may seem simple and fast, however,
-integrating a full mark-sweep impacts memory management overall, because it
-also requires an auxiliary stack to keep track of all temporary lists that are
-being constructed by the interpreter that cannot be released yet.
+interpreter runs out of memory.
 
-The tinylisp reference count garbage collector does all the heavy lifting more
-efficiently, while its simple mark-sweep collector only runs when the tinylisp
-interpreter returns to the REPL.  In this case, mark-sweep only keeps list
-cells that make up the stored Lisp program.  Therefore, we don't need an
-auxiliary stack.
+The tinylisp-extras-gc reference count garbage collector does all the heavy
+lifting efficiently and uniformely, independent of the cell memory size.
+Memory size has an impact on tinylisp-extras-ms with mark-sweep garbage
+collection.
+
+The tinylisp-extras-expand versions use early binding to boost performance
+significantly.  This avoids the runtime overhead of `assoc()` calls for most
+globals.  Adding built-ins for `make-list`, `nth`, and `seq` further speeds up
+solving 8-queens.
 
 A quick investigation (not scientific) shows the performance difference on a
 Mac M1 compiled with clang 21.0.0 option -O2 to solve the
@@ -71,10 +72,10 @@ compute times of 10 or more runs with `show` and `print` output removed from
 | tinylisp-extras-expand-gc (with additional built-ins)     | ref count + mark-sweep |  8192 |   35 ms |
 | tinylisp-extras-ms                                        | mark-sweep mode `MS=0` |  8192 |  370 ms |
 | tinylisp-extras-expand-ms                                 | mark-sweep mode `MS=0` |  8192 |   85 ms |
-| tinylisp-extras-expand-ms (with additional built-ins)     | mark-sweep mode `MS=0' |  8192 |   28 ms |
+| tinylisp-extras-expand-ms (with additional built-ins)     | mark-sweep mode `MS=0` |  8192 |   28 ms |
 | tinylisp-extras-ms                                        | mark-sweep mode `MS=0` | 16384 |  365 ms |
 | tinylisp-extras-expand-ms                                 | mark-sweep mode `MS=0` | 16384 |   79 ms |
-| tinylisp-extras-expand-ms (with additional built-ins)     | mark-sweep mode `MS=0' | 16384 |   27 ms |
+| tinylisp-extras-expand-ms (with additional built-ins)     | mark-sweep mode `MS=0` | 16384 |   27 ms |
 | [lisp](https://github.com/Robert-van-Engelen/lisp)        | mark-sweep             |  8192 |  920 ms |
 | [lisp](https://github.com/Robert-van-Engelen/lisp)        | mark-sweep             | 16384 |  895 ms |
 | [lisp-cheney](https://github.com/Robert-van-Engelen/lisp) | cheney                 |  8192 | 1880 ms |
@@ -82,19 +83,14 @@ compute times of 10 or more runs with `show` and `print` output removed from
 
 The performance of reference count GC is independent of the memory size (since
 there is no effect, different memory sizes are not shown in the table for
-tinylisp with ref count GC).  But memory size does impact mark-sweep and
-cheney, where more memory reduces GC overhead.
+tinylisp with ref count GC).  Memory size does impact mark-sweep and cheney,
+where more memory reduces GC overhead.
 
 The performance of tinylisp-extras versus the Common Lisp interpreter GNU
 [CLISP](https://www.gnu.org/software/clisp) is reasonably comparable (370 ms
 versus CLISP 296 ms) to solve 8-queens.  However, tinylisp-extras, lisp, and
 lisp-cheney are slow by the runtime overhead of frequent `assoc()` calls in
 `eval()` to find the definitions of globals in the environment.
-
-The performance is significantly boosted with early binding global names in the
-tinylisp-extras-expand versions.  This avoids the runtime overhead of `assoc()`
-calls for most globals.  Adding built-ins for `make-list`, `nth`, and `seq`
-further speeds up solving 8-queens.
 
 Mark-sweep in tinylisp-extras-expand-gc with reference counting has zero
 overhead since there are no unreachable cyclic data structures in the 8-queends
