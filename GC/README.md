@@ -64,42 +64,98 @@ Mac M1 compiled with clang 21.0.0 option -O2 to solve the
 compute times of 10 or more runs with `show` and `print` output removed from
 `nqueens.lisp`:
 
-| implementation | GC | mem size (cells) | time (ms) |
-| -------------- | -- | ---------------: | --------: |
+| implementation | GC method | mem size (cells) | time (ms) |
+| -------------- | --------- | ---------------: | --------: |
 | tinylisp-extras-gc                                        | ref count              |  8192 |  373 ms |
 | tinylisp-extras-expand-gc                                 | ref count + mark-sweep |  8192 |  105 ms |
 | tinylisp-extras-expand-gc (with additional built-ins)     | ref count + mark-sweep |  8192 |   35 ms |
+| tinylisp-extras-ms                                        | mark-sweep mode `MS=0` |  8192 |  370 ms |
+| tinylisp-extras-expand-ms                                 | mark-sweep mode `MS=0` |  8192 |   85 ms |
+| tinylisp-extras-expand-ms (with additional built-ins)     | mark-sweep mode `MS=0' |  8192 |   28 ms |
+| tinylisp-extras-ms                                        | mark-sweep mode `MS=0` | 16384 |  365 ms |
+| tinylisp-extras-expand-ms                                 | mark-sweep mode `MS=0` | 16384 |   79 ms |
+| tinylisp-extras-expand-ms (with additional built-ins)     | mark-sweep mode `MS=0' | 16384 |   27 ms |
 | [lisp](https://github.com/Robert-van-Engelen/lisp)        | mark-sweep             |  8192 |  920 ms |
 | [lisp](https://github.com/Robert-van-Engelen/lisp)        | mark-sweep             | 16384 |  895 ms |
 | [lisp-cheney](https://github.com/Robert-van-Engelen/lisp) | cheney                 |  8192 | 1880 ms |
 | [lisp-cheney](https://github.com/Robert-van-Engelen/lisp) | cheney                 | 16384 | 1420 ms |
 
-Tinylisp with reference count GC is a clear winner!  It is faster and the
-memory size has no effect on the running time of tinylisp (since there is no
-effect, different memory sizes are not shown in the table for tinylisp).  But
-memory size does impact mark-sweep and cheney, since more memory means lower GC
-overhead.
+The performance of reference count GC is independent of the memory size (since
+there is no effect, different memory sizes are not shown in the table for
+tinylisp with ref count GC).  But memory size does impact mark-sweep and
+cheney, where more memory reduces GC overhead.
 
-The performance of tinylisp-extras-gc versus the Common Lisp interpreter GNU
-[CLISP](https://www.gnu.org/software/clisp) is reasonably comparable (373 ms
-versus CLISP 296 ms) to solve 8-queens.  However, tinylisp-extras-gc and all
-other versions, except tinylisp-extras-expand-gc, slow down when more
-definitions are added.  This is caused by the runtime overhead of frequent
-`assoc()` calls in `eval()` to find the definitions of globals in the
-environment.
+The performance of tinylisp-extras versus the Common Lisp interpreter GNU
+[CLISP](https://www.gnu.org/software/clisp) is reasonably comparable (370 ms
+versus CLISP 296 ms) to solve 8-queens.  However, tinylisp-extras, lisp, and
+lisp-cheney are slow by the runtime overhead of frequent `assoc()` calls in
+`eval()` to find the definitions of globals in the environment.
 
-The performance of tinylisp-extras-expand-gc is significantly boosted with
-early binding global names.  This avoids the runtime overhead of `assoc()`
+The performance is significantly boosted with early binding global names in the
+tinylisp-extras-expand versions.  This avoids the runtime overhead of `assoc()`
 calls for most globals.  Adding built-ins for `make-list`, `nth`, and `seq`
-further speeds up solving 8-queens from 105ms down to 35ms.  Mark-sweep in
-tinylisp-extras-expand-gc has zero overhead since there are no unreachable
-cyclic data structures in the 8-queends benchmark that ref count cannot delete.
+further speeds up solving 8-queens.
+
+Mark-sweep in tinylisp-extras-expand-gc with reference counting has zero
+overhead since there are no unreachable cyclic data structures in the 8-queends
+benchmark that ref count cannot delete.
+
+Mark-sweep in tinylisp-extras-expand-ms has three operating modes:
+
+- `MS=0` allocates cell pairs until running out of memory, i.e. the fastest
+  method, but may cause fragmentation that block the allocation of new atom
+  symbols (located below in the cell pair pool), causing a fatal out-of-memory
+  error
+- `MS=1` allocates until 1/2 or 1/4 or 1/8 or ... free cell memory remains to
+  avoid fragmentation, but this may cause out-of-control mark-sweep calls when
+  repeately crossing the same free cell ratio, e.g. allocate one cell pair that
+  triggers mark-sweep only to release one other cell pair, and so on
+- `MS=2` similar to `MS=1` but avoids out-of-control mark-sweep by disallowing
+  crossing the same free cell ratio to invoke mark-sweep again, 1/2 requires
+  crossing 1/4, then either 1/2 or 1/8, and so on.  This operating mode keeps
+  fragmentation low with good performance.
+
+The effect of these modes on the performance of tinylisp-extras-expand-ms (with
+additional built-ins) for small 2048 to larger 65536 cell memory sizes is
+clearly noticible:
+
+| implementation | GC method | mem size (cells) | time (ms) | GC invocations |
+| -------------- | --------- | ---------------: | --------: | -------------: |
+| tinylisp-extras-expand-ms | mark-sweep mode `MS=0' |  2048 |   79 ms | 11,771 |
+| tinylisp-extras-expand-ms | mark-sweep mode `MS=0' |  4096 |   33 ms |  1,547 |
+| tinylisp-extras-expand-ms | mark-sweep mode `MS=0' |  8192 |   28 ms |    569 |
+| tinylisp-extras-expand-ms | mark-sweep mode `MS=0` | 16384 |   27 ms |    251 |
+| tinylisp-extras-expand-ms | mark-sweep mode `MS=0` | 32768 |   26 ms |    119 |
+| tinylisp-extras-expand-ms | mark-sweep mode `MS=0` | 65536 |   26 ms |     57 |
+
+| tinylisp-extras-expand-ms | mark-sweep mode `MS=1` |  2048 |  233 ms | 46,354 |
+| tinylisp-extras-expand-ms | mark-sweep mode `MS=1` |  4096 |  100 ms | 11,590 |
+| tinylisp-extras-expand-ms | mark-sweep mode `MS=1` |  8192 |   38 ms |  1,544 |
+| tinylisp-extras-expand-ms | mark-sweep mode `MS=1` | 16384 |   32 ms |    568 |
+| tinylisp-extras-expand-ms | mark-sweep mode `MS=1` | 32768 |   30 ms |    251 |
+| tinylisp-extras-expand-ms | mark-sweep mode `MS=1` | 65536 |   30 ms |    119 |
+
+| tinylisp-extras-expand-ms | mark-sweep mode `MS=2` |  2048 |  150 ms | 26,741 |
+| tinylisp-extras-expand-ms | mark-sweep mode `MS=2` |  4096 |   52 ms |  4,362 |
+| tinylisp-extras-expand-ms | mark-sweep mode `MS=2` |  8192 |   33 ms |  1,080 |
+| tinylisp-extras-expand-ms | mark-sweep mode `MS=2` | 16384 |   30 ms |    432 |
+| tinylisp-extras-expand-ms | mark-sweep mode `MS=2` | 32768 |   29 ms |    196 |
+| tinylisp-extras-expand-ms | mark-sweep mode `MS=2` | 65536 |   28 ms |     94 |
+
+Note that `MS=1` effectively cuts memory size in half, not surprisingly. It
+suffers some out-of-control behavior at 2048 and 4096 cells of memory.  As
+`MS=2` is recommended, at `N=8192` the performance of 33 ms is slightly better
+than the reference count tinylisp-extras-expand-gc.  Adding more cell memory
+can bring this down to 28 ms.  However, the performance of mark-sweep with
+different cell memory size is highly application dependent.  One benchmark
+does not provide sufficient performance testing coverage.
 
 By comparison, [SBCL](https://www.sbcl.org) is a high-performance Common Lisp
-implementation.  It runs 8-queens in 6 ms.  However, Common Lisp (compiled or
-not) is not as flexible as tinylisp in which code and data are truly the same.
-The dot operator is supported by tinylisp as should be and there is no need for
-ugly `funcall` and other unnecessary additions.
+implementation that internally compiles Common Lisp programs to machine code to
+run.  It runs 8-queens in 6 ms.  However, Common Lisp (compiled or not) is not
+as flexible as tinylisp in which code and data are truly the same.  The dot
+operator is supported by tinylisp as should be and there is no need for ugly
+`funcall` and other unnecessary additions.
 
 Perhaps I will build a compiler for tinylisp.  The fastest way to run tinylisp
 programs is to generate C code that is highly optimizable by a C compiler.
