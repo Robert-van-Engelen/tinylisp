@@ -121,20 +121,20 @@ clearly noticible:
 
 | implementation | GC method | mem size (cells) | time (ms) | GC invocations |
 | -------------- | --------- | ---------------: | --------: | -------------: |
-| tinylisp-extras-expand-ms | mark-sweep mode `MS=0' |  2048 |   79 ms | 11,771 |
-| tinylisp-extras-expand-ms | mark-sweep mode `MS=0' |  4096 |   33 ms |  1,547 |
-| tinylisp-extras-expand-ms | mark-sweep mode `MS=0' |  8192 |   28 ms |    569 |
+| tinylisp-extras-expand-ms | mark-sweep mode `MS=0` |  2048 |   79 ms | 11,771 |
+| tinylisp-extras-expand-ms | mark-sweep mode `MS=0` |  4096 |   33 ms |  1,547 |
+| tinylisp-extras-expand-ms | mark-sweep mode `MS=0` |  8192 |   28 ms |    569 |
 | tinylisp-extras-expand-ms | mark-sweep mode `MS=0` | 16384 |   27 ms |    251 |
 | tinylisp-extras-expand-ms | mark-sweep mode `MS=0` | 32768 |   26 ms |    119 |
 | tinylisp-extras-expand-ms | mark-sweep mode `MS=0` | 65536 |   26 ms |     57 |
-
+|                           |                        |       |         |        |
 | tinylisp-extras-expand-ms | mark-sweep mode `MS=1` |  2048 |  233 ms | 46,354 |
 | tinylisp-extras-expand-ms | mark-sweep mode `MS=1` |  4096 |  100 ms | 11,590 |
 | tinylisp-extras-expand-ms | mark-sweep mode `MS=1` |  8192 |   38 ms |  1,544 |
 | tinylisp-extras-expand-ms | mark-sweep mode `MS=1` | 16384 |   32 ms |    568 |
 | tinylisp-extras-expand-ms | mark-sweep mode `MS=1` | 32768 |   30 ms |    251 |
 | tinylisp-extras-expand-ms | mark-sweep mode `MS=1` | 65536 |   30 ms |    119 |
-
+|                           |                        |       |         |        |
 | tinylisp-extras-expand-ms | mark-sweep mode `MS=2` |  2048 |  150 ms | 26,741 |
 | tinylisp-extras-expand-ms | mark-sweep mode `MS=2` |  4096 |   52 ms |  4,362 |
 | tinylisp-extras-expand-ms | mark-sweep mode `MS=2` |  8192 |   33 ms |  1,080 |
