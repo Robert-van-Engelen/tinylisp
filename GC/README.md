@@ -60,36 +60,40 @@ auxiliary stack.
 
 A quick investigation (not scientific) shows the performance difference on a
 Mac M1 compiled with clang 21.0.0 option -O2 to solve the
-[nqueens.lisp](nqueens.lisp) problem for N=8:
+[nqueens.lisp](nqueens.lisp) problem for N=8, we get the following average
+compute times of 10 or more runs with `show` and `print` output removed from
+`nqueens.lisp`:
 
 | implementation | GC | mem size (cells) | time (ms) |
 | -------------- | -- | ---------------: | --------: |
 | tinylisp-extras-gc                                        | ref count              |  8192 |  373 ms |
-| tinylisp-extras-expand-gc                                 | ref count + mark-sweep |  8192 |   35 ms |
+| tinylisp-extras-expand-gc                                 | ref count + mark-sweep |  8192 |  105 ms |
+| tinylisp-extras-expand-gc (with additional built-ins)     | ref count + mark-sweep |  8192 |   35 ms |
 | [lisp](https://github.com/Robert-van-Engelen/lisp)        | mark-sweep             |  8192 |  920 ms |
 | [lisp](https://github.com/Robert-van-Engelen/lisp)        | mark-sweep             | 16384 |  895 ms |
 | [lisp-cheney](https://github.com/Robert-van-Engelen/lisp) | cheney                 |  8192 | 1880 ms |
 | [lisp-cheney](https://github.com/Robert-van-Engelen/lisp) | cheney                 | 16384 | 1420 ms |
 
-Tinylisp is a clear winner!  It is faster and the memory size has no effect on
-the running time of tinylisp (since there is no effect, different memory sizes
-are not shown in the table for tinylisp).  But memory size does impact
-mark-sweep and cheney, since more memory means lower GC overhead.
+Tinylisp with reference count GC is a clear winner!  It is faster and the
+memory size has no effect on the running time of tinylisp (since there is no
+effect, different memory sizes are not shown in the table for tinylisp).  But
+memory size does impact mark-sweep and cheney, since more memory means lower GC
+overhead.
 
 The performance of tinylisp-extras-gc versus the Common Lisp interpreter GNU
 [CLISP](https://www.gnu.org/software/clisp) is reasonably comparable (373 ms
-versus CLISP 296 ms) to solve 8-queens.
-
-However, tinylisp-extras-gc and all other versions, except
-tinylisp-extras-expand-gc, slow down when more definitions are added.  This is
-caused by the runtime overhead of frequent `assoc()` calls in `eval()` to
-find the definitions of globals in the environment.
+versus CLISP 296 ms) to solve 8-queens.  However, tinylisp-extras-gc and all
+other versions, except tinylisp-extras-expand-gc, slow down when more
+definitions are added.  This is caused by the runtime overhead of frequent
+`assoc()` calls in `eval()` to find the definitions of globals in the
+environment.
 
 The performance of tinylisp-extras-expand-gc is significantly boosted with
-early binding global names and built-ins.  This avoids the runtime overhead of
-`assoc()` calls.  Since this version uses reference counting, mark-sweep in
-tinylisp-extras-expand-gc is only used to delete unreachable cyclic data
-structures that ref count cannot delete.
+early binding global names.  This avoids the runtime overhead of `assoc()`
+calls for most globals.  Adding built-ins for `make-list`, `nth`, and `seq`
+further speeds up solving 8-queens from 105ms down to 35ms.  Mark-sweep in
+tinylisp-extras-expand-gc has zero overhead since there are no unreachable
+cyclic data structures in the 8-queends benchmark that ref count cannot delete.
 
 By comparison, [SBCL](https://www.sbcl.org) is a high-performance Common Lisp
 implementation.  It runs 8-queens in 6 ms.  However, Common Lisp (compiled or
