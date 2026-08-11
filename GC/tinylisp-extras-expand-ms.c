@@ -697,9 +697,7 @@ L f_time(L t,L *e) {
  struct timeval tv0, tv1;
  float ms;
  gettimeofday(&tv0, NULL);
- for (i = 0; i < k; ++i) {
-  x = eval(car(t),*e);
- }
+ for (i = 0; i < k; ++i) x = eval(car(t),*e);
  gettimeofday(&tv1, NULL);
  ms = tv1.tv_usec;
  ms -= tv0.tv_usec;

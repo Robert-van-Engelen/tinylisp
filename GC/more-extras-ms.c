@@ -1,0 +1,387 @@
+/* some more Lisp primitives to extend tinylisp-extras-ms.c */
+
+/* ... prim[] = {
+   ...
+   {">",        f_gt,      0},
+   {"<=",       f_le,      0},
+   {">=",       f_ge,      0},
+   {"=",        f_is,      0},
+   {"%",        f_mod,     0},
+   {"^",        f_exp,     0},
+   {"<<",       f_lshift,  0},
+   {">>",       f_rshift,  0},
+   {"&",        f_bitand,  0},
+   {"|",        f_bitor,   0},
+   {"~",        f_bitxor,  0},
+   {"abs",      f_abs,     0},
+   {"sgn",      f_sgn,     0},
+   {"neg",      f_neg,     0},
+   {"sqrt",     f_sqrt,    0},
+   {"sin",      f_sin,     0},
+   {"cos",      f_cos,     0},
+   {"tan",      f_tan,     0},
+   {"asin",     f_asin,    0},
+   {"acos",     f_acos,    0},
+   {"atan",     f_atan,    0},
+   {"atan2",    f_atan2,   0},
+   {"round",    f_round,   0},
+   {"floor",    f_floor,   0},
+   {"ceiling",  f_ceiling, 0},
+   {"char",     f_char,    0},
+   {"code",     f_code,    0},
+   {"cpos",     f_cpos,    0},
+   {"clen",     f_clen,    0},
+   {"see",      f_see,     0},
+   {"get",      f_get,     0},
+   {"val",      f_val,     0},
+   {"list",     f_list,    0},
+   {"append",   f_append,  0},
+   {"length",   f_length,  0},
+   {"nthcdr",   f_nthcdr,  0},
+   {"nth",      f_nth,     0},
+   {"last",     f_last,    0},
+   {"reverse",  f_reverse, 0},
+   {"seq",      f_seq,     0},
+   {"range",    f_range,   0},
+   {"equal?",   f_equal,   0},
+   {"member",   f_member,  0},
+   {"copy-list",f_copylist,0},
+   {"make-list",f_makelist,0},
+   {"rplaca",   f_rplaca,  0},
+   {"rplacd",   f_rplacd,  0},
+   {"time",     f_time,    0},
+   {0}};
+*/
+
+/* ++ updated: (< x y [z ...])
+   returns #t if x < y and y < z ... etc when given, otherwise returns () */
+L f_lt(L t,L *e) {
+ I a = 0; L x = evarg(&t,e,&a),y;
+ while (isarg(&t,e,&a,&y)) {
+  if (T(x) == ATOM && T(y) == ATOM ? strcmp(A+ord(x),A+ord(y)) >= 0 :
+      x == x && y == y ? x >= y :
+      T(x) >= T(y) || (T(x) == T(y) && ord(x) >= ord(y))) return nil;
+  x = y;
+ }
+ return tru;
+}
+
+/* (> x y [z ...])
+   returns #t if x > y and y > z ... etc when given, otherwise returns () */
+L f_gt(L t,L *e) {
+ I a = 0; L x = evarg(&t,e,&a),y;
+ while (isarg(&t,e,&a,&y)) {
+  if (T(x) == ATOM && T(y) == ATOM ? strcmp(A+ord(x),A+ord(y)) <= 0 :
+      x == x && y == y ? x <= y :
+      T(x) <= T(y) || (T(x) == T(y) && ord(x) <= ord(y))) return nil;
+  x = y;
+ }
+ return tru;
+}
+
+/* (<= x y [z ...])
+   returns #t if x <= y and y <= z ... etc when given, otherwise returns () */
+L f_le(L t,L *e) {
+ I a = 0; L x = evarg(&t,e,&a),y;
+ while (isarg(&t,e,&a,&y)) {
+  if (T(x) == ATOM && T(y) == ATOM ? strcmp(A+ord(x),A+ord(y)) > 0 :
+      x == x && y == y ? x > y :
+      T(x) > T(y) || (T(x) == T(y) && ord(x) > ord(y))) return nil;
+  x = y;
+ }
+ return tru;
+}
+
+/* (>= x y [z ...])
+   returns #t if x >= y and y >= z ... etc when given, otherwise returns () */
+L f_ge(L t,L *e) {
+ I a = 0; L x = evarg(&t,e,&a),y;
+ while (isarg(&t,e,&a,&y)) {
+  if (T(x) == ATOM && T(y) == ATOM ? strcmp(A+ord(x),A+ord(y)) > 0 :
+      x == x && y == y ? x > y :
+      T(x) > T(y) || (T(x) == T(y) && ord(x) > ord(y))) return nil;
+  x = y;
+ }
+ return tru;
+}
+
+/* (= x y)
+   returns #t if number x equals number y, otherwise returns () */
+L f_is(L t,L *e) { I a = 0; L x = num(evarg(&t,e,&a)); return x == num(evarg(&t,e,&a)) ? tru : nil; }
+
+/* (% x y ...)
+   modulo of dividing x by y, then by ... */
+L f_mod(L t,L *e) { I a = 0; L x; int64_t n = (int64_t)num(evarg(&t,e,&a)); while (isarg(&t,e,&a,&x)) n %= (int64_t)num(x); return n; }
+
+/* (^ x y ...)
+   raise x to the power y then by ... */
+L f_exp(L t,L *e) { I a = 0; L x,n = evarg(&t,e,&a); while (isarg(&t,e,&a,&x)) n = pow(n,x); return num(n); }
+
+/* (<< x y ...)
+   shift signed integer x left by y and by ... */
+L f_lshift(L t,L *e) { I a = 0; L x; int64_t n = (int64_t)num(evarg(&t,e,&a)); while (isarg(&t,e,&a,&x)) n <<= (int64_t)num(x); return n; }
+
+/* (>> x y ...)
+   shift signed integer x right by y and by ... */
+L f_rshift(L t,L *e) { I a = 0; L x; int64_t n = (int64_t)num(evarg(&t,e,&a)); while (isarg(&t,e,&a,&x)) n >>= (int64_t)num(x); return n; }
+
+/* (& x y ...)
+   bitwise and signed integers */
+L f_bitand(L t,L *e) { I a = 0; L x; int64_t n = (int64_t)num(evarg(&t,e,&a)); while (isarg(&t,e,&a,&x)) n &= (int64_t)num(x); return n; }
+
+/* (| x y ...)
+   bitwise or signed integers */
+L f_bitor(L t,L *e) { I a = 0; L x; int64_t n = (int64_t)num(evarg(&t,e,&a)); while (isarg(&t,e,&a,&x)) n |= (int64_t)num(x); return n; }
+
+/* (~ x y ...)
+   bitwise xor signed integers */
+L f_bitxor(L t,L *e) { I a = 0; L x; int64_t n = (int64_t)num(evarg(&t,e,&a)); while (isarg(&t,e,&a,&x)) n ^= (int64_t)num(x); return n; }
+
+/* (abs x) */
+L f_abs(L t,L *e) { I a = 0; return num(fabs(evarg(&t,e,&a))); }
+
+/* (sgn x) */
+L f_sgn(L t,L *e) { I a = 0; L x = evarg(&t,e,&a); return x > 0 ? 1 : x < 0 ? -1 : 0; }
+
+/* (neg x) */
+L f_neg(L t,L *e) { I a = 0; return num(-evarg(&t,e,&a)); }
+
+/* (sqrt x) */
+L f_sqrt(L t,L *e) { I a = 0; return num(sqrt(evarg(&t,e,&a))); }
+
+/* (sin x) */
+L f_sin(L t,L *e) { I a = 0; return num(sin(evarg(&t,e,&a))); }
+
+/* (cos x) */
+L f_cos(L t,L *e) { I a = 0; return num(cos(evarg(&t,e,&a))); }
+
+/* (tan x) */
+L f_tan(L t,L *e) { I a = 0; return num(tan(evarg(&t,e,&a))); }
+
+/* (asin x) */
+L f_asin(L t,L *e) { I a = 0; return num(asin(evarg(&t,e,&a))); }
+
+/* (acos x) */
+L f_acos(L t,L *e) { I a = 0; return num(acos(evarg(&t,e,&a))); }
+
+/* (atan x) */
+L f_atan(L t,L *e) { I a = 0; return num(atan(evarg(&t,e,&a))); }
+
+/* (atan2 x y) */
+L f_atan2(L t,L *e) { I a = 0; L x = evarg(&t,e,&a); return num(atan2(x,evarg(&t,e,&a))); }
+
+/* (round x) */
+L f_round(L t,L *e) { I a = 0; return num(round(evarg(&t,e,&a))); }
+
+/* (floor x) */
+L f_floor(L t,L *e) { I a = 0; return num(floor(evarg(&t,e,&a))); }
+
+/* (ceiling x) */
+L f_ceiling(L t,L *e) { I a = 0; return num(ceil(evarg(&t,e,&a))); }
+
+/* (char k [n])
+   return a string of n (default n=1) characters with code -128 <= k <= 255 */
+L f_char(L t,L *e) {
+ I a = 0,k = (int)num(evarg(&t,e,&a)),n = 1; L y;
+ if (isarg(&t,e,&a,&y)) { n = num(y); if (n >= sizeof(buf)) n = sizeof(buf)-1; }
+ buf[n] = '\0';
+ while (n--) buf[n] = k;
+ return atom(buf);
+}
+
+/* (code <atom> [n])
+   return the code 0 to 255 of a single character in an atom at the front or at an optional given index n, returns 0 when beyond the end of the atom */
+L f_code(L t,L *e) {
+ I i,k,a = 0; L x,v = evarg(&t,e,&a);
+ k = T(v) == ATOM ? strlen(A+ord(v)) : 0;
+ i = isarg(&t,e,&a,&x) ? (I)num(x) : 0;
+ return i < k ? *(A+ord(v)+i)&0xff : 0;
+}
+
+/* (cpos <atom> <atom> [n])
+   return character position of the first <atom> in the second <atom> or nil (), look after position n */
+L f_cpos(L t,L *e) {
+ I i,a = 0; L x,v = evarg(&t,e,&a),w = evarg(&t,e,&a);
+ i = isarg(&t,e,&a,&x) ? (I)num(x) : 0;
+ if (T(v) == ATOM && T(w) == ATOM && i < strlen(A+ord(w))) {
+  char *s = strstr(A+ord(w)+i,A+ord(v));
+  if (s != NULL) return s-(A+ord(w));
+ }
+ return nil;
+}
+
+/* (clen <atom>)
+   return character length of <atom> */
+L f_clen(L t,L *e) {
+ I a = 0; L v = evarg(&t,e,&a);
+ return T(v) == ATOM ? strlen(A+ord(v)) : 0;
+}
+
+/* (see)
+   return the code of the current character in the input or 0 when no input is present, use (get) to advance input */
+L f_see(L t,L *e) { return see; }
+
+/* (get)
+   return the code of the current character in the input and advance to the next */
+char get();
+L f_get(L t,L *e) { return get(); }
+
+/* (val a)
+   converts an atom symbol a to a number, throws ERR 7 when invalid */
+L f_val(L t,L *e) {
+ I a = 0; L n,x = evarg(&t,e,&a); char *s;
+ if (T(x) != ATOM) return err(7,nil);
+ n = strtod(A+ord(x),&s);
+ return *s ? err(7,x) : n;
+}
+
+/* (list ...) - built-in for speed to replace the list definition in common.lisp (remove it)
+   returns a list of its arguments - a built-in Lisp primitive of (define list (lambda args args)) */
+L f_list(L t,L *e) { return evlis(t,*e); }
+
+/* (append ...) - built-in for speed to replace the append definition in list.lisp (remove it)
+   returns the concatenation of its list arguments as a new list */
+L f_append(L t,L *e) {
+ I a = 0; L x = nil,y,s,*p = &s;
+ for (rc(&y,nil),rc(p,nil); isarg(&t,e,&a,&x) && !not(t); )
+  for (y = x; !not(x); x = cdr(x)) p = &CDR(*p = cons(car(x),nil));
+ *p = x;
+ return rr(2,s);
+}
+
+/* (length t) - built-in for speed to replace the length definition in list.lisp (remove it)
+   return the length of list t */
+L f_length(L t,L *e) {
+ I a = 0,k = 0; L s = evarg(&t,e,&a);
+ for (t = s; T(s) == CONS; s = CDR(s)) ++k;
+ return k;
+}
+
+/* (nthcdr n t)
+   returns n'th rest of the list t */
+L f_nthcdr(L t,L *e) {
+ I a = 0,i = (I)num(evarg(&t,e,&a)); L s = evarg(&t,e,&a);
+ for (t = s; i > 0; --i) t = cdr(t);
+ return t;
+}
+
+/* (nth n t)
+   returns n'th item in list t */
+L f_nth(L t,L *e) { return car(f_nthcdr(t,e)); }
+
+/* (last t [n])
+   returns last singleton list element of list t, optionally return list of n last list elements */
+L f_last(L t,L *e) {
+ I a = 0; L s,x,y; int n;
+ rc(&x,evarg(&t,e,&a));
+ n = isarg(&t,e,&a,&y) ? (int)num(y) : 1;
+ for (t = s = x; T(t) == CONS; t = CDR(t)) if (n < 1) s = CDR(s); else --n;
+ return rr(1,s);
+}
+
+/* (reverse t)
+   returns reversed copy of list t */
+L f_reverse(L t,L *e) {
+ I a = 0; L x,s = nil;
+ for (rc(&x,evarg(&t,e,&a)),t = x; T(t) == CONS; t = CDR(t)) s = cons(CAR(t),s);
+ return rr(1,s);
+}
+
+/* (seq n m)
+   returns list with the sequence (n n+1 n+2 ... m-1) */
+L f_seq(L t,L *e) {
+ I a = 0; int n = (int)num(evarg(&t,e,&a)),m = (int)num(evarg(&t,e,&a)); L s,*p = &s;
+ for (rc(p,nil); n < m; ++n) p = &CDR(*p = cons(n,nil));
+ return rr(1,s);
+}
+
+/* (range n m k)
+   returns list with the sequence (n n+k n+2k ... m-1) where optional k=1 by default */
+L f_range(L t,L *e) {
+ I a = 0; int n = (int)num(evarg(&t,e,&a)),m = (int)num(evarg(&t,e,&a)),k = 1; L x,s,*p = &s;
+ if (isarg(&t,e,&a,&x)) k = (int)num(x);
+ for (rc(p,nil); k*m > k*n; n += k) p = &CDR(*p = cons(n,nil));
+ return rr(1,s);
+}
+
+/* (equal? x y)
+   deep check for equality, does not permit cyclic data structures */
+I equal(L x,L y) {
+ if (equ(x,y)) return 1;
+ if (T(x) != T(y) || (T(x) != CONS && T(x) != CLOS && T(x) != MACR)) return 0;
+ for (; T(x) == T(y) && (T(x) == CONS || T(x) == CLOS || T(x) == MACR); x = CDR(x),y = CDR(y))
+  if (!equal(CAR(x),CAR(y))) return 0;
+ return equal(x,y);
+}
+L f_equal(L t,L *e) {
+ I a = 0; L x,z;
+ rc(&x,evarg(&t,e,&a));
+ z = equal(x,evarg(&t,e,&a)) ? tru : nil;
+ return rr(1,z);
+}
+
+/* (member x t)
+   returns rest of list t from the first list element that is equal to x */
+L f_member(L t,L *e) {
+ I a = 0; L x;
+ rc(&x,evarg(&t,e,&a));
+ t = evarg(&t,e,&a);
+ while (T(t) == CONS && !equal(x,CAR(t))) t = CDR(t);
+ return rr(1,t);
+}
+
+/* (copy-list t)
+   returns a copy of list t */
+L f_copylist(L t,L *e) {
+ I a = 0; L x,s,*p = &s;
+ for (t = rc(&x,evarg(&t,e,&a)); T(t) == CONS; t = CDR(t)) p = &CDR(*p = cons(CAR(t),nil));
+ *p = t;
+ return rr(1,s);
+}
+
+/* (make-list n [x])
+   returns list of n copies of optional x, x is () by default */
+L f_makelist(L t,L *e) {
+ I a = 0; int n = (int)num(evarg(&t,e,&a)); L s = nil,x = nil;
+ isarg(&t,e,&a,&x);
+ while (n-- > 0) s = cons(x,s);
+ return s;
+}
+
+/* (rplaca p x)
+   ANSI Lisp rplaca replace car of a cons pair p with x */
+L f_rplaca(L t,L *e) {
+ I a = 0; L p,z;
+ rc(&p,evarg(&t,e,&a));
+ if (T(p) != CONS) err(1,p);
+ z = CAR(p); CAR(p) = evarg(&t,e,&a);
+ return rr(1,p);
+}
+
+/* (rplacd p x)
+   ANSI Lisp rplacd replace cdr of a cons pair p with x */
+L f_rplacd(L t,L *e) {
+ I a = 0; L p,z;
+ rc(&p,evarg(&t,e,&a));
+ if (T(p) != CONS) err(1,p);
+ z = CDR(p); CDR(p) = evarg(&t,e,&a);
+ return rr(1,p);
+}
+
+/* (time <expr> [n]) 
+   elapsed running time to evaluate an expression, optionally executed n times to improve measurement accuracy */
+#include <sys/time.h>
+L f_time(L t,L *e) {
+ L x = nil; I i,k = let(t) ? (I)num(car(CDR(t))) : 1;
+ struct timeval tv0, tv1;
+ float ms;
+ gettimeofday(&tv0, NULL);
+ for (i = 0; i < k; ++i) x = eval(car(t),*e);
+ gettimeofday(&tv1, NULL);
+ ms = tv1.tv_usec;
+ ms -= tv0.tv_usec;
+ ms = 1000.0 * (tv1.tv_sec - tv0.tv_sec) + ms/1000.0;
+ if (ms < 0.0) ms += 60000.0;
+ printf("\nelapsed time is %g ms\n",ms/k);
+ return x;
+}
