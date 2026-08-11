@@ -41,7 +41,7 @@ L evarg(L *t,L *e,I *a) {
 }
 I isarg(L *t,L *e,I *a,L *x) {
  if (T(*t) == ATOM && !*a) *t = assoc(*t,*e),*a = 1;
- if (not(*t)) return 0;
+ if (T(*t) != CONS) return 0;
  *x = car(*t); *t = cdr(*t);
  if (!*a) *x = eval(*x,*e);
  return 1;
