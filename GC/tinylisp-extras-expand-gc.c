@@ -69,7 +69,7 @@ L eval(L,L),expand(L,L,L),cede(L),Read(),parse(),err(I,L); void collect(L),ms(L)
    fn: number of free cell cons pairs, not taking space used by atoms into account (for reporting only, not required)
    tr: tracing off (0), on (1), wait on ENTER (2), dump and wait (3)
    ld: number of open loads from input files (nested load up to 10 levels deep)
-   safety invariant: hp < (lp-2)<<3 */
+   safety invariant: hp+16 < lp<<3 */
 I hp = 0,fp = N-2,lp = N-2,fn = N/2,tr = 0,ld = 0;
 /* ref[] array with ref count of a used cell pair or ref to next free cell pair in the free list */
 I ref[N/2];
@@ -99,7 +99,7 @@ I equ(L x,L y) { union { L x; uint64_t i; } u = {x},v = {y}; return u.i == v.i; 
 /* interning of atom names (Lisp symbols), returns a unique NaN-boxed ATOM */
 L atom(const char *s) {
  I i = 0; while (i < hp && strcmp(A+i,s)) i += strlen(A+i)+1;
- return i == hp && ((hp += strlen(s)+1) > (lp-2)<<3 || !memmove(A+i,s,hp-i)) ? err(4,nil) : box(ATOM,i);
+ return i == hp && ((hp += strlen(s)+1)+16 > lp<<3 || !memmove(A+i,s,hp-i)) ? err(4,nil) : box(ATOM,i);
 }
 
 /* ++ new: mark-sweep garbage collector registry stack size S, max depth of nested calls to eval() = S/3 */
@@ -114,7 +114,7 @@ I lomem(I i) { return lp = i < lp ? i : lp; }
 L cons(L x,L y) {
  I i = fp; L p = box(CONS,i);
  fp = ref[i/2]&~FREE; ref[i/2] = 1; --fn; cell[i+1] = x; cell[i] = y; LOG(p,"\n\e[32mcons %u\e[m\t",i);
- if (TEST || hp > (fp-2)<<3) ms(p); else lomem(fp);
+ if (TEST || hp+16 > fp<<3) ms(p); else lomem(i);
  return p;
 }
 /* delete the pair cell[i] cell[i+1] to reuse by adding it to the free cell pair list */
@@ -223,7 +223,7 @@ void ms(L p) {
 #if TEST
  if (k < fn) printf("\n\e[31;1mms() collected %u unused cells\e[m\t",2*(fn-k));
 #endif
- if (hp > (lp-2)<<3) err(4,nil);
+ if (hp+16 > lp<<3) err(4,nil);
 }
 
 /* section 14: error handling and exceptions
@@ -495,7 +495,7 @@ L f_atomize(L t,L *e) {
   p = &CDR(*p = cons(T(CAR(t)) == ATOM || T(CAR(t)) == HOLD ? CAR(t) : eval(CAR(t),*e),nil));
  *p = dup(t);                                   /* tail of s is t */
  k = atomize(s,NULL);                           /* the atom string length k, to hold atomized list of arguments */
- if (hp+k+1 > (lp-2)<<3) err(4,nil);            /* ERR 4 if the heap space is not large enough */
+ if (hp+k+17 > lp<<3) err(4,nil);               /* ERR 4 if the heap space is not large enough */
  atomize(s,A+hp);                               /* store the atomized arguments on the heap */
  rg(1);
  return atom(A+hp);                             /* this requires memmove() instead of strcpy() in atom() */
@@ -522,6 +522,7 @@ L f_read(L t,L *e) {
 /* section 12: adding readline with history ++ updated: support multiple loads and nested loads */
 L f_load(L t,L *e) {
  I j,k = ld; L s,v = nil;
+ rc(&s,nil);
  while (T(t) == CONS) {
   s = CDR(t); CDR(t) = nil;                     /* temporarily set cdr(t) to nil */
   v = f_atomize(t,e);                           /* atomize one argument */
@@ -529,6 +530,7 @@ L f_load(L t,L *e) {
   if (ld >= sizeof(in)/sizeof(*in) || !(in[ld++] = fopen(A+ord(v),"r"))) err(5,v);
  }
  for (j = ld-1; j > k; --j,++k) { FILE *f = in[j]; in[j] = in[k]; in[k] = f; }  /* reverse the in[] additions */
+ rr(1);
  return v;
 }
 
@@ -1005,46 +1007,40 @@ void trace(L y,L x,L e) {
 
 /* section 16.2/3/4: tail-call optimization (section 17.2: hygienic macros - remove MACR branch) */
 L eval(L x,L e) {
- I a; L f,g,h,v,y,z;
+ I a; L d,f,g,v,y,z;
  /* if x is an atom, then return its value; if x is not an application list (it is constant), then return x */
  if (T(x) == ATOM) return dup(assoc(x,e));
  if (T(x) != CONS) return dup(x);
  /* pre-check for stack overflow, expect 3 + 1 (for evlis) rc() calls to register variables */
  if (sp >= stk+S-4) return err(4,nil);
- /* we dup(e) the environment to extend with locals and formal arguments, then gc(e) all of them afterwards */
- rc(&e,dup(e)); rc(&g,nil); rc(&h,nil);
+ /* we dup(e) the environment to extend with locals and formal arguments */
+ rc(&d,nil); rc(&e,dup(e)); rc(&g,nil);
  while (1) {
   /* copy x to y to output y => x when tracing is enabled */
   y = x;
   /* if x is an atom, then return its value; if x is not an application list (it is constant), then return x */
   if (T(x) == ATOM) { x = dup(assoc(x,e)); break; }
   if (T(x) != CONS) { x = dup(x); break; }
-  /* save h = old f to garbage collect, evaluate f in the application (f . x) and get the list of arguments x */
-  h = g; g = nil; f = CAR(x); x = CDR(x);
+  /* evaluate f in the application (f . x) and get the list of arguments x */
+  f = CAR(x); x = CDR(x);
   if (T(f) == ATOM) f = assoc(f,e);
-  else if (T(f) == CONS) f = g = eval(f,e);
+  else if (T(f) == CONS) { z = g; g = nil; gc(z); f = g = eval(f,e); }
   if (T(f) == PRIM) {
    /* apply Lisp primitive to argument list x, return value in x */
    x = prim[ord(f)].f(x,&e);
-   /* garbage collect h (use temp z in case gc() gets SIGINT interrupted) */
-   z = h; h = nil; gc(z);
    /* if tail-call then continue evaluating x, otherwise return x */
    if (prim[ord(f)].t) continue;
    break;
   }
   if (T(f) != CLOS) return err(3,f);
-  /* garbage collect closure h (use temp z in case gc() gets SIGINT) */
-  z = h; h = nil; gc(z);
-  /* get the list of variables v of closure f and its local environment h (use global env when nil) */
-  v = CAR(CAR(f)); h = dup(CDR(f));
-  if (T(h) == NIL) h = dup(env);
+  /* get the list of variables v of closure f and its local environment d (use global env when nil) */
+  v = CAR(CAR(f)); d = dup(CDR(f));
+  if (T(d) == NIL) d = dup(env);
   /* bind closure f variables v to the evaluated argument values */
-  for (a = 0; T(v) == CONS; v = CDR(v)) h = pair(CAR(v),evarg(&x,&e,&a),h);
-  if (T(v) == ATOM) h = pair(v,a ? dup(x) : evlis(x,e),h);
-  /* next, evaluate body x of closure f in environment e = h while keeping f in memory as long as x */
-  x = CDR(CAR(f));
-  /* discard copy of the old environment e to use new environment h (use temp z in case gc() gets SIGINT) */
-  z = e; e = h; h = nil; gc(z);
+  for (a = 0; T(v) == CONS; v = CDR(v)) d = pair(CAR(v),evarg(&x,&e,&a),d);
+  if (T(v) == ATOM) d = pair(v,a ? dup(x) : evlis(x,e),d);
+  /* next, evaluate body x of closure f in environment e = d (use temp z in case gc() gets SIGINT) */
+  x = CDR(CAR(f)); z = e; e = d; d = nil; gc(z);
   if (tr) trace(y,x,e);
  }
  if (tr && !equ(x,y)) trace(y,x,e);
@@ -1311,7 +1307,7 @@ L expand(L x,L e,L b) {
     return t;
    }
    if (equ(f,p_define)) {
-    /* ++ new: <define> early bind self-recursive calls in functions to its closure of the function */
+    /* <define> early bind self-recursive calls in functions to its closure of the function */
     v = expand(car(x),e,b);                             /* expand variable v of (<define> v x) */
     *p = cons(v,nil);                                   /* to return expanded (<define> v ...) */
     x = opt(x);                                         /* body x of (<define> v x) */

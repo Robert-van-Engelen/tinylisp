@@ -142,7 +142,7 @@ clearly noticible:
 Note that `MS=1` effectively cuts memory size in half, not surprisingly. It
 suffers some out-of-control behavior at 2048 and 4096 memory sizes.
 
-`MS=2` is recommended where at `N=8192` the performance of 33 ms is slightly
+`MS=2` is recommended, where at `N=8192` the performance of 33 ms is slightly
 better than the 35 ms that reference count tinylisp-extras-expand-gc takes to
 solve 8-queens.  Adding more cell memory can bring 33 ms down to 28 ms.
 However, the performance of mark-sweep with different cell memory sizes is
@@ -161,7 +161,7 @@ programs is to generate C code that is highly optimizable by a C compiler.
 Solving 8-queens in compiled tinylisp should take about 2 ms, a best estimate
 based on my prototype tinylisp compiler.
 
-**How does it work?**
+**How does reference count GC work?**
 
 The original tinylisp uses a stack to allocate new cells for `CONS` and `CLOS`
 Lisp values.  Two cells are needed to store the car and the cdr of a `CONS` or

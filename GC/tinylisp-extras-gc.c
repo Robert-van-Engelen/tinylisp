@@ -450,6 +450,7 @@ L f_read(L t,L *e) {
 /* section 12: adding readline with history ++ updated: support multiple loads and nested loads */
 L f_load(L t,L *e) {
  I j,k = ld; L s,v = nil;
+ rc(&s,nil);
  while (T(t) == CONS) {
   s = CDR(t); CDR(t) = nil;                     /* temporarily set cdr(t) to nil */
   v = f_atomize(t,e);                           /* atomize one argument */
@@ -457,6 +458,7 @@ L f_load(L t,L *e) {
   if (ld >= sizeof(in)/sizeof(*in) || !(in[ld++] = fopen(A+ord(v),"r"))) err(5,v);
  }
  for (j = ld-1; j > k; --j,++k) { FILE *f = in[j]; in[j] = in[k]; in[k] = f; }  /* reverse the in[] additions */
+ rr(1);
  return v;
 }
 
@@ -599,7 +601,7 @@ L eval(L x,L e) {
  /* if x is an atom, then return its value; if x is not an application list (it is constant), then return x */
  if (T(x) == ATOM) return dup(assoc(x,e));
  if (T(x) != CONS) return dup(x);
- /* we dup(e) the environment to extend with locals and formal arguments, then gc(e) all of them afterwards */
+ /* we dup(e) the environment to extend with locals and formal arguments */
  /* if f_catch-ing then register 5 variables to track and garbage collect when an error is caught by f_catch */
  rc(&d,nil); rc(&e,dup(e)); rc(&f,nil); rc(&g,nil); rc(&h,nil);
  while (1) {
@@ -638,10 +640,8 @@ L eval(L x,L e) {
   /* bind closure f variables v to the evaluated argument values */
   for (a = 0; T(v) == CONS; v = CDR(v)) d = pair(CAR(v),evarg(&x,&e,&a),d);
   if (T(v) == ATOM) d = pair(v,a ? dup(x) : evlis(x,e),d);
-  /* next, evaluate body x of closure f in environment e = d while keeping f in memory as long as x */
-  x = CDR(CAR(f));
-  /* discard copy of the old environment e to use new environment d */
-  gc(e); e = d; d = nil;
+  /* next, evaluate body x of closure f in environment e = d */
+  x = CDR(CAR(f)); gc(e); e = d; d = nil;
   /* garbage collect closure g = old f with old body x, garbage collect old macro body h */
   gc(g); g = nil; gc(h); h = nil;
   if (tr) trace(y,x,e);
