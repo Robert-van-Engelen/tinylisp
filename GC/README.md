@@ -50,14 +50,14 @@ mark-sweep only collects unused memory to recycle for reuse when the
 interpreter runs out of memory.
 
 The tinylisp-extras-gc reference count garbage collector does all the heavy
-lifting efficiently and uniformely, independent of the cell memory size.
-Memory size has an impact on tinylisp-extras-ms with mark-sweep garbage
-collection.
+lifting efficiently and uniformly, independent of the cell memory size.
+However, memory size has an impact on tinylisp-extras-ms with mark-sweep
+garbage collection.
 
 The tinylisp-extras-expand versions use early binding to boost performance
 significantly.  This avoids the runtime overhead of `assoc()` calls for most
-globals.  Adding built-ins for `make-list`, `nth`, and `seq` further speeds up
-solving 8-queens.
+globals.  Adding built-ins, in particular `make-list`, `nth`, and `seq`,
+further speeds up solving the 8-queens benchmark.
 
 A quick investigation (not scientific) shows the performance difference on a
 Mac M1 compiled with clang 21.0.0 option -O2 to solve the
@@ -89,8 +89,8 @@ where more memory reduces GC overhead.
 The performance of tinylisp-extras versus the Common Lisp interpreter GNU
 [CLISP](https://www.gnu.org/software/clisp) is reasonably comparable (370 ms
 versus CLISP 296 ms) to solve 8-queens.  However, tinylisp-extras, lisp, and
-lisp-cheney are slow by the runtime overhead of frequent `assoc()` calls in
-`eval()` to find the definitions of globals in the environment.
+lisp-cheney are all slow due to the runtime overhead of frequent `assoc()`
+calls in `eval()` to find the definitions of globals in the environment.
 
 Mark-sweep in tinylisp-extras-expand-gc with reference counting has zero
 overhead since there are no unreachable cyclic data structures in the 8-queends
@@ -99,16 +99,17 @@ benchmark that ref count cannot delete.
 Mark-sweep in tinylisp-extras-expand-ms has three operating modes:
 
 - `MS=0` allocates cell pairs until running out of memory, i.e. the fastest
-  method, but may cause fragmentation that block the allocation of new atom
-  symbols (located below in the cell pair pool), causing a fatal out-of-memory
-  error
+  method, but this method may cause fragmentation that blocks the allocation of
+  new atom symbols (located below in the cell pair pool), causing a fatal
+  out-of-memory error
 - `MS=1` allocates until 1/2 or 1/4 or 1/8 or ... free cell memory remains to
   avoid fragmentation, but this may cause out-of-control mark-sweep calls when
   repeately crossing the same free cell ratio, e.g. allocate one cell pair that
   triggers mark-sweep only to release one other cell pair, and so on
-- `MS=2` similar to `MS=1` but avoids out-of-control mark-sweep by disallowing
-  crossing the same free cell ratio to invoke mark-sweep again, 1/2 requires
-  crossing 1/4, then either 1/2 or 1/8, and so on.  This operating mode keeps
+- `MS=2` is similar to `MS=1` but avoids out-of-control mark-sweep by
+  disallowing crossing the same free cell ratio to invoke mark-sweep again,
+  that is, after crossing 1/2 to mark-sweep it requires crossing 1/4, then
+  either crossing 1/2 or 1/8, and so on.  This operating mode keeps
   fragmentation low with good performance.
 
 The effect of these modes on the performance of tinylisp-extras-expand-ms (with
@@ -139,19 +140,21 @@ clearly noticible:
 | tinylisp-extras-expand-ms | mark-sweep mode `MS=2` | 65536 |   28 ms |     94 |
 
 Note that `MS=1` effectively cuts memory size in half, not surprisingly. It
-suffers some out-of-control behavior at 2048 and 4096 cells of memory.  As
-`MS=2` is recommended, at `N=8192` the performance of 33 ms is slightly better
-than the reference count tinylisp-extras-expand-gc.  Adding more cell memory
-can bring this down to 28 ms.  However, the performance of mark-sweep with
-different cell memory size is highly application dependent.  One benchmark
-does not provide sufficient performance testing coverage.
+suffers some out-of-control behavior at 2048 and 4096 memory sizes.
 
-By comparison, [SBCL](https://www.sbcl.org) is a high-performance Common Lisp
-implementation that internally compiles Common Lisp programs to machine code to
-run.  It runs 8-queens in 6 ms.  However, Common Lisp (compiled or not) is not
-as flexible as tinylisp in which code and data are truly the same.  The dot
-operator is supported by tinylisp as should be and there is no need for ugly
-`funcall` and other unnecessary additions.
+`MS=2` is recommended where at `N=8192` the performance of 33 ms is slightly
+better than the 35 ms that reference count tinylisp-extras-expand-gc takes to
+solve 8-queens.  Adding more cell memory can bring 33 ms down to 28 ms.
+However, the performance of mark-sweep with different cell memory sizes is
+application dependent.  One benchmark does not provide sufficient performance
+testing coverage.
+
+Let's compare this to [SBCL](https://www.sbcl.org) which is a high-performance
+Common Lisp implementation that internally compiles Common Lisp programs to
+machine code to run.  It runs 8-queens in 6 ms.  However, Common Lisp (compiled
+or not) is not as flexible as tinylisp in which code and data are truly the
+same.  The dot operator is supported by tinylisp as should be and there is no
+need for ugly `funcall` and other unnecessary additions.
 
 Perhaps I will build a compiler for tinylisp.  The fastest way to run tinylisp
 programs is to generate C code that is highly optimizable by a C compiler.
