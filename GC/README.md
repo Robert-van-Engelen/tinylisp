@@ -164,7 +164,10 @@ better than the 35 ms that reference count tinylisp-extras-expand-gc takes to
 solve 8-queens.  Adding more cell memory can bring 33 ms down to 28 ms.
 However, the performance of mark-sweep with different cell memory sizes is
 application dependent.  One benchmark does not provide sufficient performance
-testing coverage.
+testing coverage.  The 8-queens benchmark destructively updates lists, without
+creating new ones.  By constrast, Lisp programs that frequently construct
+temporary lists may benefit more from reference counting that removes them
+quickly and continously.
 
 Let's compare this to [SBCL](https://www.sbcl.org) which is a high-performance
 Common Lisp implementation that internally compiles Common Lisp programs to
