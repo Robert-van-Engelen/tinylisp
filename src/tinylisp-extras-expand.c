@@ -58,7 +58,7 @@ L cell[N];
 /* Lisp constant expressions () (nil), #t, and the global environment env */
 L nil,tru,env;
 /* section 17.1: early binding and efficient macro expansion */
-L p_quote,p_lambda,p_macro,p_cond,p_leta,p_let,p_letreca,p_letrec;
+L p_quote,p_lambda,p_macro,p_cond,p_leta,p_let,p_letreca,p_letrec,p_define;
 /* NaN-boxing specific functions:
    T(x):     returns the tag bits of a NaN-boxed double x
    box(t,i): returns a new NaN-boxed double with tag t and ordinal i
@@ -495,7 +495,7 @@ L release(L x) {
 }
 /* section 17.1-2: early binding and efficient macro expansion with hygienic macros */
 L expand(L x,L e,L b) {
- L c,d,v,w,y;
+ L c,d,v,w,y,z;
  if (T(x) == ATOM) {
   /* resolve the name of a variable (atom) x */
   if (lookup(x,b,&y)) return y;         /* x is a macro argument in a macro body */
@@ -605,6 +605,27 @@ L expand(L x,L e,L b) {
     *p = cons(expand(car(y),d,c),nil);                  /* expand <letrec> body */
     return t;
    }
+   if (equ(f,p_define)) {
+    /* <define> early bind self-recursive calls in functions to its closure of the function */
+    v = expand(car(x),e,b);                             /* expand variable v of (<define> v x) */
+    *p = cons(v,nil);                                   /* to return expanded (<define> v ...) */
+    p = cell+sp;
+    x = car(cdr(x));                                    /* body x of (<define> v x) */
+    if (T(v) == ATOM) {                                 /* if v is an atom then ... */
+     f = closure(nil,nil,nil);                          /* v may reference itself, assume it's a function */
+     d = pair(v,f,e);                                   /* update environment d of e to include (v . f) */
+     y = expand(x,d,b);                                 /* y is expanded body x of (<define> v x) */
+     z = eval(y,e);                                     /* evaluate expanded y of body x */
+     if (T(z) == CLOS) {                                /* if this is a closure then ... */
+      cell[ord(f)] = cdr(z);                            /* replace closure f's environment with z's */
+      cell[ord(f)+1] = car(z);                          /* replace closure f's variables and body with z's */
+      *p = cons(f,nil);                                 /* to return expanded (<define> v f) with closure f */
+     }
+     else *p = cons(y,nil);                             /* to return expanded (<define> v y) */
+    }
+    else *p = cons(expand(x,e,b),nil);                  /* to return expanded (<define> v y) */
+    return t;
+   }
   }
   /* expand argument expressions x in (f . x) and return a new application t = (f ...) by populating *p */
   for (; T(x) == CONS; x = cdr(x),p = cell+sp) *p = cons(expand(car(x),e,b),nil);
@@ -657,6 +678,7 @@ int main(int argc,char **argv) {
  p_let     = assoc(atom("let"),env);
  p_letreca = assoc(atom("letrec*"),env);
  p_letrec  = assoc(atom("letrec"),env);
+ p_define  = assoc(atom("define"),env);
  if (!(in = fopen((argc > 1 ? argv[1] : "common.lisp"),"r"))) printf("\nERR 5");
  using_history();
  signal(SIGINT,stop);
