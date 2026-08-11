@@ -171,10 +171,11 @@ quickly and continously.
 
 Let's compare this to [SBCL](https://www.sbcl.org) which is a high-performance
 Common Lisp implementation that internally compiles Common Lisp programs to
-machine code to run.  It runs 8-queens in 6 ms.  However, Common Lisp (compiled
-or not) is not as flexible as tinylisp in which code and data are truly the
-same.  The dot operator is supported by tinylisp as should be and there is no
-need for ugly `funcall` and other unnecessary additions.
+machine code to run.  It runs 8-queens in 6 ms or in 5 ms with safety off and
+max optimizations.  However, Common Lisp (compiled or not) is not as flexible
+as tinylisp in which code and data are truly the same.  The dot operator is
+supported by tinylisp as should be and there is no need for ugly `funcall` and
+other unnecessary additions.
 
 Perhaps I will build a compiler for tinylisp.  The fastest way to run tinylisp
 programs is to generate C code that is highly optimizable by a C compiler.

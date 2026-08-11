@@ -4,6 +4,8 @@
 ; (declare (ignore x)), and deffun, defvar, defconstant to sugar define.
 
 ; SBCL requires defconstant before the constant is used in the code below it.
+; SBCL safety off max optimization:
+; (declaim (optimize (speed 3) (safety 0) (debug 0) (compilation-speed 0)))
 
 ; We keep some list function definitions herein instead of using Common Lisp
 ; built-in nth, mapcar, and make-list for a fair comparison to tinylisp.  While
@@ -120,5 +122,9 @@
 (defvar board (make-board board-size))
 (defun run () (solve board))
 
-(run)
+; loop 100 times for timing results with e.g. sbcl < nqueens-common-lisp.lisp
+; to do an accurate timing, comment out the format and show function calls above
+;(dotimes (i 100) (run))
+;(quit)
 
+(run)
