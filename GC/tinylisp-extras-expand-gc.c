@@ -684,13 +684,20 @@ L f_range(L t,L *e) {
  return s;
 }
 
-/* ++ new: (equal? x y) deep check for equality, does not permit cyclic data structures */
+/* ++ new: (equal? x y) deep check for equality, recurses up to lg(n) for n cons pairs, does not permit cyclic data */
 I equal(L x,L y) {
- if (equ(x,y)) return 1;
- if (T(x) != T(y) || (T(x) != CONS && T(x) != CLOS && T(x) != MACR)) return 0;
- for (; T(x) == T(y) && (T(x) == CONS || T(x) == CLOS || T(x) == MACR); x = CDR(x),y = CDR(y))
-  if (!equal(CAR(x),CAR(y))) return 0;
- return equal(x,y);
+ while (!equ(x,y) && T(x) == T(y) && (T(x) == CONS || T(x) == CLOS || T(x) == MACR)) {
+  L u = CAR(x),v = CAR(y); x = CDR(x); y = CDR(y);
+  if (T(u) != CONS && T(u) != CLOS && T(u) != MACR) {
+   if (!equ(u,v)) return 0;
+  }
+  else if (T(x) != CONS && T(x) != CLOS && T(x) != MACR) {
+   if (!equ(x,y)) return 0;
+   x = u; y = v;
+  }
+  else if (!equal(u,v)) return 0;
+ }
+ return equ(x,y);
 }
 L f_equal(L t,L *e) {
  I a = 0; L x,y,z;
