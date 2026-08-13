@@ -39,6 +39,7 @@
   - the ultimate version of the above with a lot more built-in extras and automatic hygienic macros
   - fast interpreter optimized with early binding names to globals (part of early macro expansion)
   - also adds a mark-sweep garbage collector that kicks in when a program runs low on memory (deletes unreachable cyclic data structures)
+  - compile with `cc -O2 -o tinylisp tinylisp-extras-expand-gc.c -lreadline`
 
 **Tinylisp versions with mark-sweep garbage collector**
 
@@ -53,11 +54,12 @@
   - the source code is commented to explain the code
   - passes `tests/dotcall-extras.lisp` tests and runs 8-queens `nqueens.lisp`
   - optimized internal logic with unchecked CAR and CDR when safe to use
-  - compile with `cc -DMS=2 -O2 -o tinylisp tinylisp-extras-ms.c -lreadline` or without `MS=2` for speed, but with possible runtime atom symbol allocation problems due to memory fragmentation
+  - compile with `cc -DMS=2 -O2 -o tinylisp tinylisp-extras-ms.c -lreadline` or without `MS=2` for a bit more speed, but with possible runtime atom symbol allocation problems due to memory fragmentation
 
 - [tinylisp-extras-expand-ms.c](tinylisp-extras-expand-ms.c)
   - the ultimate version of the above with a lot more built-in extras and automatic hygienic macros
   - fast interpreter optimized with early binding names to globals (part of early macro expansion)
+  - compile with `cc -DMS=2 -O2 -o tinylisp tinylisp-extras-expand-ms.c -lreadline` or without `MS=2` for a bit more speed, but with possible runtime atom symbol allocation problems due to memory fragmentation
 
 **Reference counting or mark-sweep, which is faster?**
 
@@ -115,10 +117,10 @@ benchmark that ref count cannot delete.
 
 Mark-sweep in tinylisp-extras-expand-ms has three operating modes:
 
-- `MS=0` allocates cell pairs until running out of memory, i.e. the fastest
-  method, but this method may cause fragmentation that blocks the allocation of
-  new atom symbols (located below in the cell pair pool), causing a fatal
-  out-of-memory error
+- `MS=0` (default) allocates cell pairs until running out of memory, i.e. the
+  fastest method, but this method causes memory fragmentation that may block
+  the allocation of new atom symbols (located below in the cell pair pool),
+  resulting in a fatal out-of-memory error
 - `MS=1` allocates until 1/2 or 1/4 or 1/8 or ... free cell memory remains to
   avoid fragmentation, but this may cause out-of-control mark-sweep calls when
   repeately crossing the same free cell ratio, e.g. allocate one cell pair that

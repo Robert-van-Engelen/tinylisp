@@ -237,14 +237,14 @@ L f_mul(L t,L *e) { I a = 0; L x,n = evarg(&t,e,&a); while (isarg(&t,e,&a,&x)) n
 L f_div(L t,L *e) { I a = 0; L x,n = evarg(&t,e,&a); while (isarg(&t,e,&a,&x)) n /= x; return num(n); }
 L f_int(L t,L *e) { I a = 0; L n = evarg(&t,e,&a); return n < 1e7 && n > -1e7 ? (int64_t)n : num(n); }
 /* ++ updated: (< x y [z ...]) returns #t if x < y and y < z ... etc when given, otherwise returns () */
+I lt(L x,L y) {
+ return (T(x) == ATOM && T(y) == ATOM ? strcmp(A+ord(x),A+ord(y)) < 0 :
+     x == x && y == y ? x < y :
+     T(x) < T(y) || (T(x) == T(y) && ord(x) < ord(y)));
+}
 L f_lt(L t,L *e) {
  I a = 0; L x = evarg(&t,e,&a),y;
- while (isarg(&t,e,&a,&y)) {
-  if (T(x) == ATOM && T(y) == ATOM ? strcmp(A+ord(x),A+ord(y)) >= 0 :
-      x == x && y == y ? x >= y :
-      T(x) >= T(y) || (T(x) == T(y) && ord(x) >= ord(y))) return nil;
-  x = y;
- }
+ while (isarg(&t,e,&a,&y)) if (lt(x,y)) x = y; else return nil;
  return tru;
 }
 L f_eq(L t,L *e) { I a = 0; L x = evarg(&t,e,&a); return equ(cede(x),cede(evarg(&t,e,&a))) ? tru : nil; }
@@ -573,36 +573,21 @@ L f_makelist(L t,L *e) {
 /* ++ new: (> x y [z ...]) returns #t if x > y and y > z ... etc when given, otherwise returns () */
 L f_gt(L t,L *e) {
  I a = 0; L x = evarg(&t,e,&a),y;
- while (isarg(&t,e,&a,&y)) {
-  if (T(x) == ATOM && T(y) == ATOM ? strcmp(A+ord(x),A+ord(y)) <= 0 :
-      x == x && y == y ? x <= y :
-      T(x) <= T(y) || (T(x) == T(y) && ord(x) <= ord(y))) return nil;
-  x = y;
- }
+ while (isarg(&t,e,&a,&y)) if (lt(y,x)) x = y; else return nil;
  return tru;
 }
 
 /* ++ new: (<= x y [z ...]) returns #t if x <= y and y <= z ... etc when given, otherwise returns () */
 L f_le(L t,L *e) {
  I a = 0; L x = evarg(&t,e,&a),y;
- while (isarg(&t,e,&a,&y)) {
-  if (T(x) == ATOM && T(y) == ATOM ? strcmp(A+ord(x),A+ord(y)) > 0 :
-      x == x && y == y ? x > y :
-      T(x) > T(y) || (T(x) == T(y) && ord(x) > ord(y))) return nil;
-  x = y;
- }
+ while (isarg(&t,e,&a,&y)) if (!lt(y,x)) x = y; else return nil;
  return tru;
 }
 
 /* ++ new: (>= x y [z ...]) returns #t if x >= y and y >= z ... etc when given, otherwise returns () */
 L f_ge(L t,L *e) {
  I a = 0; L x = evarg(&t,e,&a),y;
- while (isarg(&t,e,&a,&y)) {
-  if (T(x) == ATOM && T(y) == ATOM ? strcmp(A+ord(x),A+ord(y)) > 0 :
-      x == x && y == y ? x > y :
-      T(x) > T(y) || (T(x) == T(y) && ord(x) > ord(y))) return nil;
-  x = y;
- }
+ while (isarg(&t,e,&a,&y)) if (!lt(x,y)) x = y; else return nil;
  return tru;
 }
 
@@ -867,13 +852,13 @@ L eval(L x,L e) {
   }
   if (T(f) != CLOS) return err(3,f);
   /* get the list of variables v of closure f and its local environment d (use global env when nil) */
-  v = CAR(CAR(f)); d = CDR(f);
+  d = CDR(f); f = CAR(f);
   if (T(d) == NIL) d = env;
   /* bind closure f variables v to the evaluated argument values */
-  for (a = 0; T(v) == CONS; v = CDR(v)) d = pair(CAR(v),evarg(&x,&e,&a),d);
+  for (a = 0,v = CAR(f); T(v) == CONS; v = CDR(v)) d = pair(CAR(v),evarg(&x,&e,&a),d);
   if (T(v) == ATOM) d = pair(v,a ? x : evlis(x,e),d);
   /* next, evaluate body x of closure f in environment e = d */
-  x = CDR(CAR(f)); e = d;
+  x = CDR(f); e = d;
   if (tr) trace(y,x,e);
  }
  if (tr && !equ(x,y)) trace(y,x,e);

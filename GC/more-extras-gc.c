@@ -55,57 +55,38 @@
 
 /* ++ updated: (< x y [z ...])
    returns #t if x < y and y < z ... etc when given, otherwise returns () */
+I lt(L x,L y) {
+ return (T(x) == ATOM && T(y) == ATOM ? strcmp(A+ord(x),A+ord(y)) < 0 :
+     x == x && y == y ? x < y :
+     T(x) < T(y) || (T(x) == T(y) && ord(x) < ord(y)));
+}
 L f_lt(L t,L *e) {
  I a = 0; L x = gc(evarg(&t,e,&a)),y;
- while (isarg(&t,e,&a,&y)) {
-  gc(y);
-  if (T(x) == ATOM && T(y) == ATOM ? strcmp(A+ord(x),A+ord(y)) >= 0 :
-      x == x && y == y ? x >= y :
-      T(x) >= T(y) || (T(x) == T(y) && ord(x) >= ord(y))) return nil;
-  x = y;
- }
+ while (isarg(&t,e,&a,&y)) if (lt(x,gc(y))) x = y; else return nil;
  return tru;
 }
 
-/* ++ new: (> x y [z ...])
+/* (> x y [z ...])
    returns #t if x > y and y > z ... etc when given, otherwise returns () */
 L f_gt(L t,L *e) {
  I a = 0; L x = gc(evarg(&t,e,&a)),y;
- while (isarg(&t,e,&a,&y)) {
-  gc(y);
-  if (T(x) == ATOM && T(y) == ATOM ? strcmp(A+ord(x),A+ord(y)) <= 0 :
-      x == x && y == y ? x <= y :
-      T(x) <= T(y) || (T(x) == T(y) && ord(x) <= ord(y))) return nil;
-  x = y;
- }
+ while (isarg(&t,e,&a,&y)) if (lt(gc(y),x)) x = y; else return nil;
  return tru;
 }
 
-/* ++ new: (<= x y [z ...])
+/* (<= x y [z ...])
    returns #t if x <= y and y <= z ... etc when given, otherwise returns () */
 L f_le(L t,L *e) {
  I a = 0; L x = gc(evarg(&t,e,&a)),y;
- while (isarg(&t,e,&a,&y)) {
-  gc(y);
-  if (T(x) == ATOM && T(y) == ATOM ? strcmp(A+ord(x),A+ord(y)) > 0 :
-      x == x && y == y ? x > y :
-      T(x) > T(y) || (T(x) == T(y) && ord(x) > ord(y))) return nil;
-  x = y;
- }
+ while (isarg(&t,e,&a,&y)) if (!lt(gc(y),x)) x = y; else return nil;
  return tru;
 }
 
-/* ++ new: (>= x y [z ...])
+/* (>= x y [z ...])
    returns #t if x >= y and y >= z ... etc when given, otherwise returns () */
 L f_ge(L t,L *e) {
  I a = 0; L x = gc(evarg(&t,e,&a)),y;
- while (isarg(&t,e,&a,&y)) {
-  gc(y);
-  if (T(x) == ATOM && T(y) == ATOM ? strcmp(A+ord(x),A+ord(y)) > 0 :
-      x == x && y == y ? x > y :
-      T(x) > T(y) || (T(x) == T(y) && ord(x) > ord(y))) return nil;
-  x = y;
- }
+ while (isarg(&t,e,&a,&y)) if (!lt(x,gc(y))) x = y; else return nil;
  return tru;
 }
 
