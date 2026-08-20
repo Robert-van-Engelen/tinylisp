@@ -265,7 +265,10 @@ L closure(L v,L x,L e) { return box(CLOS,ord(pair(v,x,e))); }
 /* construct a macro, returns a NaN-boxed MACR */
 L macro(L v,L x) { return box(MACR,ord(cons(v,x))); }
 /* look up a symbol in an environment, return its value or throw err(2) if not found */
-L assoc(L v,L e) { while (T(e) == CONS && !equ(v,car(CAR(e)))) e = CDR(e); return T(e) == CONS ? cdr(CAR(e)) : err(2,v); }
+L assoc(L v,L e) {
+ for (; T(e) == CONS && T(CAR(e)) == CONS; e = CDR(e)) if (equ(v,CAR(CAR(e)))) return CDR(CAR(e));
+ return err(2,v);
+}
 /* not(x) is nonzero if x is the Lisp () empty list */
 I not(L x) { return T(x) == NIL; }
 /* let(x) is nonzero if x has more than one list item, used by let* */
@@ -389,8 +392,8 @@ I lt(L x,L y) {
      T(x) < T(y) || (T(x) == T(y) && ord(x) < ord(y)));
 }
 L f_lt(L t,L *e) {
- I a = 0; L x = gc(evarg(&t,e,&a)),y;
- while (isarg(&t,e,&a,&y)) if (lt(x,gc(y))) x = y; else return nil;
+ I a = 0; L x,y;
+ for (x = gc(evarg(&t,e,&a)); isarg(&t,e,&a,&y); x = y) if (!lt(x,gc(y))) return nil;
  return tru;
 }
 L f_eq(L t,L *e) { I a = 0; L x = gc(evarg(&t,e,&a)); return equ(cede(x),cede(gc(evarg(&t,e,&a)))) ? tru : nil; }
@@ -738,22 +741,22 @@ L f_makelist(L t,L *e) {
 
 /* ++ new: (> x y [z ...]) returns #t if x > y and y > z ... etc when given, otherwise returns () */
 L f_gt(L t,L *e) {
- I a = 0; L x = gc(evarg(&t,e,&a)),y;
- while (isarg(&t,e,&a,&y)) if (lt(gc(y),x)) x = y; else return nil;
+ I a = 0; L x,y;
+ for (x = gc(evarg(&t,e,&a)); isarg(&t,e,&a,&y); x = y) if (!lt(gc(y),x)) return nil;
  return tru;
 }
 
 /* ++ new: (<= x y [z ...]) returns #t if x <= y and y <= z ... etc when given, otherwise returns () */
 L f_le(L t,L *e) {
- I a = 0; L x = gc(evarg(&t,e,&a)),y;
- while (isarg(&t,e,&a,&y)) if (!lt(gc(y),x)) x = y; else return nil;
+ I a = 0; L x,y;
+ for (x = gc(evarg(&t,e,&a)); isarg(&t,e,&a,&y); x = y) if (lt(gc(y),x)) return nil;
  return tru;
 }
 
 /* ++ new: (>= x y [z ...]) returns #t if x >= y and y >= z ... etc when given, otherwise returns () */
 L f_ge(L t,L *e) {
- I a = 0; L x = gc(evarg(&t,e,&a)),y;
- while (isarg(&t,e,&a,&y)) if (!lt(x,gc(y))) x = y; else return nil;
+ I a = 0; L x,y;
+ for (x = gc(evarg(&t,e,&a)); isarg(&t,e,&a,&y); x = y) if (lt(x,gc(y))) return nil;
  return tru;
 }
 

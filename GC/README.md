@@ -89,10 +89,10 @@ compute times of 10 or more runs with `show` and `print` output removed from
 | tinylisp-extras-gc                                        | ref count              |  8192 |  373 ms |
 | tinylisp-extras-expand-gc                                 | ref count + mark-sweep |  8192 |  105 ms |
 | tinylisp-extras-expand-gc (with additional built-ins)     | ref count + mark-sweep |  8192 |   35 ms |
-| tinylisp-extras-ms                                        | mark-sweep mode `MS=0` |  8192 |  370 ms |
+| tinylisp-extras-ms                                        | mark-sweep mode `MS=0` |  8192 |  356 ms |
 | tinylisp-extras-expand-ms                                 | mark-sweep mode `MS=0` |  8192 |   85 ms |
 | tinylisp-extras-expand-ms (with additional built-ins)     | mark-sweep mode `MS=0` |  8192 |   28 ms |
-| tinylisp-extras-ms                                        | mark-sweep mode `MS=0` | 16384 |  365 ms |
+| tinylisp-extras-ms                                        | mark-sweep mode `MS=0` | 16384 |  350 ms |
 | tinylisp-extras-expand-ms                                 | mark-sweep mode `MS=0` | 16384 |   79 ms |
 | tinylisp-extras-expand-ms (with additional built-ins)     | mark-sweep mode `MS=0` | 16384 |   27 ms |
 | [lisp](https://github.com/Robert-van-Engelen/lisp)        | mark-sweep             |  8192 |  920 ms |
@@ -106,7 +106,7 @@ tinylisp with ref count GC).  Memory size does impact mark-sweep and cheney,
 where more memory reduces GC overhead.
 
 The performance of tinylisp-extras versus the Common Lisp interpreter GNU
-[CLISP](https://www.gnu.org/software/clisp) is reasonably comparable (370 ms
+[CLISP](https://www.gnu.org/software/clisp) is reasonably comparable (356 ms
 versus CLISP 296 ms) to solve 8-queens.  However, tinylisp-extras, lisp, and
 lisp-cheney are all slow due to the runtime overhead of frequent `assoc()`
 calls in `eval()` to find the definitions of globals in the environment.

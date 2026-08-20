@@ -186,7 +186,10 @@ L closure(L v,L x,L e) { return box(CLOS,ord(pair(v,x,e))); }
 /* construct a macro, returns a NaN-boxed MACR */
 L macro(L v,L x) { return box(MACR,ord(cons(v,x))); }
 /* look up a symbol in an environment, return its value or throw err(2) if not found */
-L assoc(L v,L e) { while (T(e) == CONS && !equ(v,car(CAR(e)))) e = CDR(e); return T(e) == CONS ? cdr(CAR(e)) : err(2,v); }
+L assoc(L v,L e) {
+ for (; T(e) == CONS && T(CAR(e)) == CONS; e = CDR(e)) if (equ(v,CAR(CAR(e)))) return CDR(CAR(e));
+ return err(2,v);
+}
 /* not(x) is nonzero if x is the Lisp () empty list */
 I not(L x) { return T(x) == NIL; }
 /* let(t) is nonzero if t has more than one list item */

@@ -61,32 +61,32 @@ I lt(L x,L y) {
      T(x) < T(y) || (T(x) == T(y) && ord(x) < ord(y)));
 }
 L f_lt(L t,L *e) {
- I a = 0; L x = gc(evarg(&t,e,&a)),y;
- while (isarg(&t,e,&a,&y)) if (lt(x,gc(y))) x = y; else return nil;
+ I a = 0; L x,y;
+ for (x = gc(evarg(&t,e,&a)); isarg(&t,e,&a,&y); x = y) if (!lt(x,gc(y))) return nil;
  return tru;
 }
 
 /* (> x y [z ...])
    returns #t if x > y and y > z ... etc when given, otherwise returns () */
 L f_gt(L t,L *e) {
- I a = 0; L x = gc(evarg(&t,e,&a)),y;
- while (isarg(&t,e,&a,&y)) if (lt(gc(y),x)) x = y; else return nil;
+ I a = 0; L x,y;
+ for (x = gc(evarg(&t,e,&a)); isarg(&t,e,&a,&y); x = y) if (!lt(gc(y),x)) return nil;
  return tru;
 }
 
 /* (<= x y [z ...])
    returns #t if x <= y and y <= z ... etc when given, otherwise returns () */
 L f_le(L t,L *e) {
- I a = 0; L x = gc(evarg(&t,e,&a)),y;
- while (isarg(&t,e,&a,&y)) if (!lt(gc(y),x)) x = y; else return nil;
+ I a = 0; L x,y;
+ for (x = gc(evarg(&t,e,&a)); isarg(&t,e,&a,&y); x = y) if (lt(gc(y),x)) return nil;
  return tru;
 }
 
 /* (>= x y [z ...])
    returns #t if x >= y and y >= z ... etc when given, otherwise returns () */
 L f_ge(L t,L *e) {
- I a = 0; L x = gc(evarg(&t,e,&a)),y;
- while (isarg(&t,e,&a,&y)) if (!lt(x,gc(y))) x = y; else return nil;
+ I a = 0; L x,y;
+ for (x = gc(evarg(&t,e,&a)); isarg(&t,e,&a,&y); x = y) if (lt(x,gc(y))) return nil;
  return tru;
 }
 
