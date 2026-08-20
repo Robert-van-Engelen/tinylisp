@@ -81,22 +81,25 @@ further speeds up solving the 8-queens benchmark.
 A quick investigation (not scientific) shows the performance difference on a
 Mac M1 compiled with clang 21.0.0 option -O2 to solve the
 [nqueens.lisp](nqueens.lisp) problem for N=8, we get the following average
-compute times of 10 or more runs with `show` and `print` output removed from
+compute times of 20 or more runs and with `show` and `print` output removed from
 `nqueens.lisp`:
 
 | implementation | GC method | mem size (cells) | time (ms) |
 | -------------- | --------- | ---------------: | --------: |
 | tinylisp-extras-gc                                        | ref count              |  8192 |  373 ms |
-| tinylisp-extras-expand-gc                                 | ref count + mark-sweep |  8192 |  105 ms |
-| tinylisp-extras-expand-gc (with additional built-ins)     | ref count + mark-sweep |  8192 |   35 ms |
+| tinylisp-extras-expand-gc                                 | ref count + mark-sweep |  8192 |  103 ms |
+| tinylisp-extras-expand-gc (with additional built-ins)     | ref count + mark-sweep |  8192 |   34 ms |
+|                                                           |                        |       |         |
 | tinylisp-extras-ms                                        | mark-sweep mode `MS=0` |  8192 |  356 ms |
-| tinylisp-extras-expand-ms                                 | mark-sweep mode `MS=0` |  8192 |   85 ms |
-| tinylisp-extras-expand-ms (with additional built-ins)     | mark-sweep mode `MS=0` |  8192 |   28 ms |
+| tinylisp-extras-expand-ms                                 | mark-sweep mode `MS=0` |  8192 |   83 ms |
+| tinylisp-extras-expand-ms (with additional built-ins)     | mark-sweep mode `MS=0` |  8192 |   27 ms |
 | tinylisp-extras-ms                                        | mark-sweep mode `MS=0` | 16384 |  350 ms |
-| tinylisp-extras-expand-ms                                 | mark-sweep mode `MS=0` | 16384 |   79 ms |
-| tinylisp-extras-expand-ms (with additional built-ins)     | mark-sweep mode `MS=0` | 16384 |   27 ms |
+| tinylisp-extras-expand-ms                                 | mark-sweep mode `MS=0` | 16384 |   78 ms |
+| tinylisp-extras-expand-ms (with additional built-ins)     | mark-sweep mode `MS=0` | 16384 |   26 ms |
+|                                                           |                        |       |         |
 | [lisp](https://github.com/Robert-van-Engelen/lisp)        | mark-sweep             |  8192 |  920 ms |
 | [lisp](https://github.com/Robert-van-Engelen/lisp)        | mark-sweep             | 16384 |  895 ms |
+|                                                           |                        |       |         |
 | [lisp-cheney](https://github.com/Robert-van-Engelen/lisp) | cheney                 |  8192 | 1880 ms |
 | [lisp-cheney](https://github.com/Robert-van-Engelen/lisp) | cheney                 | 16384 | 1420 ms |
 
@@ -138,31 +141,31 @@ clearly noticible:
 | implementation | GC method | mem size (cells) | time (ms) | GC invocations |
 | -------------- | --------- | ---------------: | --------: | -------------: |
 | tinylisp-extras-expand-ms | mark-sweep mode `MS=0` |  2048 |   79 ms | 11,771 |
-| tinylisp-extras-expand-ms | mark-sweep mode `MS=0` |  4096 |   33 ms |  1,547 |
-| tinylisp-extras-expand-ms | mark-sweep mode `MS=0` |  8192 |   28 ms |    569 |
-| tinylisp-extras-expand-ms | mark-sweep mode `MS=0` | 16384 |   27 ms |    251 |
+| tinylisp-extras-expand-ms | mark-sweep mode `MS=0` |  4096 |   32 ms |  1,547 |
+| tinylisp-extras-expand-ms | mark-sweep mode `MS=0` |  8192 |   27 ms |    569 |
+| tinylisp-extras-expand-ms | mark-sweep mode `MS=0` | 16384 |   26 ms |    251 |
 | tinylisp-extras-expand-ms | mark-sweep mode `MS=0` | 32768 |   26 ms |    119 |
-| tinylisp-extras-expand-ms | mark-sweep mode `MS=0` | 65536 |   26 ms |     57 |
+| tinylisp-extras-expand-ms | mark-sweep mode `MS=0` | 65536 |   25 ms |     57 |
 |                           |                        |       |         |        |
 | tinylisp-extras-expand-ms | mark-sweep mode `MS=1` |  2048 |  233 ms | 46,354 |
 | tinylisp-extras-expand-ms | mark-sweep mode `MS=1` |  4096 |  100 ms | 11,590 |
 | tinylisp-extras-expand-ms | mark-sweep mode `MS=1` |  8192 |   38 ms |  1,544 |
 | tinylisp-extras-expand-ms | mark-sweep mode `MS=1` | 16384 |   32 ms |    568 |
 | tinylisp-extras-expand-ms | mark-sweep mode `MS=1` | 32768 |   30 ms |    251 |
-| tinylisp-extras-expand-ms | mark-sweep mode `MS=1` | 65536 |   30 ms |    119 |
+| tinylisp-extras-expand-ms | mark-sweep mode `MS=1` | 65536 |   29 ms |    119 |
 |                           |                        |       |         |        |
-| tinylisp-extras-expand-ms | mark-sweep mode `MS=2` |  2048 |  150 ms | 26,741 |
-| tinylisp-extras-expand-ms | mark-sweep mode `MS=2` |  4096 |   52 ms |  4,362 |
+| tinylisp-extras-expand-ms | mark-sweep mode `MS=2` |  2048 |  146 ms | 26,741 |
+| tinylisp-extras-expand-ms | mark-sweep mode `MS=2` |  4096 |   51 ms |  4,362 |
 | tinylisp-extras-expand-ms | mark-sweep mode `MS=2` |  8192 |   33 ms |  1,080 |
-| tinylisp-extras-expand-ms | mark-sweep mode `MS=2` | 16384 |   30 ms |    432 |
-| tinylisp-extras-expand-ms | mark-sweep mode `MS=2` | 32768 |   29 ms |    196 |
+| tinylisp-extras-expand-ms | mark-sweep mode `MS=2` | 16384 |   29 ms |    432 |
+| tinylisp-extras-expand-ms | mark-sweep mode `MS=2` | 32768 |   28 ms |    196 |
 | tinylisp-extras-expand-ms | mark-sweep mode `MS=2` | 65536 |   28 ms |     94 |
 
 Note that `MS=1` effectively cuts memory size in half, not surprisingly. It
 suffers some out-of-control behavior at 2048 and 4096 memory sizes.
 
 `MS=2` is recommended, where at `N=8192` the performance of 33 ms is slightly
-better than the 35 ms that reference count tinylisp-extras-expand-gc takes to
+better than the 34 ms that reference count tinylisp-extras-expand-gc takes to
 solve 8-queens.  Adding more cell memory can bring 33 ms down to 28 ms.
 However, the performance of mark-sweep with different cell memory sizes is
 application dependent.  One benchmark does not provide sufficient performance
