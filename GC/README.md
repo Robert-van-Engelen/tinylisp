@@ -182,6 +182,14 @@ as tinylisp in which code and data are truly the same.  The dot operator is
 supported by tinylisp as should be and there is no need for ugly `funcall` and
 other unnecessary additions.
 
+Optionally, mark-sweep using *pointer reversal* may be useful by compiling the
+source code with `-DPR`.  This non-recursive mark-sweep with pointer reversal
+has the advantage that no additional memory (a stack) is required.  This is
+especially important when the call stack size is limited, i.e. deep recursive
+`mk()` calls could fail.  This pointer reversal implementation is based on
+a [lisp with pointer reversal](https://github.com/Robert-van-Engelen/lisp) that
+I also wrote.
+
 Perhaps I will build a compiler for tinylisp.  The fastest way to run tinylisp
 programs is to generate C code that is highly optimizable by a C compiler.
 Solving 8-queens in compiled tinylisp should take about 2 ms, a best estimate

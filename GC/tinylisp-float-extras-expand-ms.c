@@ -119,10 +119,32 @@ L cons(L x,L y) {
 /* delete the pair cell[i] cell[i+1] to reuse by adding it to the free cell pair list */
 void del(I i) { cell[i] = box(CONS,fp); fp = i; ++fn; }
 /* register x as a root on the stack with initial value y to protect it from collected as garbage */
-L rc(L *x,L y) { *x = y; *sp = x,++sp; return y; }      /* GCC incorrectly warns about *sp++ = x dangling pointer */
+L rc(L *x,L y) { return *(*sp++ = x) = y; }
 /* remove k registrations from the stack and return x */
 L rr(I k,L x) { sp -= k; return x; }
 /* ++ new: mark-sweep collector marking stage: recursively mark all cell pairs reachable from cell pair x */
+#ifdef PR                                               /* safe non-recursive pointer reversal method */
+void mk(L x) {
+ I i,j = N,k;
+ if (used(i = ord(x))) return;
+ while (j < N || !(i&1)) {                              /* repeat until all reachable cell pairs are marked */
+  while (1) {                                           /* go down the list, marking cdr first before car */
+   mark(i); x = cell[i];                                /* x is the cdr cell (even i) */
+   if ((T(x) != CONS && T(x) != CLOS && T(x) != MACR) || used(k = ord(x))) {
+    x = cell[++i];                                      /* x is the car cell (odd i) */
+    if ((T(x) != CONS && T(x) != CLOS && T(x) != MACR) || used(k = ord(x))) break;
+   }
+   cell[i] = box(T(cell[i]),j);                         /* reverse the cdr (even i) or the car (odd i) pointer */
+   j = i; i = k;                                        /* last cell visited j, cell to visit i (i is even) */
+  }
+  while (j < N) {                                       /* go back up via reversed pointers until the root */
+   k = i; i = j; j = ord(cell[i]);                      /* last cell visited k, cell to visit i, next cell to visit j */
+   cell[i] = box(T(cell[i]),k&~1);                      /* un-reverse the cdr (even i) or car (odd i) pointer */
+   if (!(i&1)) break;                                   /* if i'th cell is a cdr (even i), then break to go down again */
+  }
+ }
+}
+#else                                                   /* recursive method, may recurse too deep for large N (unsafe) */
 void mk(L x) {
  I i; L y;
  while (!used(i = ord(x))) {                            /* repeat until all reachable cell pairs are marked */
@@ -134,6 +156,7 @@ void mk(L x) {
   else mk(y);
  }
 }
+#endif
 /* ++ new: mark-sweep garbage collector, releases unreachable cell pairs */
 void ms(L p) {
  I i; L **q; fl = fn;                                   /* set fl to fn for MS=2 to avoid excessive ms() calls */
