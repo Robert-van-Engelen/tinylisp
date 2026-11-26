@@ -460,7 +460,7 @@ L f_load(L t,L *e) {
   t = CDR(t) = s;                               /* restore cdr(t) and visit next argument */
   if (ld >= sizeof(in)/sizeof(*in) || !(in[ld++] = fopen(A+ord(v),"r"))) err(5,v);
  }
- for (j = ld-1; j > k; --j,++k) { FILE *f = in[j]; in[j] = in[k]; in[k] = f; }  /* reverse the in[] additions */
+ for (j = ld; j > k+1; ++k) { FILE *f = in[--j]; in[j] = in[k]; in[k] = f; }  /* reverse the in[] additions */
  rr(1);
  return v;
 }
