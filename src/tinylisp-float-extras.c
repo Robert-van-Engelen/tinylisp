@@ -146,7 +146,7 @@ L f_add(L t,L *e) { I a = 0; L x,n = evarg(&t,e,&a); while (isarg(&t,e,&a,&x)) n
 L f_sub(L t,L *e) { I a = 0; L x,n = evarg(&t,e,&a); while (isarg(&t,e,&a,&x)) n -= x; return num(n); }
 L f_mul(L t,L *e) { I a = 0; L x,n = evarg(&t,e,&a); while (isarg(&t,e,&a,&x)) n *= x; return num(n); }
 L f_div(L t,L *e) { I a = 0; L x,n = evarg(&t,e,&a); while (isarg(&t,e,&a,&x)) n /= x; return num(n); }
-L f_int(L t,L *e) { I a = 0; L n = evarg(&t,e,&a); return n < 1e7 && n > -1e7 ? (long long)n : n; }
+L f_int(L t,L *e) { I a = 0; L n = evarg(&t,e,&a); return n < 1e7 && n > -1e7 ? (long)n : n; }
 L f_lt(L t,L *e) { I a = 0; L n = evarg(&t,e,&a); return n - evarg(&t,e,&a) < 0 ? tru : nil; }
 L f_eq(L t,L *e) { I a = 0; L x = evarg(&t,e,&a); return equ(x,evarg(&t,e,&a)) ? tru : nil; }
 L f_pair(L t,L *e) { I a = 0; L x = evarg(&t,e,&a); return T(x) == CONS ? tru : nil; }
@@ -184,11 +184,11 @@ L f_setq(L t,L *e) {
 }
 L f_setcar(L t,L *e) {
  I a = 0; L p = evarg(&t,e,&a);
- return (T(p) == CONS) ? cell[ord(p)+1] = evarg(&t,e,&a) : err(1,p);
+ return T(p) == CONS ? cell[ord(p)+1] = evarg(&t,e,&a) : err(1,p);
 }
 L f_setcdr(L t,L *e) {
  I a = 0; L p = evarg(&t,e,&a);
- return (T(p) == CONS) ? cell[ord(p)] = evarg(&t,e,&a) : err(1,p);
+ return T(p) == CONS ? cell[ord(p)] = evarg(&t,e,&a) : err(1,p);
 }
 L f_macro(L t,L *_) { return macro(car(t),car(cdr(t))); }
 L f_read(L t,L *_) { L x; char c = see; see = 0; x = Read(); see = c; return x; }
