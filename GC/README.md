@@ -110,12 +110,14 @@ where more memory reduces GC overhead.
 
 The performance of tinylisp-extras versus the Common Lisp interpreter GNU
 [CLISP](https://www.gnu.org/software/clisp) is reasonably comparable (356 ms
-versus CLISP 296 ms) to solve 8-queens.  However, tinylisp-extras, lisp, and
-lisp-cheney are all slow due to the runtime overhead of frequent `assoc()`
-calls in `eval()` to find the definitions of globals in the environment.
+versus CLISP 296 ms) to solve 8-queens.  Tinylisp-extras, lisp, and lisp-cheney
+are all slow due to the runtime overhead of frequent `assoc()` calls in
+`eval()` to find the definitions of globals in the environment.  However, the
+tinylisp-extras-expand versions are an order of magnitude faster, taking only
+26ms to 34ms to solve 8-queens.
 
 Mark-sweep in tinylisp-extras-expand-gc with reference counting has zero
-overhead since there are no unreachable cyclic data structures in the 8-queends
+overhead since there are no unreachable cyclic data structures in the 8-queens
 benchmark that ref count cannot delete.
 
 Mark-sweep in tinylisp-extras-expand-ms has three operating modes:

@@ -384,7 +384,7 @@ L f_add(L t,L *e) { I a = 0; L x,n = gc(evarg(&t,e,&a)); while (isarg(&t,e,&a,&x
 L f_sub(L t,L *e) { I a = 0; L x,n = gc(evarg(&t,e,&a)); while (isarg(&t,e,&a,&x)) n -= gc(x); return num(n); }
 L f_mul(L t,L *e) { I a = 0; L x,n = gc(evarg(&t,e,&a)); while (isarg(&t,e,&a,&x)) n *= gc(x); return num(n); }
 L f_div(L t,L *e) { I a = 0; L x,n = gc(evarg(&t,e,&a)); while (isarg(&t,e,&a,&x)) n /= gc(x); return num(n); }
-L f_int(L t,L *e) { I a = 0; L n = gc(evarg(&t,e,&a)); return n < 1e7 && n > -1e7 ? (int64_t)n : num(n); }
+L f_int(L t,L *e) { I a = 0; L n = gc(evarg(&t,e,&a)); return n < 1e7 && n > -1e7 ? (int32_t)n : num(n); }
 /* ++ updated: (< x y [z ...]) returns #t if x < y and y < z ... etc when given, otherwise returns () */
 I lt(L x,L y) {
  return (T(x) == ATOM && T(y) == ATOM ? strcmp(A+ord(x),A+ord(y)) < 0 :
